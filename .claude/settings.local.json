@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"c:\\\\Users\\\\Dell\\\\Desktop\\\\amgalan\\\\hvrgelt\"; \\(Get-Command pnpm -ErrorAction SilentlyContinue\\).Source; \\(Get-Command npm -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(Start-Process \"http://localhost:5173\")"
+    ]
+  }
+}
