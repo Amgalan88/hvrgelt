@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser } from "./types";
+import { supabase } from "../../lib/supabase";
 
 // ── Auth method types ─────────────────────────────────────────────────
 export type AuthMethod = "pin" | "pattern" | "password";
@@ -51,7 +52,7 @@ export interface CustomerAccount {
   createdAt: string;
 }
 
-// ── Superadmin ────────────────────────────────────────────────────────
+// ── Superadmin (программ дотор тодорхойлогдсон) ────────────────────────
 export const SUPERADMIN = {
   id: "sa1",
   name: "Супер Админ",
@@ -62,22 +63,7 @@ export const SUPERADMIN = {
   authKey: "gegee0011",
 };
 
-// ── Seed data ─────────────────────────────────────────────────────────
-const SEED_OPERATORS: OperatorAccount[] = [
-  { id: "op1", name: "Д. Дэлгэрмаа",  username: "delgermaa",    password: "op2024", phone: "99110001", authMethod: "pin",     authKey: "1234", createdAt: "2024-01-10", active: true },
-  { id: "op2", name: "Б. Наранцэцэг", username: "narantsetseg", password: "op2024", phone: "99220002", authMethod: "pin",     authKey: "5678", createdAt: "2024-02-14", active: true },
-];
-
-const SEED_COURIERS: CourierAccount[] = [
-  { id: "cr1", name: "Б. Мөнхбат",   username: "munkh",      password: "cr2024", phone: "99112233", authMethod: "pin",     authKey: "1111", vehicle: "мотоцикл",  available: true,  rating: 4.9, totalDeliveries: 1240, todayDeliveries: 8,  createdAt: "2023-06-01", active: true },
-  { id: "cr2", name: "Д. Эрдэнэ",    username: "erdene",     password: "cr2024", phone: "99223344", authMethod: "pin",     authKey: "2222", vehicle: "автомашин", available: true,  rating: 4.7, totalDeliveries: 876,  todayDeliveries: 5,  createdAt: "2023-08-15", active: true },
-  { id: "cr3", name: "О. Батжаргал", username: "batjargal",  password: "cr2024", phone: "99334455", authMethod: "pattern", authKey: "01345678", vehicle: "дугуй",     available: false, rating: 4.8, totalDeliveries: 2103, todayDeliveries: 12, createdAt: "2023-03-20", active: true },
-  { id: "cr4", name: "Н. Солонго",   username: "solongo",    password: "cr2024", phone: "99445566", authMethod: "pin",     authKey: "4444", vehicle: "мопед",     available: true,  rating: 4.6, totalDeliveries: 523,  todayDeliveries: 3,  createdAt: "2024-04-05", active: true },
-];
-
-// ── Order seed ────────────────────────────────────────────────────────
-let orderCounter = 1001;
-
+// ── Helpers ───────────────────────────────────────────────────────────
 function nowTime() {
   const d = new Date();
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -87,136 +73,389 @@ function etaTime(mins: number) {
   d.setMinutes(d.getMinutes() + mins);
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
-function newId() { return "id-" + Date.now() + "-" + Math.floor(Math.random() * 1000); }
+function newId() {
+  return "id-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+}
 
-const SEED_ORDERS: Order[] = [
-  {
-    id: "1000", fromAddress: "Сүхбаатар дүүрэг", toAddress: "Хан-Уул дүүрэг",
-    fromDetail: "1-р хороо, Энхтайваны өргөн чөлөө 15", toDetail: "15-р хороо, Зайсан тойрог",
-    packageNote: "Бичиг баримт", price: 12000, distance: 14,
-    status: "шинэ", createdAt: "13:42", customerName: "Э. Батцэцэг",
-    customerPhone: "9955-6677", customerId: "cu1",
-  },
-  {
-    id: "999", fromAddress: "Баянзүрх дүүрэг", toAddress: "Баянгол дүүрэг",
-    fromDetail: "3-р хороо, Нарны зам 7", toDetail: "6-р хороо, Элчин сайдын гудамж 44",
-    packageNote: "Бэлэг", price: 8500, distance: 9, status: "авсан", createdAt: "12:15",
-    courierId: "cr3", courierName: "О. Батжаргал", courierPhone: "9933-4455",
-    eta: etaTime(12), customerName: "Б. Оюунаа", customerPhone: "9966-7788",
-    customerId: "cu2", assignedAt: "12:18", pickedUpAt: "12:32",
-  },
-];
+// ── Row ↔ camelCase mappers ───────────────────────────────────────────
+function rowToOrder(r: any): Order {
+  return {
+    id: r.id,
+    fromAddress: r.from_address,
+    toAddress: r.to_address,
+    fromDetail: r.from_detail,
+    toDetail: r.to_detail,
+    packageNote: r.package_note,
+    price: r.price,
+    distance: Number(r.distance),
+    status: r.status as OrderStatus,
+    createdAt: r.created_at,
+    courierId: r.courier_id ?? undefined,
+    courierName: r.courier_name ?? undefined,
+    courierPhone: r.courier_phone ?? undefined,
+    eta: r.eta ?? undefined,
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerId: r.customer_id,
+    assignedAt: r.assigned_at ?? undefined,
+    pickedUpAt: r.picked_up_at ?? undefined,
+    deliveredAt: r.delivered_at ?? undefined,
+  };
+}
+
+function rowToCourier(r: any): CourierAccount {
+  return {
+    id: r.id,
+    name: r.name,
+    username: r.username,
+    password: r.password,
+    phone: r.phone,
+    authMethod: r.auth_method,
+    authKey: r.auth_key,
+    vehicle: r.vehicle,
+    available: r.available,
+    rating: Number(r.rating),
+    totalDeliveries: r.total_deliveries,
+    todayDeliveries: r.today_deliveries,
+    createdAt: r.created_at,
+    active: r.active,
+  };
+}
+
+function rowToOperator(r: any): OperatorAccount {
+  return {
+    id: r.id,
+    name: r.name,
+    username: r.username,
+    password: r.password,
+    phone: r.phone,
+    authMethod: r.auth_method,
+    authKey: r.auth_key,
+    createdAt: r.created_at,
+    active: r.active,
+  };
+}
 
 // ── Main store hook ───────────────────────────────────────────────────
 export function useStore() {
-  const [orders, setOrders] = useState<Order[]>(SEED_ORDERS);
-  const [operatorAccounts, setOperatorAccounts] = useState<OperatorAccount[]>(SEED_OPERATORS);
-  const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>(SEED_COURIERS);
-  const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [operatorAccounts, setOperatorAccounts] = useState<OperatorAccount[]>([]);
+  const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>([]);
+  const [customerAccounts] = useState<CustomerAccount[]>([]);
 
-  const couriers: CourierUser[] = courierAccounts.filter((c) => c.active).map(
-    ({ id, name, phone, vehicle, available, rating, totalDeliveries, todayDeliveries }) =>
-      ({ id, name, phone, vehicle, available, rating, totalDeliveries, todayDeliveries })
-  );
+  // ── Initial load + realtime subscriptions ──────────────────────────
+  const refreshOrders = useCallback(async () => {
+    const { data } = await supabase
+      .from("orders")
+      .select("*")
+      .order("inserted_at", { ascending: false });
+    if (data) setOrders(data.map(rowToOrder));
+  }, []);
 
-  // ── Phone-based auth lookup ────────────────────────────────────────
-  function resolveByPhone(rawPhone: string): AccountLookup | null {
+  const refreshCouriers = useCallback(async () => {
+    const { data } = await supabase
+      .from("couriers")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (data) setCourierAccounts(data.map(rowToCourier));
+  }, []);
+
+  const refreshOperators = useCallback(async () => {
+    const { data } = await supabase
+      .from("operators")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (data) setOperatorAccounts(data.map(rowToOperator));
+  }, []);
+
+  useEffect(() => {
+    refreshOrders();
+    refreshCouriers();
+    refreshOperators();
+
+    const ordersChannel = supabase
+      .channel("orders-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        refreshOrders();
+      })
+      .subscribe();
+
+    const couriersChannel = supabase
+      .channel("couriers-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "couriers" }, () => {
+        refreshCouriers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(couriersChannel);
+    };
+  }, [refreshOrders, refreshCouriers, refreshOperators]);
+
+  // ── Couriers view-model (зөвхөн active) ─────────────────────────────
+  const couriers: CourierUser[] = courierAccounts
+    .filter((c) => c.active)
+    .map(({ id, name, phone, vehicle, available, rating, totalDeliveries, todayDeliveries }) => ({
+      id,
+      name,
+      phone,
+      vehicle,
+      available,
+      rating,
+      totalDeliveries,
+      todayDeliveries,
+    }));
+
+  // ── Phone-based auth lookup (DB) ────────────────────────────────────
+  const resolveByPhone = useCallback(async (rawPhone: string): Promise<AccountLookup | null> => {
     const phone = rawPhone.replace(/\D/g, "");
+
     if (phone === SUPERADMIN.phone.replace(/\D/g, ""))
       return { role: "superadmin", id: SUPERADMIN.id, name: SUPERADMIN.name, authMethod: "password", authKey: SUPERADMIN.password };
-    const op = operatorAccounts.find((o) => o.phone.replace(/\D/g, "") === phone && o.active);
-    if (op) return { role: "operator", id: op.id, name: op.name, authMethod: op.authMethod, authKey: op.authKey };
-    const cr = courierAccounts.find((c) => c.phone.replace(/\D/g, "") === phone && c.active);
-    if (cr) return { role: "courier", id: cr.id, name: cr.name, authMethod: cr.authMethod, authKey: cr.authKey };
-    const cu = customerAccounts.find((c) => c.phone.replace(/\D/g, "") === phone);
-    if (cu) return { role: "customer", id: cu.id, name: cu.name, authMethod: cu.authMethod, authKey: cu.authKey };
+
+    const { data: ops } = await supabase.from("operators").select("*").eq("phone", phone).eq("active", true).limit(1);
+    if (ops && ops.length) {
+      const o = ops[0];
+      return { role: "operator", id: o.id, name: o.name, authMethod: o.auth_method, authKey: o.auth_key };
+    }
+
+    const { data: crs } = await supabase.from("couriers").select("*").eq("phone", phone).eq("active", true).limit(1);
+    if (crs && crs.length) {
+      const c = crs[0];
+      return { role: "courier", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
+    }
+
+    const { data: cus } = await supabase.from("customers").select("*").eq("phone", phone).limit(1);
+    if (cus && cus.length) {
+      const c = cus[0];
+      return { role: "customer", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
+    }
+
     return null;
-  }
+  }, []);
 
   // ── Customer registration ──────────────────────────────────────────
-  const addCustomer = useCallback((data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => {
-    const id = "cu-" + newId();
-    const cu: CustomerAccount = { ...data, id, createdAt: new Date().toISOString().slice(0, 10) };
-    setCustomerAccounts((prev) => [...prev, cu]);
-    return id;
-  }, []);
+  const addCustomer = useCallback(
+    async (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }): Promise<string> => {
+      const id = "cu-" + newId();
+      const { error } = await supabase.from("customers").insert({
+        id,
+        name: data.name,
+        phone: data.phone,
+        auth_method: data.authMethod,
+        auth_key: data.authKey,
+        created_at: new Date().toISOString().slice(0, 10),
+      });
+      if (error) throw error;
+      return id;
+    },
+    [],
+  );
 
-  // ── Orders ─────────────────────────────────────────────────────────
-  const addOrder = useCallback((order: Omit<Order, "id" | "createdAt" | "status">) => {
-    const id = String(++orderCounter);
-    setOrders((prev) => [{ ...order, id, createdAt: nowTime(), status: "шинэ" }, ...prev]);
-    return id;
-  }, []);
+  // ── Orders ──────────────────────────────────────────────────────────
+  const addOrder = useCallback(
+    async (order: Omit<Order, "id" | "createdAt" | "status">): Promise<string> => {
+      const { data, error } = await supabase
+        .from("orders")
+        .insert({
+          from_address: order.fromAddress,
+          to_address: order.toAddress,
+          from_detail: order.fromDetail,
+          to_detail: order.toDetail,
+          package_note: order.packageNote,
+          price: order.price,
+          distance: order.distance,
+          status: "шинэ",
+          created_at: nowTime(),
+          courier_id: order.courierId ?? null,
+          courier_name: order.courierName ?? null,
+          courier_phone: order.courierPhone ?? null,
+          eta: order.eta ?? null,
+          customer_name: order.customerName,
+          customer_phone: order.customerPhone,
+          customer_id: order.customerId,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await refreshOrders();
+      return data!.id;
+    },
+    [refreshOrders],
+  );
 
-  const assignCourier = useCallback((orderId: string, courierId: string) => {
-    setCourierAccounts((prev) => prev.map((c) => c.id === courierId ? { ...c, available: false } : c));
-    setOrders((prev) => prev.map((o) => {
-      if (o.id !== orderId) return o;
-      const cr = courierAccounts.find((c) => c.id === courierId)!;
-      return { ...o, status: "томилогдсон" as OrderStatus, courierId, courierName: cr.name, courierPhone: cr.phone, eta: etaTime(30), assignedAt: nowTime() };
-    }));
-  }, [courierAccounts]);
+  const assignCourier = useCallback(
+    async (orderId: string, courierId: string) => {
+      const cr = courierAccounts.find((c) => c.id === courierId);
+      if (!cr) return;
+      await supabase.from("couriers").update({ available: false }).eq("id", courierId);
+      await supabase
+        .from("orders")
+        .update({
+          status: "томилогдсон",
+          courier_id: courierId,
+          courier_name: cr.name,
+          courier_phone: cr.phone,
+          eta: etaTime(30),
+          assigned_at: nowTime(),
+        })
+        .eq("id", orderId);
+      await Promise.all([refreshOrders(), refreshCouriers()]);
+    },
+    [courierAccounts, refreshOrders, refreshCouriers],
+  );
 
-  const courierUpdateStatus = useCallback((orderId: string, status: "авсан" | "хүргэгдсэн") => {
-    setOrders((prev) => prev.map((o) => {
-      if (o.id !== orderId) return o;
-      if (status === "авсан") return { ...o, status, pickedUpAt: nowTime(), eta: etaTime(20) };
-      setCourierAccounts((prev) => prev.map((c) =>
-        c.id === o.courierId ? { ...c, available: true, todayDeliveries: c.todayDeliveries + 1 } : c
-      ));
-      return { ...o, status, deliveredAt: nowTime() };
-    }));
-  }, []);
+  const courierUpdateStatus = useCallback(
+    async (orderId: string, status: "авсан" | "хүргэгдсэн") => {
+      const order = orders.find((o) => o.id === orderId);
+      if (status === "авсан") {
+        await supabase.from("orders").update({ status, picked_up_at: nowTime(), eta: etaTime(20) }).eq("id", orderId);
+      } else {
+        await supabase.from("orders").update({ status, delivered_at: nowTime() }).eq("id", orderId);
+        if (order?.courierId) {
+          const cr = courierAccounts.find((c) => c.id === order.courierId);
+          if (cr) {
+            await supabase
+              .from("couriers")
+              .update({ available: true, today_deliveries: cr.todayDeliveries + 1 })
+              .eq("id", cr.id);
+          }
+        }
+      }
+      await Promise.all([refreshOrders(), refreshCouriers()]);
+    },
+    [orders, courierAccounts, refreshOrders, refreshCouriers],
+  );
 
   // ── Auth: update PIN/Pattern after first login ─────────────────────
-  const updateAccountAuth = useCallback((role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => {
-    if (role === "operator")
-      setOperatorAccounts((prev) => prev.map((o) => o.id === id ? { ...o, authMethod, authKey } : o));
-    else
-      setCourierAccounts((prev) => prev.map((c) => c.id === id ? { ...c, authMethod, authKey } : c));
-  }, []);
+  const updateAccountAuth = useCallback(
+    async (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => {
+      const table = role === "operator" ? "operators" : "couriers";
+      await supabase.from(table).update({ auth_method: authMethod, auth_key: authKey }).eq("id", id);
+      if (role === "operator") await refreshOperators();
+      else await refreshCouriers();
+    },
+    [refreshOperators, refreshCouriers],
+  );
 
   // ── Superadmin: operator CRUD ───────────────────────────────────────
-  const addOperator = useCallback((data: { name: string; username: string; password: string; phone: string }) => {
-    const op: OperatorAccount = {
-      ...data, authMethod: "password", authKey: data.password,
-      id: newId(), createdAt: new Date().toISOString().slice(0, 10), active: true,
-    };
-    setOperatorAccounts((prev) => [...prev, op]);
-  }, []);
+  const addOperator = useCallback(
+    async (data: { name: string; username: string; password: string; phone: string }) => {
+      await supabase.from("operators").insert({
+        id: newId(),
+        name: data.name,
+        username: data.username,
+        password: data.password,
+        phone: data.phone,
+        auth_method: "password",
+        auth_key: data.password,
+        created_at: new Date().toISOString().slice(0, 10),
+        active: true,
+      });
+      await refreshOperators();
+    },
+    [refreshOperators],
+  );
 
-  const updateOperator = useCallback((id: string, data: Partial<Omit<OperatorAccount, "id">>) => {
-    setOperatorAccounts((prev) => prev.map((o) => o.id === id ? { ...o, ...data } : o));
-  }, []);
+  const updateOperator = useCallback(
+    async (id: string, data: Partial<Omit<OperatorAccount, "id">>) => {
+      const patch: any = {};
+      if (data.name !== undefined) patch.name = data.name;
+      if (data.username !== undefined) patch.username = data.username;
+      if (data.password !== undefined) {
+        patch.password = data.password;
+        patch.auth_key = data.password;
+        patch.auth_method = "password";
+      }
+      if (data.phone !== undefined) patch.phone = data.phone;
+      if (data.active !== undefined) patch.active = data.active;
+      await supabase.from("operators").update(patch).eq("id", id);
+      await refreshOperators();
+    },
+    [refreshOperators],
+  );
 
-  const deleteOperator = useCallback((id: string) => {
-    setOperatorAccounts((prev) => prev.filter((o) => o.id !== id));
-  }, []);
+  const deleteOperator = useCallback(
+    async (id: string) => {
+      await supabase.from("operators").delete().eq("id", id);
+      await refreshOperators();
+    },
+    [refreshOperators],
+  );
 
   // ── Superadmin: courier CRUD ────────────────────────────────────────
-  const addCourier = useCallback((data: { name: string; username: string; password: string; phone: string; vehicle: CourierAccount["vehicle"] }) => {
-    const cr: CourierAccount = {
-      ...data, authMethod: "password", authKey: data.password,
-      id: newId(), createdAt: new Date().toISOString().slice(0, 10),
-      active: true, available: true, rating: 5.0, totalDeliveries: 0, todayDeliveries: 0,
-    };
-    setCourierAccounts((prev) => [...prev, cr]);
-  }, []);
+  const addCourier = useCallback(
+    async (data: { name: string; username: string; password: string; phone: string; vehicle: CourierAccount["vehicle"] }) => {
+      await supabase.from("couriers").insert({
+        id: newId(),
+        name: data.name,
+        username: data.username,
+        password: data.password,
+        phone: data.phone,
+        auth_method: "password",
+        auth_key: data.password,
+        vehicle: data.vehicle,
+        available: true,
+        rating: 5.0,
+        total_deliveries: 0,
+        today_deliveries: 0,
+        created_at: new Date().toISOString().slice(0, 10),
+        active: true,
+      });
+      await refreshCouriers();
+    },
+    [refreshCouriers],
+  );
 
-  const updateCourier = useCallback((id: string, data: Partial<Omit<CourierAccount, "id">>) => {
-    setCourierAccounts((prev) => prev.map((c) => c.id === id ? { ...c, ...data } : c));
-  }, []);
+  const updateCourier = useCallback(
+    async (id: string, data: Partial<Omit<CourierAccount, "id">>) => {
+      const patch: any = {};
+      if (data.name !== undefined) patch.name = data.name;
+      if (data.username !== undefined) patch.username = data.username;
+      if (data.password !== undefined) {
+        patch.password = data.password;
+        patch.auth_key = data.password;
+        patch.auth_method = "password";
+      }
+      if (data.phone !== undefined) patch.phone = data.phone;
+      if (data.vehicle !== undefined) patch.vehicle = data.vehicle;
+      if (data.available !== undefined) patch.available = data.available;
+      if (data.rating !== undefined) patch.rating = data.rating;
+      if (data.totalDeliveries !== undefined) patch.total_deliveries = data.totalDeliveries;
+      if (data.todayDeliveries !== undefined) patch.today_deliveries = data.todayDeliveries;
+      if (data.active !== undefined) patch.active = data.active;
+      await supabase.from("couriers").update(patch).eq("id", id);
+      await refreshCouriers();
+    },
+    [refreshCouriers],
+  );
 
-  const deleteCourier = useCallback((id: string) => {
-    setCourierAccounts((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  const deleteCourier = useCallback(
+    async (id: string) => {
+      await supabase.from("couriers").delete().eq("id", id);
+      await refreshCouriers();
+    },
+    [refreshCouriers],
+  );
 
   return {
-    orders, couriers,
-    operatorAccounts, courierAccounts, customerAccounts,
-    addOrder, assignCourier, courierUpdateStatus,
-    addOperator, updateOperator, deleteOperator,
-    addCourier, updateCourier, deleteCourier,
-    resolveByPhone, addCustomer, updateAccountAuth,
+    orders,
+    couriers,
+    operatorAccounts,
+    courierAccounts,
+    customerAccounts,
+    addOrder,
+    assignCourier,
+    courierUpdateStatus,
+    addOperator,
+    updateOperator,
+    deleteOperator,
+    addCourier,
+    updateCourier,
+    deleteCourier,
+    resolveByPhone,
+    addCustomer,
+    updateAccountAuth,
   };
 }

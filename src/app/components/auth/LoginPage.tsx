@@ -8,8 +8,8 @@ import { useUser } from "../shared/UserContext";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string) => void;
-  resolveByPhone: (phone: string) => AccountLookup | null;
-  addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => string;
+  resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
+  addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
   updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
 }
 
@@ -87,10 +87,10 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   }
 
   // ── Phone submit ─────────────────────────────────────────────────
-  function handlePhoneSubmit() {
+  async function handlePhoneSubmit() {
     const clean = phone.replace(/\D/g, "");
     if (clean.length < 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
-    const found = resolveByPhone(clean);
+    const found = await resolveByPhone(clean);
     if (!found) {
       setRPhone(phone);
       setScreen("register");
@@ -159,11 +159,11 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   }
 
   // ── Register helpers ─────────────────────────────────────────────
-  function handlePinEntry(pin: string) {
+  async function handlePinEntry(pin: string) {
     if (!pinFirst) { setPinFirst(pin); return; }
     if (pin === pinFirst) {
       setPin(pin); setPattern(null);
-      const id = addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pin", authKey: pin });
+      const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pin", authKey: pin });
       localStorage.setItem(SAVED_PHONE_KEY, rPhone);
       onLogin("customer", id, rName.trim());
     } else {
@@ -173,11 +173,11 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
   }
 
-  function handlePatternEntry(pattern: string) {
+  async function handlePatternEntry(pattern: string) {
     if (!patternFirst) { setPatternFirst(pattern); return; }
     if (pattern === patternFirst) {
       setPattern(pattern); setPin(null);
-      const id = addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pattern", authKey: pattern });
+      const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pattern", authKey: pattern });
       localStorage.setItem(SAVED_PHONE_KEY, rPhone);
       onLogin("customer", id, rName.trim());
     } else {
