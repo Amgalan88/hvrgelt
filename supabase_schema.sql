@@ -45,6 +45,7 @@ create table if not exists customers (
   auth_method text not null,
   auth_key    text not null,
   addresses   jsonb not null default '[]'::jsonb,
+  cargo_route jsonb,
   created_at  text not null
 );
 

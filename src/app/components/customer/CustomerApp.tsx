@@ -27,7 +27,7 @@ const ICON_MAP = {
 
 interface CustomerAppProps {
   orders: Order[];
-  onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => string;
+  onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
   myOrderId: string | null;
   setMyOrderId: (id: string | null) => void;
   userName: string;
@@ -79,7 +79,7 @@ function MapEmbed({ from, to, theme }: { from: string; to: string; theme: "dark"
 }
 
 export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
-  const { theme, savedAddresses } = useUser();
+  const { theme, savedAddresses, cargoRoute, setCargoRoute } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
   const [orderStep, setOrderStep] = useState<OrderStep>(myOrderId ? "tracking" : "form");
@@ -90,6 +90,14 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   const [note, setNote] = useState("");
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
+
+  // ── Cargo quick-order (one-tap saved route) ──
+  const [cargoSetup, setCargoSetup] = useState(false);
+  const [cFrom, setCFrom] = useState("");
+  const [cFromDetail, setCFromDetail] = useState("");
+  const [cTo, setCTo] = useState("");
+  const [cToDetail, setCToDetail] = useState("");
+  const [placingCargo, setPlacingCargo] = useState(false);
 
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
@@ -102,9 +110,9 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
     setOrderStep("confirm");
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!estimated) return;
-    const id = onAddOrder({
+    const id = await onAddOrder({
       fromAddress: fromAddr, toAddress: toAddr,
       fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
       packageNote: note || "Тэмдэглэлгүй",
@@ -113,6 +121,44 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
     });
     setMyOrderId(id);
     setOrderStep("tracking");
+  }
+
+  // One-tap cargo order from the saved cargo route
+  async function handleCargoOrder() {
+    if (!cargoRoute || placingCargo) return;
+    setPlacingCargo(true);
+    const dist = Math.floor(Math.random() * 22 + 5);
+    try {
+      const id = await onAddOrder({
+        fromAddress: cargoRoute.fromAddress, toAddress: cargoRoute.toAddress,
+        fromDetail: cargoRoute.fromDetail || cargoRoute.fromAddress,
+        toDetail: cargoRoute.toDetail || cargoRoute.toAddress,
+        packageNote: "Карго",
+        price: 5000 + dist * 400, distance: dist,
+        customerName: userName, customerPhone: userPhone, customerId: userId,
+      });
+      setMyOrderId(id);
+      setOrderStep("tracking");
+    } finally {
+      setPlacingCargo(false);
+    }
+  }
+
+  function openCargoSetup() {
+    setCFrom(cargoRoute?.fromAddress ?? "");
+    setCFromDetail(cargoRoute?.fromDetail ?? "");
+    setCTo(cargoRoute?.toAddress ?? "");
+    setCToDetail(cargoRoute?.toDetail ?? "");
+    setCargoSetup(true);
+  }
+
+  function handleSaveCargoRoute() {
+    if (!cFrom.trim() || !cTo.trim()) return;
+    setCargoRoute({
+      fromAddress: cFrom.trim(), fromDetail: cFromDetail.trim(),
+      toAddress: cTo.trim(), toDetail: cToDetail.trim(),
+    });
+    setCargoSetup(false);
   }
 
   function handleNewOrder() {
@@ -167,6 +213,47 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                   </h1>
                   <p className="text-muted-foreground text-sm mt-1">30 секундэд захиалаарай</p>
                 </div>
+
+                {/* Cargo quick-order */}
+                {cargoRoute ? (
+                  <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <Package className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Миний карго чиглэл</span>
+                      </div>
+                      <button onClick={openCargoSetup} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Өөрчлөх</button>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p className="truncate"><span className="text-green-400">●</span> {cargoRoute.fromAddress}{cargoRoute.fromDetail ? `, ${cargoRoute.fromDetail}` : ""}</p>
+                      <p className="truncate"><span className="text-primary">◆</span> {cargoRoute.toAddress}{cargoRoute.toDetail ? `, ${cargoRoute.toDetail}` : ""}</p>
+                    </div>
+                    <button
+                      onClick={handleCargoOrder}
+                      disabled={placingCargo}
+                      className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                      style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700 }}
+                    >
+                      {placingCargo ? "Үүсгэж байна..." : <>Карго авах <ArrowRight className="w-4 h-4" /></>}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={openCargoSetup}
+                    className="w-full bg-card border border-dashed border-primary/40 rounded-2xl p-4 flex items-center gap-3 hover:bg-primary/5 transition-colors text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                      <Package className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">Карго авах — хурдан захиалга</p>
+                      <p className="text-xs text-muted-foreground">Чиглэлээ тохируулаад нэг товчоор захиалаарай</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                )}
 
                 {/* Address box */}
                 <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -434,6 +521,40 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
           </div>
         )}
       </div>
+
+      {/* Cargo route setup modal */}
+      {cargoSetup && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setCargoSetup(false)}>
+          <div className="bg-card border border-border rounded-t-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>Карго чиглэл тохируулах</h3>
+              <button onClick={() => setCargoSetup(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-xs text-muted-foreground">Нэг удаа тохируулснаар дараа нь "Карго авах" товчоор шууд захиална.</p>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5"><span className="text-green-400">●</span> Карго авах цэг</label>
+              <input value={cFrom} onChange={(e) => setCFrom(e.target.value)} placeholder="Дүүрэг, хороо" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50" />
+              <input value={cFromDetail} onChange={(e) => setCFromDetail(e.target.value)} placeholder="Гудамж, байр, тоот (заавал биш)" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5"><span className="text-primary">◆</span> Хүргэх хаяг</label>
+              <input value={cTo} onChange={(e) => setCTo(e.target.value)} placeholder="Дүүрэг, хороо" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50" />
+              <input value={cToDetail} onChange={(e) => setCToDetail(e.target.value)} placeholder="Гудамж, байр, тоот (заавал биш)" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50" />
+              {savedAddresses.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {savedAddresses.map((a) => (
+                    <button key={a.id} onClick={() => { setCTo(a.address); setCToDetail(a.detail); }} className="text-xs border border-border rounded-full px-2.5 py-1 hover:border-primary/40 transition-colors">{a.label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={handleSaveCargoRoute} disabled={!cFrom.trim() || !cTo.trim()} className="w-full bg-primary text-primary-foreground py-3 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Хадгалах</button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
