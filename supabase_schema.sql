@@ -44,6 +44,7 @@ create table if not exists customers (
   phone       text not null,
   auth_method text not null,
   auth_key    text not null,
+  addresses   jsonb not null default '[]'::jsonb,
   created_at  text not null
 );
 
@@ -93,23 +94,8 @@ create policy "demo_all_customers" on customers for all using (true) with check 
 create policy "demo_all_orders"    on orders    for all using (true) with check (true);
 
 -- ============================================================
---  Seed data — анхны оператор / жолооч / захиалга
+--  Seed data — ЗОРИУДААР ХООСОН (бодит өгөгдөл ашиглана).
+--  Оператор/жолоочдыг superadmin-ээр нэвтэрч өөрөө үүсгэнэ.
+--    Супер админ — утас: 99739959   нууц үг: gegee0011
+--    (программ дотор тодорхойлогдсон, DB-д хадгалах шаардлагагүй)
 -- ============================================================
-insert into operators (id, name, username, password, phone, auth_method, auth_key, created_at, active) values
-  ('op1', 'Д. Дэлгэрмаа',  'delgermaa',    'op2024', '99110001', 'pin', '1234', '2024-01-10', true),
-  ('op2', 'Б. Наранцэцэг', 'narantsetseg', 'op2024', '99220002', 'pin', '5678', '2024-02-14', true)
-on conflict (id) do nothing;
-
-insert into couriers (id, name, username, password, phone, auth_method, auth_key, vehicle, available, rating, total_deliveries, today_deliveries, created_at, active) values
-  ('cr1', 'Б. Мөнхбат',   'munkh',     'cr2024', '99112233', 'pin',     '1111',     'мотоцикл',  true,  4.9, 1240, 8,  '2023-06-01', true),
-  ('cr2', 'Д. Эрдэнэ',    'erdene',    'cr2024', '99223344', 'pin',     '2222',     'автомашин', true,  4.7, 876,  5,  '2023-08-15', true),
-  ('cr3', 'О. Батжаргал', 'batjargal', 'cr2024', '99334455', 'pattern', '01345678', 'дугуй',     false, 4.8, 2103, 12, '2023-03-20', true),
-  ('cr4', 'Н. Солонго',   'solongo',   'cr2024', '99445566', 'pin',     '4444',     'мопед',     true,  4.6, 523,  3,  '2024-04-05', true)
-on conflict (id) do nothing;
-
-insert into orders (id, from_address, to_address, from_detail, to_detail, package_note, price, distance, status, created_at, customer_name, customer_phone, customer_id) values
-  ('1000', 'Сүхбаатар дүүрэг', 'Хан-Уул дүүрэг', '1-р хороо, Энхтайваны өргөн чөлөө 15', '15-р хороо, Зайсан тойрог', 'Бичиг баримт', 12000, 14, 'шинэ', '13:42', 'Э. Батцэцэг', '9955-6677', 'cu1')
-on conflict (id) do nothing;
-
--- Супер админ: программ дотор шууд тодорхойлогдсон (DB-д хадгалах шаардлагагүй)
---   утас: 99739959   нууц үг: gegee0011

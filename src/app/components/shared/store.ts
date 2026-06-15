@@ -339,6 +339,14 @@ export function useStore() {
     [refreshOperators, refreshCouriers],
   );
 
+  // ── Auth: customer changes PIN/Pattern in settings ─────────────────
+  const updateCustomerAuth = useCallback(
+    async (id: string, authMethod: "pin" | "pattern", authKey: string) => {
+      await supabase.from("customers").update({ auth_method: authMethod, auth_key: authKey }).eq("id", id);
+    },
+    [],
+  );
+
   // ── Superadmin: operator CRUD ───────────────────────────────────────
   const addOperator = useCallback(
     async (data: { name: string; username: string; password: string; phone: string }) => {
@@ -457,5 +465,6 @@ export function useStore() {
     resolveByPhone,
     addCustomer,
     updateAccountAuth,
+    updateCustomerAuth,
   };
 }

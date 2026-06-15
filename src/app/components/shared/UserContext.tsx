@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { supabase } from "../../lib/supabase";
 
 export interface SavedAddress {
   id: string;
@@ -14,6 +15,8 @@ interface UserContextValue {
   savedAddresses: SavedAddress[];
   addAddress: (a: Omit<SavedAddress, "id">) => void;
   removeAddress: (id: string) => void;
+  loadCustomer: (customerId: string) => Promise<void>;
+  clearCustomer: () => void;
   pin: string | null;
   setPin: (pin: string | null) => void;
   pattern: string | null;
@@ -22,14 +25,10 @@ interface UserContextValue {
 
 const UserContext = createContext<UserContextValue | null>(null);
 
-const DEFAULT_ADDRESSES: SavedAddress[] = [
-  { id: "sa1", label: "Гэр", address: "Баянзүрх дүүрэг", detail: "3-р хороо, Нарны зам 7, 204 тоот", icon: "home" },
-  { id: "sa2", label: "Ажил", address: "Сүхбаатар дүүрэг", detail: "1-р хороо, Энхтайваны өргөн чөлөө 15", icon: "work" },
-];
-
 export function UserProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(DEFAULT_ADDRESSES);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [pin, setPin] = useState<string | null>(null);
   const [pattern, setPattern] = useState<string | null>(null);
 
@@ -48,16 +47,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
+  // Load a customer's saved addresses from the DB on login
+  const loadCustomer = useCallback(async (cid: string) => {
+    setCustomerId(cid);
+    const { data } = await supabase.from("customers").select("addresses").eq("id", cid).single();
+    setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
+  }, []);
+
+  const clearCustomer = useCallback(() => {
+    setCustomerId(null);
+    setSavedAddresses([]);
+  }, []);
+
+  // Persist the full address list to the DB
+  async function persistAddresses(next: SavedAddress[]) {
+    setSavedAddresses(next);
+    if (customerId) await supabase.from("customers").update({ addresses: next }).eq("id", customerId);
+  }
+
   function addAddress(a: Omit<SavedAddress, "id">) {
-    setSavedAddresses((prev) => [...prev, { ...a, id: "sa-" + Date.now() }]);
+    persistAddresses([...savedAddresses, { ...a, id: "sa-" + Date.now() }]);
   }
 
   function removeAddress(id: string) {
-    setSavedAddresses((prev) => prev.filter((a) => a.id !== id));
+    persistAddresses(savedAddresses.filter((a) => a.id !== id));
   }
 
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, removeAddress, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, removeAddress, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );

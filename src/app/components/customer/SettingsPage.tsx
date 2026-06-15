@@ -99,20 +99,23 @@ function AddAddressModal({ onClose, onSave }: AddAddressModalProps) {
 interface SettingsPageProps {
   userName: string;
   userPhone: string;
+  onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
 }
 
 type LockFlow =
-  | "pin-new" | "pin-confirm" | "pin-remove"
-  | "pattern-new" | "pattern-confirm" | "pattern-remove"
+  | "verify"
+  | "pin-new" | "pin-confirm"
+  | "pattern-new" | "pattern-confirm"
   | null;
 
-export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProps) {
+export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
   const { theme, toggleTheme, savedAddresses, addAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
   const [showAdd, setShowAdd] = useState(false);
   const [lockFlow, setLockFlow] = useState<LockFlow>(null);
   const [pending, setPending] = useState("");
   const [lockError, setLockError] = useState("");
+  const [target, setTarget] = useState<"pin" | "pattern">("pin");
 
   // alias for backward compat
   const pinFlow = lockFlow;
@@ -219,7 +222,7 @@ export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProp
 
         {/* PIN */}
         <button
-          onClick={() => { setLockError(""); setLockFlow(pin ? "pin-remove" : "pin-new"); }}
+          onClick={() => { setLockError(""); setTarget("pin"); setLockFlow((pin || pattern) ? "verify" : "pin-new"); }}
           className="w-full flex items-center justify-between px-4 py-3.5 border-b border-border hover:bg-secondary/30 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -238,7 +241,7 @@ export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProp
 
         {/* Pattern */}
         <button
-          onClick={() => { setLockError(""); setLockFlow(pattern ? "pattern-remove" : "pattern-new"); }}
+          onClick={() => { setLockError(""); setTarget("pattern"); setLockFlow((pin || pattern) ? "verify" : "pattern-new"); }}
           className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-secondary/30 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -292,6 +295,24 @@ export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProp
       {/* Lock setup modals */}
       {lockFlow && (
         <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center">
+          {/* Verify current credential before switching/changing */}
+          {lockFlow === "verify" && pin && (
+            <PinPad title="Баталгаажуулах" subtitle="Одоогийн PIN кодоо оруулна уу" error={lockError}
+              onComplete={(p) => {
+                if (p === pin) { setLockError(""); setLockFlow(target === "pin" ? "pin-new" : "pattern-new"); }
+                else setLockError("PIN код буруу байна");
+              }}
+              onCancel={() => { setLockFlow(null); setLockError(""); }} />
+          )}
+          {lockFlow === "verify" && !pin && pattern && (
+            <PatternLock title="Баталгаажуулах" subtitle="Одоогийн pattern-аа зурна уу" error={lockError}
+              onComplete={(p) => {
+                if (p === pattern) { setLockError(""); setLockFlow(target === "pin" ? "pin-new" : "pattern-new"); }
+                else setLockError("Pattern буруу байна");
+              }}
+              onCancel={() => { setLockFlow(null); setLockError(""); }} />
+          )}
+
           {/* PIN flows */}
           {lockFlow === "pin-new" && (
             <PinPad title="PIN тохируулах" subtitle="4 оронтой PIN код оруулна уу"
@@ -301,18 +322,10 @@ export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProp
           {lockFlow === "pin-confirm" && (
             <PinPad title="PIN баталгаажуулах" subtitle="PIN кодоо дахин оруулна уу" error={lockError}
               onComplete={(p) => {
-                if (p === pending) { setPin(p); setPattern(null); setLockFlow(null); setPending(""); }
+                if (p === pending) { setPin(p); setPattern(null); onUpdateAuth("pin", p); setLockFlow(null); setPending(""); }
                 else { setLockError("PIN код таарахгүй байна"); setLockFlow("pin-new"); setPending(""); }
               }}
               onCancel={() => { setLockFlow(null); setPending(""); }} />
-          )}
-          {lockFlow === "pin-remove" && (
-            <PinPad title="PIN устгах" subtitle="Одоогийн PIN кодоо оруулна уу" error={lockError}
-              onComplete={(p) => {
-                if (p === pin) { setPin(null); setLockFlow(null); setLockError(""); }
-                else setLockError("PIN код буруу байна");
-              }}
-              onCancel={() => { setLockFlow(null); setLockError(""); }} />
           )}
 
           {/* Pattern flows */}
@@ -324,18 +337,10 @@ export function SettingsPage({ userName, userPhone, onLogout }: SettingsPageProp
           {lockFlow === "pattern-confirm" && (
             <PatternLock title="Pattern баталгаажуулах" subtitle="Мөн адил зурна уу" error={lockError}
               onComplete={(p) => {
-                if (p === pending) { setPattern(p); setPin(null); setLockFlow(null); setPending(""); }
+                if (p === pending) { setPattern(p); setPin(null); onUpdateAuth("pattern", p); setLockFlow(null); setPending(""); }
                 else { setLockError("Pattern таарахгүй байна. Дахин оролдоно уу."); setLockFlow("pattern-new"); setPending(""); }
               }}
               onCancel={() => { setLockFlow(null); setPending(""); }} />
-          )}
-          {lockFlow === "pattern-remove" && (
-            <PatternLock title="Pattern устгах" subtitle="Одоогийн pattern-аа зурна уу" error={lockError}
-              onComplete={(p) => {
-                if (p === pattern) { setPattern(null); setLockFlow(null); setLockError(""); }
-                else setLockError("Pattern буруу байна");
-              }}
-              onCancel={() => { setLockFlow(null); setLockError(""); }} />
           )}
         </div>
       )}

@@ -32,6 +32,8 @@ interface CustomerAppProps {
   setMyOrderId: (id: string | null) => void;
   userName: string;
   userId: string;
+  userPhone: string;
+  onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
 }
 
@@ -76,7 +78,7 @@ function MapEmbed({ from, to, theme }: { from: string; to: string; theme: "dark"
   );
 }
 
-export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userName, userId, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { theme, savedAddresses } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
@@ -107,7 +109,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
       fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
       packageNote: note || "Тэмдэглэлгүй",
       price: estimated.price, distance: estimated.distance,
-      customerName: userName, customerPhone: "9900-0000", customerId: userId,
+      customerName: userName, customerPhone: userPhone, customerId: userId,
     });
     setMyOrderId(id);
     setOrderStep("tracking");
@@ -127,7 +129,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -428,7 +430,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
         {tab === "settings" && (
           <div className="space-y-4">
             <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
-            <SettingsPage userName={userName} userPhone="9900-0000" onLogout={onLogout} />
+            <SettingsPage userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
         )}
       </div>

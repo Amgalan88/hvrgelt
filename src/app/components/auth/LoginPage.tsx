@@ -7,7 +7,7 @@ import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 
 interface LoginPageProps {
-  onLogin: (role: UserRole, id: string, name: string) => void;
+  onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
   resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
   addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
   updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
@@ -121,7 +121,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         if (account.authMethod === "pin") { setPin(entered); setPattern(null); }
         else if (account.authMethod === "pattern") { setPattern(entered); setPin(null); }
       }
-      onLogin(account.role, account.id, account.name);
+      onLogin(account.role, account.id, account.name, phone.replace(/\D/g, ""));
     } else {
       handleFail(
         account.authMethod === "pin"     ? "PIN буруу байна" :
@@ -137,7 +137,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (pin === setupPinFirst) {
       updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pin", pin);
       localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name);
+      onLogin(account!.role, account!.id, account!.name, phone.replace(/\D/g, ""));
     } else {
       setSetupPinFirst("");
       setSetupError("PIN таарсангүй. Дахин оруулна уу.");
@@ -150,7 +150,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (pattern === setupPatternFirst) {
       updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pattern", pattern);
       localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name);
+      onLogin(account!.role, account!.id, account!.name, phone.replace(/\D/g, ""));
     } else {
       setSetupPatternFirst("");
       setSetupError("Pattern таарсангүй. Дахин зурна уу.");
@@ -165,7 +165,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
       setPin(pin); setPattern(null);
       const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pin", authKey: pin });
       localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-      onLogin("customer", id, rName.trim());
+      onLogin("customer", id, rName.trim(), rPhone.replace(/\D/g, ""));
     } else {
       setPinFirst("");
       setRegError("PIN таарсангүй. Дахин оруулна уу.");
@@ -179,7 +179,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
       setPattern(pattern); setPin(null);
       const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pattern", authKey: pattern });
       localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-      onLogin("customer", id, rName.trim());
+      onLogin("customer", id, rName.trim(), rPhone.replace(/\D/g, ""));
     } else {
       setPatternFirst("");
       setRegError("Pattern таарсангүй. Дахин зурна уу.");
@@ -211,7 +211,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // ── LANDING ───────────────────────────────────────────────────────
   if (screen === "landing") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
         <div className="relative flex-1 flex flex-col">
           <img
             src="https://images.unsplash.com/photo-1765808172074-702dc0371f93?w=800&h=900&fit=crop&auto=format"
@@ -259,7 +259,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // ── PHONE INPUT ───────────────────────────────────────────────────
   if (screen === "phone") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <button onClick={() => setScreen("landing")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -321,7 +321,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     // Password (superadmin)
     if (authStep === "password") {
       return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
           <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -376,7 +376,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     // PIN
     if (authStep === "pin") {
       return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
           <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -403,7 +403,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     // Pattern
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -434,7 +434,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     if (setupStep === "choose") {
       return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
           <Logo />
           <div className="mb-8">
             <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.5rem" }}>
@@ -478,7 +478,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     if (setupStep === "pin") {
       return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
           <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -494,7 +494,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -541,7 +541,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "info") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <RegHeader onBack={() => { resetRegister(); setScreen("phone"); }} />
         <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Бүртгүүлэх</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-6">Нэг удаа бүртгүүлж, хурдан захиалаарай</p>
@@ -592,7 +592,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "choose") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <RegHeader onBack={() => setRegStep("info")} />
         <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Нууцлал сонгох</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-8">Аппыг хамгаалах аргаа сонгоорой</p>
@@ -630,7 +630,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "pin") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <RegHeader onBack={() => { setPinFirst(""); setRegStep("choose"); }} />
         <PinPad
           title={pinFirst ? "PIN баталгаажуулах" : "PIN тохируулах"}
@@ -644,7 +644,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "pattern") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <RegHeader onBack={() => { setPatternFirst(""); setRegStep("choose"); }} />
         <PatternLock
           title={patternFirst ? "Pattern баталгаажуулах" : "Pattern тохируулах"}
