@@ -286,21 +286,20 @@ export function useStore() {
   );
 
   const assignCourier = useCallback(
-    async (orderId: string, courierId: string) => {
+    async (orderId: string, courierId: string, price?: number) => {
       const cr = courierAccounts.find((c) => c.id === courierId);
       if (!cr) return;
       await supabase.from("couriers").update({ available: false }).eq("id", courierId);
-      await supabase
-        .from("orders")
-        .update({
-          status: "томилогдсон",
-          courier_id: courierId,
-          courier_name: cr.name,
-          courier_phone: cr.phone,
-          eta: etaTime(30),
-          assigned_at: nowTime(),
-        })
-        .eq("id", orderId);
+      const patch: any = {
+        status: "томилогдсон",
+        courier_id: courierId,
+        courier_name: cr.name,
+        courier_phone: cr.phone,
+        eta: etaTime(30),
+        assigned_at: nowTime(),
+      };
+      if (price != null) patch.price = Math.max(5000, Math.round(price));
+      await supabase.from("orders").update(patch).eq("id", orderId);
       await Promise.all([refreshOrders(), refreshCouriers()]);
     },
     [courierAccounts, refreshOrders, refreshCouriers],

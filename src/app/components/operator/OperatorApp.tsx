@@ -6,7 +6,7 @@ interface OperatorAppProps {
   orders: Order[];
   couriers: CourierUser[];
   operatorName: string;
-  onAssign: (orderId: string, courierId: string) => void;
+  onAssign: (orderId: string, courierId: string, price: number) => void;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onLogout: () => void;
 }
@@ -34,6 +34,7 @@ type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан"
 export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdateStatus, onLogout }: OperatorAppProps) {
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState("5000");
 
   const newCount = orders.filter((o) => o.status === "шинэ").length;
   const activeCount = orders.filter((o) => ["томилогдсон", "авсан"].includes(o.status)).length;
@@ -139,7 +140,11 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                 {/* Row */}
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
-                  onClick={() => setExpandedId(expanded ? null : order.id)}
+                  onClick={() => {
+                    const opening = !expanded;
+                    setExpandedId(opening ? order.id : null);
+                    if (opening) setPriceInput(String(order.price > 0 ? order.price : 5000));
+                  }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -153,7 +158,9 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-primary font-mono">₮{order.price.toLocaleString()}</p>
+                    {order.price > 0
+                      ? <p className="text-sm font-bold text-primary font-mono">₮{order.price.toLocaleString()}</p>
+                      : <p className="text-xs text-amber-400">Үнэ?</p>}
                     <p className="text-xs text-muted-foreground">{order.createdAt}</p>
                   </div>
                   <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`} />
@@ -225,6 +232,20 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                     {/* Actions */}
                     {canAssign && (
                       <div>
+                        {/* Price input — operator sets the delivery price */}
+                        <p className="text-xs text-muted-foreground mb-1.5">Хүргэлтийн үнэ (доод тал нь 5,000₮)</p>
+                        <div className="flex items-center gap-1.5 bg-secondary border border-border rounded-xl px-3 py-2.5 mb-3">
+                          <span className="text-sm text-muted-foreground">₮</span>
+                          <input
+                            type="number"
+                            min={5000}
+                            step={500}
+                            value={priceInput}
+                            onChange={(e) => setPriceInput(e.target.value)}
+                            className="flex-1 bg-transparent text-sm font-mono focus:outline-none"
+                          />
+                        </div>
+
                         <p className="text-xs text-muted-foreground mb-2">Куриер томилох</p>
                         {availableCouriers.length === 0 ? (
                           <p className="text-xs text-center text-muted-foreground py-2 border border-border rounded-xl">Чөлөөт куриер байхгүй байна</p>
@@ -233,14 +254,14 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                             {availableCouriers.map((c) => (
                               <button
                                 key={c.id}
-                                onClick={() => { onAssign(order.id, c.id); setExpandedId(null); }}
+                                onClick={() => { onAssign(order.id, c.id, Math.max(5000, parseInt(priceInput, 10) || 5000)); setExpandedId(null); }}
                                 className="w-full flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
                               >
                                 <div className="flex items-center gap-2">
                                   <span className="text-lg">{VEHICLE_ICON[c.vehicle]}</span>
                                   <div className="text-left">
                                     <p className="text-sm font-medium">{c.name}</p>
-                                    <p className="text-xs opacity-70">{c.zone} · ★{c.rating}</p>
+                                    <p className="text-xs opacity-70">★{c.rating} · {c.vehicle}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">

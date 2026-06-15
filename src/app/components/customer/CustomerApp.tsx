@@ -105,18 +105,15 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
   function handleEstimate() {
     if (!fromAddr.trim() || !toAddr.trim()) return;
-    const dist = Math.floor(Math.random() * 22 + 5);
-    setEstimated({ price: 5000 + dist * 400, distance: dist });
     setOrderStep("confirm");
   }
 
   async function handleConfirm() {
-    if (!estimated) return;
     const id = await onAddOrder({
       fromAddress: fromAddr, toAddress: toAddr,
       fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
       packageNote: note || "Тэмдэглэлгүй",
-      price: estimated.price, distance: estimated.distance,
+      price: 0, distance: 0, // үнийг оператор тогтооно
       customerName: userName, customerPhone: userPhone, customerId: userId,
     });
     setMyOrderId(id);
@@ -127,14 +124,13 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   async function handleCargoOrder() {
     if (!cargoRoute || placingCargo) return;
     setPlacingCargo(true);
-    const dist = Math.floor(Math.random() * 22 + 5);
     try {
       const id = await onAddOrder({
         fromAddress: cargoRoute.fromAddress, toAddress: cargoRoute.toAddress,
         fromDetail: cargoRoute.fromDetail || cargoRoute.fromAddress,
         toDetail: cargoRoute.toDetail || cargoRoute.toAddress,
         packageNote: "Карго",
-        price: 5000 + dist * 400, distance: dist,
+        price: 0, distance: 0, // үнийг оператор тогтооно
         customerName: userName, customerPhone: userPhone, customerId: userId,
       });
       setMyOrderId(id);
@@ -349,13 +345,13 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                   style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
                 >
-                  Үнэ шалгах <ArrowRight className="w-4 h-4" />
+                  Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
 
             {/* CONFIRM */}
-            {orderStep === "confirm" && estimated && (
+            {orderStep === "confirm" && (
               <div className="space-y-4">
                 <button onClick={() => setOrderStep("form")} className="text-sm text-muted-foreground flex items-center gap-1 hover:text-foreground">
                   ← Буцах
@@ -393,19 +389,13 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                   )}
                 </div>
 
-                {/* Price */}
-                <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Хүргэлтийн үнэ</p>
-                    <div className="text-3xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
-                      ₮{estimated.price.toLocaleString()}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">~25–45 минут · {estimated.distance} км</p>
+                {/* Price — operator sets it after the order is placed */}
+                <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold">Үнэ операторын зүгээс тогтоогдоно</p>
                   </div>
-                  <div className="text-right text-xs text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-1 justify-end"><Clock className="w-3.5 h-3.5" /> Хурдан хүргэлт</div>
-                    <div className="flex items-center gap-1 justify-end"><Star className="w-3.5 h-3.5 text-amber-400" /> Баталгаатай куриер</div>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна. Доод үнэ — 5,000₮.</p>
                 </div>
 
                 <button
@@ -413,7 +403,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                   style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
                 >
-                  Захиалах — ₮{estimated.price.toLocaleString()} <ArrowRight className="w-4 h-4" />
+                  Захиалах <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -428,8 +418,12 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                       {myOrder.status === "хүргэгдсэн" ? "Амжилттай!" : "Захиалгын явц"}
                     </h2>
                   </div>
-                  <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
-                    ₮{myOrder.price.toLocaleString()}
+                  <span className="text-right" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                    {myOrder.price > 0 ? (
+                      <span className="text-xl font-bold text-primary">₮{myOrder.price.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Үнэ тогтоогдож байна</span>
+                    )}
                   </span>
                 </div>
 
