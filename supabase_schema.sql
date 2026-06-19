@@ -44,9 +44,9 @@ create table if not exists customers (
   phone       text not null,
   auth_method text not null,
   auth_key    text not null,
-  addresses   jsonb not null default '[]'::jsonb,
-  cargo_route jsonb,
-  created_at  text not null
+  addresses    jsonb not null default '[]'::jsonb,
+  quick_orders jsonb not null default '[]'::jsonb,
+  created_at   text not null
 );
 
 -- ---- Orders -----------------------------------------------

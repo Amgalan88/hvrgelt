@@ -9,7 +9,10 @@ export interface SavedAddress {
   icon: "home" | "work" | "other";
 }
 
-export interface CargoRoute {
+export interface QuickOrder {
+  id: string;
+  label: string;
+  emoji: string;
   fromAddress: string;
   fromDetail: string;
   toAddress: string;
@@ -22,8 +25,8 @@ interface UserContextValue {
   savedAddresses: SavedAddress[];
   addAddress: (a: Omit<SavedAddress, "id">) => void;
   removeAddress: (id: string) => void;
-  cargoRoute: CargoRoute | null;
-  setCargoRoute: (route: CargoRoute) => void;
+  quickOrders: QuickOrder[];
+  saveQuickOrders: (list: QuickOrder[]) => void;
   loadCustomer: (customerId: string) => Promise<void>;
   clearCustomer: () => void;
   pin: string | null;
@@ -37,7 +40,7 @@ const UserContext = createContext<UserContextValue | null>(null);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const [cargoRoute, setCargoRouteState] = useState<CargoRoute | null>(null);
+  const [quickOrders, setQuickOrders] = useState<QuickOrder[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [pin, setPin] = useState<string | null>(null);
   const [pattern, setPattern] = useState<string | null>(null);
@@ -57,24 +60,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
-  // Load a customer's saved addresses + cargo route from the DB on login
+  // Load a customer's saved addresses + quick orders from the DB on login
   const loadCustomer = useCallback(async (cid: string) => {
     setCustomerId(cid);
-    const { data } = await supabase.from("customers").select("addresses, cargo_route").eq("id", cid).single();
+    const { data } = await supabase.from("customers").select("addresses, quick_orders").eq("id", cid).single();
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
-    setCargoRouteState((data?.cargo_route as CargoRoute) ?? null);
+    setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
   }, []);
 
   const clearCustomer = useCallback(() => {
     setCustomerId(null);
     setSavedAddresses([]);
-    setCargoRouteState(null);
+    setQuickOrders([]);
   }, []);
-
-  function setCargoRoute(route: CargoRoute) {
-    setCargoRouteState(route);
-    if (customerId) supabase.from("customers").update({ cargo_route: route }).eq("id", customerId).then(() => {});
-  }
 
   // Persist the full address list to the DB
   async function persistAddresses(next: SavedAddress[]) {
@@ -90,8 +88,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     persistAddresses(savedAddresses.filter((a) => a.id !== id));
   }
 
+  // Persist the full quick-order list to the DB
+  function saveQuickOrders(list: QuickOrder[]) {
+    setQuickOrders(list);
+    if (customerId) supabase.from("customers").update({ quick_orders: list }).eq("id", customerId).then(() => {});
+  }
+
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, removeAddress, cargoRoute, setCargoRoute, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );
