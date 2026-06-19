@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search } from "lucide-react";
+import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
 import { useUser } from "../shared/UserContext";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
+import { PARTNERS, PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
 
-type AppTab = "order" | "history" | "settings";
+type AppTab = "order" | "places" | "history" | "settings";
 type OrderStep = "form" | "confirm" | "tracking";
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
@@ -92,6 +93,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
 
   // ── Cargo quick-order (one-tap saved route) ──
+  const [placesCat, setPlacesCat] = useState<PartnerCategory>("Карго");
   const [cargoSetup, setCargoSetup] = useState(false);
   const [cFrom, setCFrom] = useState("");
   const [cFromDetail, setCFromDetail] = useState("");
@@ -155,6 +157,16 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
       toAddress: cTo.trim(), toDetail: cToDetail.trim(),
     });
     setCargoSetup(false);
+  }
+
+  // Start an order from a partner place (pickup pre-filled)
+  function orderFromPartner(p: Partner) {
+    setFromAddr(p.address);
+    setFromDetail(p.detail);
+    setNote(`${p.category}: ${p.name}`);
+    setToAddr(""); setToDetail("");
+    setOrderStep("form");
+    setAppTab("order");
   }
 
   function handleNewOrder() {
@@ -496,6 +508,49 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
         )}
 
         {/* ── HISTORY TAB ── */}
+        {/* ── PLACES TAB ── */}
+        {tab === "places" && (
+          <div className="space-y-4">
+            <div>
+              <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.4rem" }}>Газрууд</h2>
+              <p className="text-muted-foreground text-sm mt-0.5">Карго, дэлгүүр, заханаас шууд хүргүүл</p>
+            </div>
+
+            {/* Category chips */}
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+              {PARTNER_CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setPlacesCat(c.key)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors ${placesCat === c.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
+                >
+                  <span>{c.emoji}</span> {c.key}
+                </button>
+              ))}
+            </div>
+
+            {/* Partner list */}
+            <div className="space-y-2.5">
+              {PARTNERS.filter((p) => p.category === placesCat).map((p) => (
+                <div key={p.id} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">{p.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{p.address}{p.detail ? `, ${p.detail}` : ""}</p>
+                  </div>
+                  <button
+                    onClick={() => orderFromPartner(p)}
+                    className="shrink-0 text-xs bg-primary text-primary-foreground px-3 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
+                    style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                  >
+                    Хүргүүлэх <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {tab === "history" && (
           <div className="space-y-4">
             <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>Захиалгын түүх</h2>
@@ -555,6 +610,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
         <div className="max-w-sm mx-auto flex">
           {([
             { key: "order" as AppTab, label: "Захиалга", icon: Truck },
+            { key: "places" as AppTab, label: "Газрууд", icon: Store },
             { key: "history" as AppTab, label: "Түүх", icon: Clock, badge: activeCount },
             { key: "settings" as AppTab, label: "Тохиргоо", icon: ({ className }: { className?: string }) => (
               <div className={`w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold ${className}`} style={{ fontSize: "0.6rem" }}>
