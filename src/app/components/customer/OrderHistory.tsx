@@ -1,4 +1,5 @@
-import { MapPin, Package, ChevronRight, Clock, CheckCircle, XCircle } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Package, ChevronRight, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
@@ -16,7 +17,26 @@ interface OrderHistoryProps {
 }
 
 export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
-  const myOrders = orders.filter((o) => o.customerId === userId || o.customerId.startsWith("cu-new"));
+  // Hidden orders are cleared from the customer's view only — NOT deleted from the DB.
+  const HIDDEN_KEY = "hvrgelt_hidden_orders_" + userId;
+  const [hidden, setHidden] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]"));
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const myOrders = orders.filter(
+    (o) => (o.customerId === userId || o.customerId.startsWith("cu-new")) && !hidden.has(o.id),
+  );
+
+  function clearPast(pastOrders: Order[]) {
+    const next = new Set(hidden);
+    pastOrders.forEach((o) => next.add(o.id));
+    setHidden(next);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+  }
 
   if (myOrders.length === 0) {
     return (
@@ -48,7 +68,15 @@ export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
       {/* Past orders */}
       {past.length > 0 && (
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2" style={{ fontSize: "0.7rem" }}>Өмнөх захиалгууд</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider" style={{ fontSize: "0.7rem" }}>Өмнөх захиалгууд</p>
+            <button
+              onClick={() => clearPast(past)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Цэвэрлэх
+            </button>
+          </div>
           <div className="space-y-2">
             {past.map((o) => <OrderCard key={o.id} order={o} onTrack={onTrack} />)}
           </div>

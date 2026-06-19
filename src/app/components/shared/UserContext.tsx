@@ -24,6 +24,7 @@ interface UserContextValue {
   toggleTheme: () => void;
   savedAddresses: SavedAddress[];
   addAddress: (a: Omit<SavedAddress, "id">) => void;
+  updateAddress: (id: string, a: Omit<SavedAddress, "id">) => void;
   removeAddress: (id: string) => void;
   quickOrders: QuickOrder[];
   saveQuickOrders: (list: QuickOrder[]) => void;
@@ -84,6 +85,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     persistAddresses([...savedAddresses, { ...a, id: "sa-" + Date.now() }]);
   }
 
+  function updateAddress(id: string, a: Omit<SavedAddress, "id">) {
+    persistAddresses(savedAddresses.map((x) => (x.id === id ? { ...a, id } : x)));
+  }
+
   function removeAddress(id: string) {
     persistAddresses(savedAddresses.filter((a) => a.id !== id));
   }
@@ -95,7 +100,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, updateAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );

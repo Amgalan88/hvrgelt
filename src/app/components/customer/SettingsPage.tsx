@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Briefcase, MapPin, Plus, Trash2, Moon, Sun, ChevronRight, X, Lock } from "lucide-react";
+import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock } from "lucide-react";
 import { useUser, type SavedAddress } from "../shared/UserContext";
 import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
@@ -11,21 +11,22 @@ const ICON_MAP = {
 };
 
 interface AddAddressModalProps {
+  initial?: SavedAddress;
   onClose: () => void;
   onSave: (a: Omit<SavedAddress, "id">) => void;
 }
 
-function AddAddressModal({ onClose, onSave }: AddAddressModalProps) {
-  const [label, setLabel] = useState("");
-  const [address, setAddress] = useState("");
-  const [detail, setDetail] = useState("");
-  const [icon, setIcon] = useState<"home" | "work" | "other">("other");
+function AddAddressModal({ initial, onClose, onSave }: AddAddressModalProps) {
+  const [label, setLabel] = useState(initial?.label ?? "");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [detail, setDetail] = useState(initial?.detail ?? "");
+  const [icon, setIcon] = useState<"home" | "work" | "other">(initial?.icon ?? "other");
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>Хаяг нэмэх</h3>
+          <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{initial ? "Хаяг засах" : "Хаяг нэмэх"}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
@@ -110,8 +111,9 @@ type LockFlow =
   | null;
 
 export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
-  const { theme, toggleTheme, savedAddresses, addAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
+  const { theme, toggleTheme, savedAddresses, addAddress, updateAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
   const [showAdd, setShowAdd] = useState(false);
+  const [editAddr, setEditAddr] = useState<SavedAddress | null>(null);
   const [lockFlow, setLockFlow] = useState<LockFlow>(null);
   const [pending, setPending] = useState("");
   const [lockError, setLockError] = useState("");
@@ -193,6 +195,12 @@ export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: Se
                 <p className="text-sm font-medium">{addr.label}</p>
                 <p className="text-xs text-muted-foreground truncate">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
               </div>
+              <button
+                onClick={() => setEditAddr(addr)}
+                className="text-muted-foreground hover:text-primary transition-colors p-1"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => removeAddress(addr.id)}
                 className="text-muted-foreground hover:text-destructive transition-colors p-1"
@@ -291,6 +299,13 @@ export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: Se
       </button>
 
       {showAdd && <AddAddressModal onClose={() => setShowAdd(false)} onSave={addAddress} />}
+      {editAddr && (
+        <AddAddressModal
+          initial={editAddr}
+          onClose={() => setEditAddr(null)}
+          onSave={(data) => updateAddress(editAddr.id, data)}
+        />
+      )}
 
       {/* Lock setup modals */}
       {lockFlow && (

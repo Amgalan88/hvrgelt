@@ -1,6 +1,6 @@
 // Партнёр газрууд — одоогоор mock дата (дараа нь DB-д шилжинэ).
 
-export type PartnerCategory = "Карго" | "Дэлгүүр" | "Зах" | "Кофе шоп" | "Тээш";
+export type PartnerCategory = "Карго" | "Дэлгүүр" | "Зах" | "Кофе шоп" | "Тээш" | "Аптек";
 
 export interface Partner {
   id: string;
@@ -18,6 +18,7 @@ export const PARTNER_CATEGORIES: { key: PartnerCategory; emoji: string }[] = [
   { key: "Зах",       emoji: "🛒" },
   { key: "Кофе шоп",  emoji: "☕" },
   { key: "Тээш",      emoji: "🧳" },
+  { key: "Аптек",     emoji: "💊" },
 ];
 
 export const PARTNERS: Partner[] = [
@@ -43,4 +44,9 @@ export const PARTNERS: Partner[] = [
   // ── Тээш ──
   { id: "p-teesh-1", name: "Хурдан тээш", category: "Тээш", emoji: "🧳", address: "Дархан, автовокзал", detail: "Тээшний цэг 1", area: "Дархан" },
   { id: "p-teesh-2", name: "Улаанбаатар тээш", category: "Тээш", emoji: "🧳", address: "Дархан, автовокзал", detail: "Тээшний цэг 3", area: "Дархан" },
+
+  // ── Аптек ──
+  { id: "p-pharm-1", name: "Монос аптек", category: "Аптек", emoji: "💊", address: "Дархан, төв", detail: "Соёлын ордны урд", area: "Дархан" },
+  { id: "p-pharm-2", name: "Хүнс-Энэрэл аптек", category: "Аптек", emoji: "💊", address: "Дархан, 8-р баг", detail: "16-р байрны 1 давхар", area: "Дархан" },
+  { id: "p-pharm-3", name: "Тавилаг аптек", category: "Аптек", emoji: "💊", address: "Дархан, 12-р баг", detail: "Шинэ хороолол", area: "Дархан" },
 ];
