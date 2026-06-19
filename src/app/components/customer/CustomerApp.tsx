@@ -106,6 +106,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   const [qTo, setQTo] = useState("");
   const [qToDetail, setQToDetail] = useState("");
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const [confirmQO, setConfirmQO] = useState<QuickOrder | null>(null);
 
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
@@ -179,6 +180,13 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
   function deleteQuick(id: string) {
     saveQuickOrders(quickOrders.filter((q) => q.id !== id));
+  }
+
+  async function confirmPlaceQuick() {
+    if (!confirmQO) return;
+    const qo = confirmQO;
+    setConfirmQO(null);
+    await placeQuickOrder(qo);
   }
 
   // Start an order from a partner place (pickup pre-filled)
@@ -258,7 +266,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                     {quickOrders.map((qo) => (
                       <div key={qo.id} className="relative">
                         <button
-                          onClick={() => (quickEdit ? openQuickEdit(qo) : placeQuickOrder(qo))}
+                          onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
                           disabled={placingId === qo.id}
                           className="w-full flex flex-col items-center gap-1.5 group disabled:opacity-50"
                         >
@@ -631,6 +639,25 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
             </div>
 
             <button onClick={handleSaveQuick} disabled={!qLabel.trim() || !qFrom.trim() || !qTo.trim()} className="w-full bg-primary text-primary-foreground py-3 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Хадгалах</button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick order confirm modal */}
+      {confirmQO && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" onClick={() => setConfirmQO(null)}>
+          <div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl mx-auto mb-3">{confirmQO.emoji}</div>
+            <p className="font-bold mb-2" style={{ fontFamily: "'Roboto Slab', serif" }}>{confirmQO.label}</p>
+            <div className="text-xs text-muted-foreground space-y-0.5 mb-3 text-left bg-secondary/40 rounded-xl p-3">
+              <p className="truncate"><span className="text-green-400">●</span> {confirmQO.fromAddress}{confirmQO.fromDetail ? `, ${confirmQO.fromDetail}` : ""}</p>
+              <p className="truncate"><span className="text-primary">◆</span> {confirmQO.toAddress}{confirmQO.toDetail ? `, ${confirmQO.toDetail}` : ""}</p>
+            </div>
+            <p className="text-sm text-muted-foreground mb-5">Хурдан захиалга үүсгэхэд итгэлтэй байна уу?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmQO(null)} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:bg-secondary/50 transition-colors">Болих</button>
+              <button onClick={confirmPlaceQuick} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Захиалах</button>
+            </div>
           </div>
         </div>
       )}
