@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "motion/react";
 import { Truck, ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock } from "lucide-react";
 import type { UserRole } from "../shared/types";
 import type { AccountLookup } from "../shared/store";
@@ -235,21 +236,22 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
           </nav>
 
           <div className="relative z-10 mt-auto px-5 pb-10 space-y-5">
-            <div>
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
               <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
               <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ куриертэй холбогдоорой.</p>
-            </div>
-            <div className="space-y-2.5">
-              <button
+            </motion.div>
+            <motion.div className="space-y-2.5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setScreen("phone")}
                 className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}
               >
                 Эхлэх <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
         </div>
       </div>

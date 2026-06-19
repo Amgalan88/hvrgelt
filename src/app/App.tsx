@@ -10,6 +10,7 @@ import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { Truck, LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Session {
   role: UserRole;
@@ -153,9 +154,12 @@ function Inner() {
         />
       )}
 
+      <AnimatePresence>
       {confirmLogout && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" style={{ fontFamily: "'Inter', sans-serif" }}>
-          <div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center">
+        <motion.div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" style={{ fontFamily: "'Inter', sans-serif" }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center"
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }}>
             <div className="w-12 h-12 rounded-full bg-destructive/15 border border-destructive/30 flex items-center justify-center mx-auto mb-4">
               <LogOut className="w-5 h-5 text-destructive" />
             </div>
@@ -175,9 +179,10 @@ function Inner() {
                 Гарах
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </>
   );
 }

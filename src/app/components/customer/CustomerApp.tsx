@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
 import { useUser, type QuickOrder } from "../shared/UserContext";
@@ -238,6 +239,14 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
       {/* Main content */}
       <div className="flex-1 max-w-sm mx-auto w-full px-4 py-5 pb-24">
+       <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
 
         {/* ── ORDER TAB ── */}
         {tab === "order" && (
@@ -263,9 +272,16 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                     )}
                   </div>
                   <div className="grid grid-cols-4 gap-2.5">
-                    {quickOrders.map((qo) => (
-                      <div key={qo.id} className="relative">
-                        <button
+                    {quickOrders.map((qo, i) => (
+                      <motion.div
+                        key={qo.id}
+                        className="relative"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.04, type: "spring", damping: 20, stiffness: 300 }}
+                      >
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
                           onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
                           disabled={placingId === qo.id}
                           className="w-full flex flex-col items-center gap-1.5 group disabled:opacity-50"
@@ -274,13 +290,13 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                             {placingId === qo.id ? "…" : qo.emoji}
                           </div>
                           <span className="text-[11px] text-center leading-tight truncate w-full">{qo.label}</span>
-                        </button>
+                        </motion.button>
                         {quickEdit && (
                           <button onClick={() => deleteQuick(qo.id)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow">
                             <X className="w-3 h-3" />
                           </button>
                         )}
-                      </div>
+                      </motion.div>
                     ))}
                     <button onClick={openQuickAdd} className="flex flex-col items-center gap-1.5">
                       <div className="w-full aspect-square rounded-2xl bg-card border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors">
@@ -559,8 +575,14 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
             {/* Partner list */}
             <div className="space-y-2.5">
-              {PARTNERS.filter((p) => p.category === placesCat).map((p) => (
-                <div key={p.id} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
+              {PARTNERS.filter((p) => p.category === placesCat).map((p, i) => (
+                <motion.div
+                  key={p.id}
+                  className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.25, ease: "easeOut" }}
+                >
                   <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">{p.emoji}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{p.name}</p>
@@ -573,7 +595,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                   >
                     Хүргүүлэх <ArrowRight className="w-3.5 h-3.5" />
                   </button>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -597,12 +619,18 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
             <SettingsPage userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
         )}
+
+        </motion.div>
+       </AnimatePresence>
       </div>
 
       {/* Quick order add/edit modal */}
+      <AnimatePresence>
       {quickModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setQuickModal(false)}>
-          <div className="bg-card border border-border rounded-t-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <motion.div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setQuickModal(false)}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div className="bg-card border border-border rounded-t-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{editingId ? "Хурдан захиалга засах" : "Хурдан захиалга нэмэх"}</h3>
               <button onClick={() => setQuickModal(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
@@ -639,14 +667,18 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
             </div>
 
             <button onClick={handleSaveQuick} disabled={!qLabel.trim() || !qFrom.trim() || !qTo.trim()} className="w-full bg-primary text-primary-foreground py-3 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Хадгалах</button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Quick order confirm modal */}
+      <AnimatePresence>
       {confirmQO && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" onClick={() => setConfirmQO(null)}>
-          <div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <motion.div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" onClick={() => setConfirmQO(null)}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center" onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }}>
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl mx-auto mb-3">{confirmQO.emoji}</div>
             <p className="font-bold mb-2" style={{ fontFamily: "'Roboto Slab', serif" }}>{confirmQO.label}</p>
             <div className="text-xs text-muted-foreground space-y-0.5 mb-3 text-left bg-secondary/40 rounded-xl p-3">
@@ -658,9 +690,10 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
               <button onClick={() => setConfirmQO(null)} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:bg-secondary/50 transition-colors">Болих</button>
               <button onClick={confirmPlaceQuick} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Захиалах</button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
