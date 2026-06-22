@@ -142,6 +142,7 @@ export function useStore() {
   const [operatorAccounts, setOperatorAccounts] = useState<OperatorAccount[]>([]);
   const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>([]);
   const [customerAccounts] = useState<CustomerAccount[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // ── Initial load + realtime subscriptions ──────────────────────────
   const refreshOrders = useCallback(async () => {
@@ -169,9 +170,7 @@ export function useStore() {
   }, []);
 
   useEffect(() => {
-    refreshOrders();
-    refreshCouriers();
-    refreshOperators();
+    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators()]).finally(() => setLoading(false));
 
     const ordersChannel = supabase
       .channel("orders-changes")
@@ -449,6 +448,7 @@ export function useStore() {
   return {
     orders,
     couriers,
+    loading,
     operatorAccounts,
     courierAccounts,
     customerAccounts,

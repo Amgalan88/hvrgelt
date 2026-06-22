@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X } from "lucide-react";
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
+import { Spinner } from "../shared/Spinner";
 
 interface OperatorAppProps {
   orders: Order[];
   couriers: CourierUser[];
   operatorName: string;
-  onAssign: (orderId: string, courierId: string, price: number) => void;
+  onAssign: (orderId: string, courierId: string, price: number) => void | Promise<void>;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onLogout: () => void;
 }
@@ -35,6 +36,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("5000");
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const newCount = orders.filter((o) => o.status === "шинэ").length;
   const activeCount = orders.filter((o) => ["томилогдсон", "авсан"].includes(o.status)).length;
@@ -254,8 +256,17 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                             {availableCouriers.map((c) => (
                               <button
                                 key={c.id}
-                                onClick={() => { onAssign(order.id, c.id, Math.max(5000, parseInt(priceInput, 10) || 5000)); setExpandedId(null); }}
-                                className="w-full flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors"
+                                disabled={assigningId === order.id}
+                                onClick={async () => {
+                                  setAssigningId(order.id);
+                                  try {
+                                    await onAssign(order.id, c.id, Math.max(5000, parseInt(priceInput, 10) || 5000));
+                                    setExpandedId(null);
+                                  } finally {
+                                    setAssigningId(null);
+                                  }
+                                }}
+                                className="w-full flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
                               >
                                 <div className="flex items-center gap-2">
                                   <span className="text-lg">{VEHICLE_ICON[c.vehicle]}</span>
@@ -266,7 +277,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs opacity-80">{c.vehicle}</span>
-                                  <CheckCircle className="w-4 h-4" />
+                                  {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                                 </div>
                               </button>
                             ))}

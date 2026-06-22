@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
 import { useUser, type QuickOrder } from "../shared/UserContext";
+import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNERS, PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
@@ -108,6 +109,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   const [qToDetail, setQToDetail] = useState("");
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [confirmQO, setConfirmQO] = useState<QuickOrder | null>(null);
+  const [placing, setPlacing] = useState(false);
 
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
@@ -119,15 +121,21 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
   }
 
   async function handleConfirm() {
-    const id = await onAddOrder({
-      fromAddress: fromAddr, toAddress: toAddr,
-      fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
-      packageNote: note || "Тэмдэглэлгүй",
-      price: 0, distance: 0, // үнийг оператор тогтооно
-      customerName: userName, customerPhone: userPhone, customerId: userId,
-    });
-    setMyOrderId(id);
-    setOrderStep("tracking");
+    if (placing) return;
+    setPlacing(true);
+    try {
+      const id = await onAddOrder({
+        fromAddress: fromAddr, toAddress: toAddr,
+        fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
+        packageNote: note || "Тэмдэглэлгүй",
+        price: 0, distance: 0, // үнийг оператор тогтооно
+        customerName: userName, customerPhone: userPhone, customerId: userId,
+      });
+      setMyOrderId(id);
+      setOrderStep("tracking");
+    } finally {
+      setPlacing(false);
+    }
   }
 
   // One-tap order from a saved quick-order shortcut
@@ -456,10 +464,11 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
                 <button
                   onClick={handleConfirm}
-                  className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                  disabled={placing}
+                  className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-primary/90 transition-colors"
                   style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
                 >
-                  Захиалах <ArrowRight className="w-4 h-4" />
+                  {placing ? <Spinner className="w-5 h-5" /> : <>Захиалах <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             )}

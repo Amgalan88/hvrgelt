@@ -9,6 +9,7 @@ import { CourierApp } from "./components/courier/CourierApp";
 import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
+import { LoadingScreen } from "./components/shared/Spinner";
 import { Truck, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -99,6 +100,11 @@ function Inner() {
         </div>
       </div>
     );
+  }
+
+  // Logged-in screens need DB data — show a loading screen until it arrives
+  if (store.loading) {
+    return <LoadingScreen />;
   }
 
   return (

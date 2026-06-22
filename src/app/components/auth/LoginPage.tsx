@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { Truck, ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock } from "lucide-react";
+import { Spinner } from "../shared/Spinner";
 import type { UserRole } from "../shared/types";
 import type { AccountLookup } from "../shared/store";
 import { PinPad } from "../shared/PinPad";
@@ -33,6 +34,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   const savedPhone = localStorage.getItem(SAVED_PHONE_KEY) ?? "";
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Auth
   const [account, setAccount] = useState<AccountLookup | null>(null);
@@ -89,20 +91,26 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   // ── Phone submit ─────────────────────────────────────────────────
   async function handlePhoneSubmit() {
+    if (submitting) return;
     const clean = phone.replace(/\D/g, "");
     if (clean.length < 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
-    const found = await resolveByPhone(clean);
-    if (!found) {
-      setRPhone(phone);
-      setScreen("register");
-      return;
+    setSubmitting(true);
+    try {
+      const found = await resolveByPhone(clean);
+      if (!found) {
+        setRPhone(phone);
+        setScreen("register");
+        return;
+      }
+      setAccount(found);
+      setAuthStep(found.authMethod as AuthStep);
+      setFailCount(0);
+      setLockUntil(0);
+      setAuthError("");
+      setScreen("auth");
+    } finally {
+      setSubmitting(false);
     }
-    setAccount(found);
-    setAuthStep(found.authMethod as AuthStep);
-    setFailCount(0);
-    setLockUntil(0);
-    setAuthError("");
-    setScreen("auth");
   }
 
   // ── Auth: verify ─────────────────────────────────────────────────
@@ -301,11 +309,11 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <div className="mt-6">
           <button
             onClick={handlePhoneSubmit}
-            disabled={phone.replace(/\D/g, "").length < 8}
+            disabled={phone.replace(/\D/g, "").length < 8 || submitting}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
           >
-            Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
+            {submitting ? <Spinner className="w-4 h-4" /> : <>Үргэлжлүүлэх <ArrowRight className="w-4 h-4" /></>}
           </button>
         </div>
       </div>
