@@ -92,6 +92,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
 
   // ── Quick orders (one-tap saved shortcuts) ──
   const [placesCat, setPlacesCat] = useState<PartnerCategory>("Карго");
+  const [placesSearch, setPlacesSearch] = useState("");
   const [quickEdit, setQuickEdit] = useState(false);
   const [quickModal, setQuickModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -615,28 +616,52 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
               <p className="text-muted-foreground text-sm mt-0.5">Карго, дэлгүүр, захаас шууд хүргүүл</p>
             </div>
 
-            {/* Category chips — hidden scrollbar */}
-            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {PARTNER_CATEGORIES.map((c) => (
-                <button
-                  key={c.key}
-                  onClick={() => setPlacesCat(c.key)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${placesCat === c.key ? "bg-primary text-white border-primary shadow-sm" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
-                >
-                  <span>{c.emoji}</span> {c.key}
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={placesSearch}
+                onChange={(e) => setPlacesSearch(e.target.value)}
+                placeholder="Газар хайх..."
+                className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+              />
+              {placesSearch && (
+                <button onClick={() => setPlacesSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              ))}
+              )}
             </div>
 
+            {/* Category chips — hidden when searching */}
+            {!placesSearch && (
+              <div className="flex gap-2 overflow-x-auto -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {PARTNER_CATEGORIES.map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => setPlacesCat(c.key)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${placesCat === c.key ? "bg-primary text-white border-primary shadow-sm" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
+                  >
+                    <span>{c.emoji}</span> {c.key}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Partner list */}
+            {(() => {
+              const q = placesSearch.toLowerCase();
+              const filtered = placesSearch
+                ? partners.filter(p => p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q) || p.detail.toLowerCase().includes(q))
+                : partners.filter(p => p.category === placesCat);
+              return (
             <div className="space-y-2">
-              {partners.filter((p) => p.category === placesCat).length === 0 ? (
+              {filtered.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Store className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Энэ ангилалд газар байхгүй байна</p>
+                  <p className="text-sm">{placesSearch ? `"${placesSearch}" олдсонгүй` : "Энэ ангилалд газар байхгүй байна"}</p>
                 </div>
               ) : (
-                partners.filter((p) => p.category === placesCat).map((p, i) => (
+                filtered.map((p, i) => (
                   <motion.div
                     key={p.id}
                     className="bg-card border border-border rounded-2xl overflow-hidden"
@@ -678,6 +703,8 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                 ))
               )}
             </div>
+              );
+            })()}
           </div>
         )}
 

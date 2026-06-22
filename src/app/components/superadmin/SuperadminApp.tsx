@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search } from "lucide-react";
 import type { OperatorAccount, CourierAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
@@ -271,6 +271,8 @@ export function SuperadminApp({
   const [bankDraft, setBankDraft] = useState(bankInfo);
   const [bankSaved, setBankSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("operators");
+  const [partnerCat, setPartnerCat] = useState<string>("бүгд");
+  const [partnerSearch, setPartnerSearch] = useState("");
   const [modal, setModal] = useState<
     | { type: "add-operator" }
     | { type: "edit-operator"; item: OperatorAccount }
@@ -452,7 +454,8 @@ export function SuperadminApp({
 
         {/* ── PARTNERS ── */}
         {tab === "partners" && (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {/* Header */}
             <div className="flex justify-between items-center">
               <p className="text-xs text-muted-foreground">{partners.length} газар</p>
               <button onClick={() => setModal({ type: "add-partner" })}
@@ -461,11 +464,50 @@ export function SuperadminApp({
               </button>
             </div>
 
-            {partners.map((p) => (
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={partnerSearch}
+                onChange={(e) => setPartnerSearch(e.target.value)}
+                placeholder="Газар хайх..."
+                className="w-full bg-input-background border border-border rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+              />
+              {partnerSearch && (
+                <button onClick={() => setPartnerSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Category chips */}
+            {!partnerSearch && (
+              <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
+                {[{ key: "бүгд", emoji: "🗂️" }, ...PARTNER_CATEGORIES].map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => setPartnerCat(c.key)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${partnerCat === c.key ? "bg-primary text-white border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
+                  >
+                    <span>{c.emoji}</span> {c.key}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Partner list */}
+            {(() => {
+              const q = partnerSearch.toLowerCase();
+              const list = partnerSearch
+                ? partners.filter(p => p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q))
+                : partners.filter(p => partnerCat === "бүгд" || p.category === partnerCat);
+              return list.map((p) => (
               <div key={p.id} className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">
-                    {p.emoji}
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shrink-0 overflow-hidden">
+                    {p.image
+                      ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                      : p.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -489,7 +531,8 @@ export function SuperadminApp({
                   </div>
                 </div>
               </div>
-            ))}
+            ));
+            })()}
           </div>
         )}
 
