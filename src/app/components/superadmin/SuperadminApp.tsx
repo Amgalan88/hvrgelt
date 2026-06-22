@@ -1,18 +1,24 @@
 import { useState } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin } from "lucide-react";
 import type { OperatorAccount, CourierAccount } from "../shared/store";
+import type { Partner, PartnerCategory } from "../customer/partners";
+import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
 
-type Tab = "operators" | "couriers";
+type Tab = "operators" | "couriers" | "partners";
 
 interface SuperadminAppProps {
   operatorAccounts: OperatorAccount[];
   courierAccounts: CourierAccount[];
+  partners: Partner[];
   onAddOperator: (data: { name: string; username: string; password: string; phone: string }) => void;
   onUpdateOperator: (id: string, data: Partial<Omit<OperatorAccount, "id">>) => void;
   onDeleteOperator: (id: string) => void;
   onAddCourier: (data: { name: string; username: string; password: string; phone: string; vehicle: CourierAccount["vehicle"] }) => void;
   onUpdateCourier: (id: string, data: Partial<Omit<CourierAccount, "id">>) => void;
   onDeleteCourier: (id: string) => void;
+  onAddPartner: (data: Omit<Partner, "id">) => void;
+  onUpdatePartner: (id: string, data: Partial<Omit<Partner, "id">>) => void;
+  onDeletePartner: (id: string) => void;
   onLogout: () => void;
 }
 
@@ -104,7 +110,7 @@ function CourierModal({ initial, onSave, onClose }: {
   const [showPass, setShowPass] = useState(false);
 
   return (
-    <Modal title={initial?.id ? "Куриер засах" : "Куриер нэмэх"} onClose={onClose}>
+    <Modal title={initial?.id ? "Хүргэгч засах" : "Хүргэгч нэмэх"} onClose={onClose}>
       <Field label="Овог нэр"><Input value={name} onChange={setName} placeholder="Б. Мөнхбат" /></Field>
       <Field label="Нэвтрэх нэр (username)"><Input value={username} onChange={setUsername} placeholder="munkh" /></Field>
       <Field label="Нэг удаагийн нууц үг">
@@ -154,11 +160,66 @@ function ConfirmDelete({ name, onConfirm, onClose }: { name: string; onConfirm: 
   );
 }
 
+// ── Partner modal ─────────────────────────────────────────────────────
+function PartnerModal({ initial, onSave, onClose }: {
+  initial?: Partial<Partner>;
+  onSave: (data: Omit<Partner, "id">) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [category, setCategory] = useState<PartnerCategory>(initial?.category ?? "Карго");
+  const [emoji, setEmoji] = useState(initial?.emoji ?? "📦");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [detail, setDetail] = useState(initial?.detail ?? "");
+  const [area, setArea] = useState(initial?.area ?? "Дархан");
+
+  return (
+    <Modal title={initial?.id ? "Газар засах" : "Газар нэмэх"} onClose={onClose}>
+      <Field label="Нэр"><Input value={name} onChange={setName} placeholder="Дархан бүсийн карго" /></Field>
+      <Field label="Ангилал">
+        <div className="grid grid-cols-3 gap-1.5">
+          {PARTNER_CATEGORIES.map((c) => (
+            <button key={c.key} onClick={() => setCategory(c.key)}
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl border text-xs transition-all ${category === c.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}>
+              <span>{c.emoji}</span> {c.key}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Emoji">
+        <div className="flex flex-wrap gap-1.5">
+          {PARTNER_EMOJIS.map((e) => (
+            <button key={e} onClick={() => setEmoji(e)}
+              className={`w-9 h-9 rounded-xl border text-lg transition-all ${emoji === e ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"}`}>
+              {e}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Хаяг (дүүрэг/бүс)"><Input value={address} onChange={setAddress} placeholder="Дархан, 9-р баг" /></Field>
+      <Field label="Дэлгэрэнгүй хаяг"><Input value={detail} onChange={setDetail} placeholder="Гол гудамж 4" /></Field>
+      <Field label="Хот/Бүс"><Input value={area} onChange={setArea} placeholder="Дархан" /></Field>
+      <div className="flex gap-2 pt-2">
+        <button onClick={onClose} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:border-primary/30 transition-colors">Болих</button>
+        <button
+          onClick={() => { if (name && address) { onSave({ name, category, emoji, address, detail, area }); onClose(); } }}
+          disabled={!name || !address}
+          className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
+          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+        >
+          Хадгалах
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Main superadmin app ───────────────────────────────────────────────
 export function SuperadminApp({
-  operatorAccounts, courierAccounts,
+  operatorAccounts, courierAccounts, partners,
   onAddOperator, onUpdateOperator, onDeleteOperator,
   onAddCourier, onUpdateCourier, onDeleteCourier,
+  onAddPartner, onUpdatePartner, onDeletePartner,
   onLogout,
 }: SuperadminAppProps) {
   const [tab, setTab] = useState<Tab>("operators");
@@ -167,13 +228,16 @@ export function SuperadminApp({
     | { type: "edit-operator"; item: OperatorAccount }
     | { type: "add-courier" }
     | { type: "edit-courier"; item: CourierAccount }
-    | { type: "delete"; id: string; name: string; role: "operator" | "courier" }
+    | { type: "add-partner" }
+    | { type: "edit-partner"; item: Partner }
+    | { type: "delete"; id: string; name: string; role: "operator" | "courier" | "partner" }
     | null
   >(null);
 
   const activeOps = operatorAccounts.filter((o) => o.active).length;
   const activeCrs = courierAccounts.filter((c) => c.active).length;
   const availCrs = courierAccounts.filter((c) => c.available && c.active).length;
+  const partnerCount = partners.length;
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -200,8 +264,8 @@ export function SuperadminApp({
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Оператор", value: activeOps, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
-            { label: "Куриер", value: activeCrs, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
-            { label: "Чөлөөт куриер", value: availCrs, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+            { label: "Хүргэгч", value: activeCrs, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
+            { label: "Газар", value: partnerCount, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} border rounded-xl p-3 text-center`}>
               <p className={`text-2xl font-bold ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
@@ -214,7 +278,8 @@ export function SuperadminApp({
         <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl">
           {([
             { key: "operators" as Tab, label: "Операторууд", icon: Users },
-            { key: "couriers" as Tab, label: "Куриерүүд", icon: Truck },
+            { key: "couriers" as Tab, label: "Хүргэгчид", icon: Truck },
+            { key: "partners" as Tab, label: "Газрууд", icon: MapPin },
           ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm transition-colors ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
@@ -283,7 +348,7 @@ export function SuperadminApp({
         {tab === "couriers" && (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">{courierAccounts.length} куриер</p>
+              <p className="text-xs text-muted-foreground">{courierAccounts.length} хүргэгч</p>
               <button onClick={() => setModal({ type: "add-courier" })}
                 className="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Нэмэх
@@ -300,8 +365,8 @@ export function SuperadminApp({
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium">{cr.name}</p>
                       <span className="text-base">{VEHICLE_ICON[cr.vehicle]}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cr.available && cr.active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-secondary text-muted-foreground border-border"}`}>
-                        {!cr.active ? "идэвхгүй" : cr.available ? "чөлөөтэй" : "завгүй"}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cr.active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-secondary text-muted-foreground border-border"}`}>
+                        {cr.active ? "идэвхтэй" : "идэвхгүй"}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -335,6 +400,49 @@ export function SuperadminApp({
             ))}
           </div>
         )}
+
+        {/* ── PARTNERS ── */}
+        {tab === "partners" && (
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">{partners.length} газар</p>
+              <button onClick={() => setModal({ type: "add-partner" })}
+                className="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> Нэмэх
+              </button>
+            </div>
+
+            {partners.map((p) => (
+              <div key={p.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">
+                    {p.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium">{p.name}</p>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/20">{p.category}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                      <MapPin className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{p.address}{p.detail ? ` · ${p.detail}` : ""}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => setModal({ type: "edit-partner", item: p })}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setModal({ type: "delete", id: p.id, name: p.name, role: "partner" })}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -358,10 +466,24 @@ export function SuperadminApp({
           onClose={() => setModal(null)}
         />
       )}
+      {modal?.type === "add-partner" && (
+        <PartnerModal onSave={onAddPartner} onClose={() => setModal(null)} />
+      )}
+      {modal?.type === "edit-partner" && (
+        <PartnerModal
+          initial={modal.item}
+          onSave={(data) => onUpdatePartner(modal.item.id, data)}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal?.type === "delete" && (
         <ConfirmDelete
           name={modal.name}
-          onConfirm={() => modal.role === "operator" ? onDeleteOperator(modal.id) : onDeleteCourier(modal.id)}
+          onConfirm={() =>
+            modal.role === "operator" ? onDeleteOperator(modal.id) :
+            modal.role === "courier" ? onDeleteCourier(modal.id) :
+            onDeletePartner(modal.id)
+          }
           onClose={() => setModal(null)}
         />
       )}

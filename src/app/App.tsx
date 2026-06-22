@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { UserRole } from "./components/shared/types";
 import { useStore } from "./components/shared/store";
 import { UserProvider, useUser } from "./components/shared/UserContext";
@@ -21,7 +21,14 @@ interface Session {
 }
 
 function Inner() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(() => {
+    try {
+      const saved = localStorage.getItem("hvrgelt_session");
+      return saved ? (JSON.parse(saved) as Session) : null;
+    } catch {
+      return null;
+    }
+  });
   const [pinVerified, setPinVerified] = useState(false);
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
@@ -30,14 +37,23 @@ function Inner() {
   const { pin, pattern, loadCustomer, clearCustomer } = useUser();
   const hasLock = !!(pin || pattern);
 
+  // If a customer session was restored from localStorage, load their saved data
+  useEffect(() => {
+    if (session?.role === "customer") loadCustomer(session.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleLogin(role: UserRole, id: string, name: string, phone: string) {
-    setSession({ role, id, name, phone });
+    const s = { role, id, name, phone };
+    setSession(s);
+    localStorage.setItem("hvrgelt_session", JSON.stringify(s));
     setPinVerified(true); // LoginPage already verified auth for everyone
     setPinError("");
     if (role === "customer") loadCustomer(id);
   }
 
   function doLogout() {
+    localStorage.removeItem("hvrgelt_session");
     setSession(null);
     setMyOrderId(null);
     setPinVerified(false);
@@ -113,12 +129,16 @@ function Inner() {
         <SuperadminApp
           operatorAccounts={store.operatorAccounts}
           courierAccounts={store.courierAccounts}
+          partners={store.partners}
           onAddOperator={store.addOperator}
           onUpdateOperator={store.updateOperator}
           onDeleteOperator={store.deleteOperator}
           onAddCourier={store.addCourier}
           onUpdateCourier={store.updateCourier}
           onDeleteCourier={store.deleteCourier}
+          onAddPartner={store.addPartner}
+          onUpdatePartner={store.updatePartner}
+          onDeletePartner={store.deletePartner}
           onLogout={requestLogout}
         />
       )}
@@ -126,6 +146,7 @@ function Inner() {
       {session.role === "customer" && (
         <CustomerApp
           orders={store.orders}
+          partners={store.partners}
           onAddOrder={store.addOrder}
           myOrderId={myOrderId}
           setMyOrderId={setMyOrderId}

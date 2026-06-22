@@ -248,7 +248,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
-              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ куриертэй холбогдоорой.</p>
+              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ хүргэгчтэй холбогдоорой.</p>
             </motion.div>
             <motion.div className="space-y-2.5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}>
               <motion.button

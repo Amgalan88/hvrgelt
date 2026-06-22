@@ -41,7 +41,6 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
   const newCount = orders.filter((o) => o.status === "шинэ").length;
   const activeCount = orders.filter((o) => ["томилогдсон", "авсан"].includes(o.status)).length;
   const doneCount = orders.filter((o) => o.status === "хүргэгдсэн").length;
-  const availableCouriers = couriers.filter((c) => c.available);
 
   const filtered = orders.filter((o) => {
     if (filter === "шинэ") return o.status === "шинэ";
@@ -84,7 +83,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
             { label: "Шинэ", value: newCount, color: "text-amber-400", ring: "border-amber-500/30 bg-amber-500/10" },
             { label: "Идэвхтэй", value: activeCount, color: "text-primary", ring: "border-primary/30 bg-primary/10" },
             { label: "Хүргэгдсэн", value: doneCount, color: "text-green-400", ring: "border-green-500/30 bg-green-500/10" },
-            { label: "Чөлөөт", value: availableCouriers.length, color: "text-blue-400", ring: "border-blue-500/30 bg-blue-500/10" },
+            { label: "Хүргэгч", value: couriers.length, color: "text-blue-400", ring: "border-blue-500/30 bg-blue-500/10" },
           ].map((s) => (
             <div key={s.label} className={`${s.ring} border rounded-xl p-2.5 text-center`}>
               <p className={`text-xl font-bold font-mono ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
@@ -95,10 +94,10 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
 
         {/* Courier strip */}
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Куриерийн байдал</p>
+          <p className="text-xs text-muted-foreground mb-2">Хүргэгчдийн байдал</p>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {couriers.map((c) => (
-              <div key={c.id} className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs transition-colors ${c.available ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-secondary border-border text-muted-foreground"}`}>
+              <div key={c.id} className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs bg-secondary border-border text-foreground">
                 <span>{VEHICLE_ICON[c.vehicle]}</span>
                 <span>{c.name.split(".")[1]?.trim() ?? c.name}</span>
               </div>
@@ -220,7 +219,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                         <div className="flex items-center gap-2">
                           <Truck className="w-4 h-4 text-blue-400" />
                           <div>
-                            <p className="text-xs text-muted-foreground">Куриер</p>
+                            <p className="text-xs text-muted-foreground">Хүргэгч</p>
                             <p className="text-sm font-medium">{order.courierName}</p>
                           </div>
                         </div>
@@ -248,12 +247,12 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                           />
                         </div>
 
-                        <p className="text-xs text-muted-foreground mb-2">Куриер томилох</p>
-                        {availableCouriers.length === 0 ? (
-                          <p className="text-xs text-center text-muted-foreground py-2 border border-border rounded-xl">Чөлөөт куриер байхгүй байна</p>
+                        <p className="text-xs text-muted-foreground mb-2">Хүргэгч томилох</p>
+                        {couriers.length === 0 ? (
+                          <p className="text-xs text-center text-muted-foreground py-2 border border-border rounded-xl">Хүргэгч байхгүй байна</p>
                         ) : (
                           <div className="space-y-1.5">
-                            {availableCouriers.map((c) => (
+                            {couriers.map((c) => (
                               <button
                                 key={c.id}
                                 disabled={assigningId === order.id}
@@ -276,7 +275,6 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-xs opacity-80">{c.vehicle}</span>
                                   {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                                 </div>
                               </button>

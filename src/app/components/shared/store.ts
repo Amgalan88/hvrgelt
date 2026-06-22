@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser } from "./types";
+import type { Partner, PartnerCategory } from "../customer/partners";
 import { supabase } from "../../lib/supabase";
 
 // ── Auth method types ─────────────────────────────────────────────────
@@ -122,6 +123,18 @@ function rowToCourier(r: any): CourierAccount {
   };
 }
 
+function rowToPartner(r: any): Partner {
+  return {
+    id: r.id,
+    name: r.name,
+    category: r.category as PartnerCategory,
+    emoji: r.emoji,
+    address: r.address,
+    detail: r.detail ?? "",
+    area: r.area ?? "",
+  };
+}
+
 function rowToOperator(r: any): OperatorAccount {
   return {
     id: r.id,
@@ -142,6 +155,7 @@ export function useStore() {
   const [operatorAccounts, setOperatorAccounts] = useState<OperatorAccount[]>([]);
   const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>([]);
   const [customerAccounts] = useState<CustomerAccount[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Initial load + realtime subscriptions ──────────────────────────
@@ -169,8 +183,17 @@ export function useStore() {
     if (data) setOperatorAccounts(data.map(rowToOperator));
   }, []);
 
+  const refreshPartners = useCallback(async () => {
+    const { data } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: true });
+    if (data) setPartners(data.map(rowToPartner));
+  }, []);
+
   useEffect(() => {
-    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators()]).finally(() => setLoading(false));
+    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshPartners()]).finally(() => setLoading(false));
 
     const ordersChannel = supabase
       .channel("orders-changes")
@@ -186,11 +209,19 @@ export function useStore() {
       })
       .subscribe();
 
+    const partnersChannel = supabase
+      .channel("partners-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "partners" }, () => {
+        refreshPartners();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(couriersChannel);
+      supabase.removeChannel(partnersChannel);
     };
-  }, [refreshOrders, refreshCouriers, refreshOperators]);
+  }, [refreshOrders, refreshCouriers, refreshOperators, refreshPartners]);
 
   // ── Couriers view-model (зөвхөн active) ─────────────────────────────
   const couriers: CourierUser[] = courierAccounts
@@ -445,9 +476,45 @@ export function useStore() {
     [refreshCouriers],
   );
 
+  // ── Superadmin: partner CRUD ────────────────────────────────────────
+  const addPartner = useCallback(
+    async (data: Omit<Partner, "id">) => {
+      await supabase.from("partners").insert({
+        id: "p-" + newId(),
+        name: data.name,
+        category: data.category,
+        emoji: data.emoji,
+        address: data.address,
+        detail: data.detail,
+        area: data.area,
+        active: true,
+        created_at: new Date().toISOString().slice(0, 10),
+      });
+      await refreshPartners();
+    },
+    [refreshPartners],
+  );
+
+  const updatePartner = useCallback(
+    async (id: string, data: Partial<Omit<Partner, "id">>) => {
+      await supabase.from("partners").update(data).eq("id", id);
+      await refreshPartners();
+    },
+    [refreshPartners],
+  );
+
+  const deletePartner = useCallback(
+    async (id: string) => {
+      await supabase.from("partners").delete().eq("id", id);
+      await refreshPartners();
+    },
+    [refreshPartners],
+  );
+
   return {
     orders,
     couriers,
+    partners,
     loading,
     operatorAccounts,
     courierAccounts,
@@ -461,6 +528,9 @@ export function useStore() {
     addCourier,
     updateCourier,
     deleteCourier,
+    addPartner,
+    updatePartner,
+    deletePartner,
     resolveByPhone,
     addCustomer,
     updateAccountAuth,

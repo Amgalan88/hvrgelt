@@ -4,7 +4,7 @@ import type { Order, OrderStatus } from "../shared/types";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
   шинэ:        { label: "Хүлээгдэж байна",    color: "text-amber-400",  icon: Clock },
-  томилогдсон: { label: "Куриер томилогдсон", color: "text-blue-400",   icon: Clock },
+  томилогдсон: { label: "Хүргэгч томилогдсон", color: "text-blue-400",   icon: Clock },
   авсан:       { label: "Ачаа авсан",          color: "text-primary",    icon: Clock },
   хүргэгдсэн: { label: "Хүргэгдсэн",          color: "text-green-400",  icon: CheckCircle },
   цуцлагдсан: { label: "Цуцлагдсан",          color: "text-red-400",    icon: XCircle },
@@ -146,7 +146,7 @@ function OrderCard({ order, onTrack }: { order: Order; onTrack: (id: string) => 
               <span className="text-xs text-muted-foreground">{order.courierName}</span>
             </div>
           ) : (
-            <span className="text-xs text-muted-foreground">Куриер хүлээж байна...</span>
+            <span className="text-xs text-muted-foreground">Хүргэгч хүлээж байна...</span>
           )}
 
           {isActive && (

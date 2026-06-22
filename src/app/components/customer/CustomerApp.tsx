@@ -6,15 +6,15 @@ import { useUser, type QuickOrder } from "../shared/UserContext";
 import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
-import { PARTNERS, PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
+import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
 
 type AppTab = "order" | "places" | "history" | "settings";
 type OrderStep = "form" | "confirm" | "tracking";
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
-  { key: "шинэ",        label: "Захиалга хүлээгдэж байна", sub: "Оператор куриер томилж байна..." },
-  { key: "томилогдсон", label: "Куриер томилогдлоо",       sub: "Куриер таны ачааг авахаар явна" },
-  { key: "авсан",       label: "Ачааг авлаа",              sub: "Куриер таны захиалгыг хүргэж байна" },
+  { key: "шинэ",        label: "Захиалга хүлээгдэж байна", sub: "Оператор хүргэгч томилж байна..." },
+  { key: "томилогдсон", label: "Хүргэгч томилогдлоо",      sub: "Хүргэгч таны ачааг авахаар явна" },
+  { key: "авсан",       label: "Ачааг авлаа",              sub: "Хүргэгч таны захиалгыг хүргэж байна" },
   { key: "хүргэгдсэн", label: "Амжилттай хүргэгдлээ! 🎉", sub: "" },
 ];
 
@@ -32,6 +32,7 @@ const QUICK_EMOJIS = ["📦", "🧳", "🛒", "☕", "🏪", "📄", "🎁", "�
 
 interface CustomerAppProps {
   orders: Order[];
+  partners: Partner[];
   onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
   myOrderId: string | null;
   setMyOrderId: (id: string | null) => void;
@@ -83,7 +84,7 @@ function MapEmbed({ from, to, theme }: { from: string; to: string; theme: "dark"
   );
 }
 
-export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { theme, savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
@@ -200,9 +201,10 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
 
   // Start an order from a partner place (pickup pre-filled)
   function orderFromPartner(p: Partner) {
-    setFromAddr(p.address);
-    setFromDetail(p.detail);
-    setNote(`${p.category}: ${p.name}`);
+    const fullAddr = [p.name, p.address, p.detail].filter(Boolean).join(", ");
+    setFromAddr(fullAddr);
+    setFromDetail("");
+    setNote("");
     setToAddr(""); setToDetail("");
     setOrderStep("form");
     setAppTab("order");
@@ -329,12 +331,12 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                       />
                       {fromAddr && <button onClick={() => { setFromAddr(""); setFromDetail(""); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
                     </div>
-                    {fromAddr && (
+                    {(fromDetail || addrTarget === "from") && fromAddr && (
                       <input
                         value={fromDetail}
                         onChange={(e) => setFromDetail(e.target.value)}
-                        placeholder="Гудамж, байр, тоот..."
-                        className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none pl-6"
+                        placeholder="Хаяг, байр, тоот..."
+                        className="w-full bg-transparent text-xs text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none pl-6"
                       />
                     )}
                   </div>
@@ -350,12 +352,12 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                       />
                       {toAddr && <button onClick={() => { setToAddr(""); setToDetail(""); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
                     </div>
-                    {toAddr && (
+                    {(toDetail || addrTarget === "to") && toAddr && (
                       <input
                         value={toDetail}
                         onChange={(e) => setToDetail(e.target.value)}
-                        placeholder="Гудамж, байр, тоот..."
-                        className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/50 focus:outline-none pl-6"
+                        placeholder="Хаяг, байр, тоот..."
+                        className="w-full bg-transparent text-xs text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none pl-6"
                       />
                     )}
                   </div>
@@ -376,7 +378,11 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                       return (
                         <button
                           key={addr.id}
-                          onClick={() => fillAddress(addrTarget, addr.address, addr.detail)}
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            const addrFull = [addr.address, addr.detail].filter(Boolean).join(", ");
+                            fillAddress(addrTarget, addr.label, addrFull);
+                          }}
                           className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/40 transition-colors text-left ${i < savedAddresses.length - 1 ? "border-b border-border" : ""}`}
                         >
                           <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center shrink-0">
@@ -384,7 +390,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium leading-none">{addr.label}</p>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">{addr.address}</p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
                           </div>
                         </button>
                       );
@@ -533,7 +539,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                       <div>
                         <p className="text-sm font-medium">{myOrder.courierName}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Таны куриер
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Таны хүргэгч
                         </div>
                       </div>
                     </div>
@@ -546,7 +552,7 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
                 {myOrder.status === "шинэ" && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                    <p className="text-xs text-amber-300">Оператор куриер томилж байна...</p>
+                    <p className="text-xs text-amber-300">Оператор хүргэгч томилж байна...</p>
                   </div>
                 )}
 
@@ -563,19 +569,19 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
         {/* ── HISTORY TAB ── */}
         {/* ── PLACES TAB ── */}
         {tab === "places" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
               <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.4rem" }}>Газрууд</h2>
-              <p className="text-muted-foreground text-sm mt-0.5">Карго, дэлгүүр, заханаас шууд хүргүүл</p>
+              <p className="text-muted-foreground text-sm mt-0.5">Карго, дэлгүүр, захаас шууд хүргүүл</p>
             </div>
 
-            {/* Category chips */}
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+            {/* Category chips — hidden scrollbar */}
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {PARTNER_CATEGORIES.map((c) => (
                 <button
                   key={c.key}
                   onClick={() => setPlacesCat(c.key)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors ${placesCat === c.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
+                  className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${placesCat === c.key ? "bg-primary text-white border-primary shadow-sm" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
                 >
                   <span>{c.emoji}</span> {c.key}
                 </button>
@@ -583,29 +589,36 @@ export function CustomerApp({ orders, onAddOrder, myOrderId, setMyOrderId, userN
             </div>
 
             {/* Partner list */}
-            <div className="space-y-2.5">
-              {PARTNERS.filter((p) => p.category === placesCat).map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.25, ease: "easeOut" }}
-                >
-                  <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">{p.emoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{p.address}{p.detail ? `, ${p.detail}` : ""}</p>
-                  </div>
-                  <button
-                    onClick={() => orderFromPartner(p)}
-                    className="shrink-0 text-xs bg-primary text-primary-foreground px-3 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
-                    style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            <div className="space-y-2">
+              {partners.filter((p) => p.category === placesCat).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Store className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Энэ ангилалд газар байхгүй байна</p>
+                </div>
+              ) : (
+                partners.filter((p) => p.category === placesCat).map((p, i) => (
+                  <motion.div
+                    key={p.id}
+                    className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut" }}
                   >
-                    Хүргүүлэх <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </motion.div>
-              ))}
+                    <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{p.emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{p.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.address}{p.detail ? ` · ${p.detail}` : ""}</p>
+                    </div>
+                    <button
+                      onClick={() => orderFromPartner(p)}
+                      className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
+                      style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                    >
+                      Захиалах <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         )}
