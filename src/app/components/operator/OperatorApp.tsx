@@ -228,9 +228,17 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                           <div>
                             <p className="text-xs text-muted-foreground">Хүргэгч</p>
                             <p className="text-sm font-medium">{order.courierName}</p>
+                            {order.courierPhone && (
+                              <p className="text-xs text-muted-foreground font-mono">{order.courierPhone}</p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          {order.courierPhone && (
+                            <a href={`tel:${order.courierPhone}`} className="flex items-center gap-1 text-xs border border-border px-2 py-1 rounded-lg hover:text-primary hover:border-primary/50 transition-colors">
+                              <Phone className="w-3 h-3" /> Залгах
+                            </a>
+                          )}
                           {order.eta && <p className="text-xs font-mono text-primary">~{order.eta}</p>}
                           {order.pickedUpAt && <p className="text-xs text-muted-foreground">авсан {order.pickedUpAt}</p>}
                         </div>
@@ -278,7 +286,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                                   <span className="text-lg">{VEHICLE_ICON[c.vehicle]}</span>
                                   <div className="text-left">
                                     <p className="text-sm font-medium">{c.name}</p>
-                                    <p className="text-xs opacity-70">★{c.rating} · {c.vehicle}</p>
+                                    <p className="text-xs opacity-70">★{c.rating} · {c.vehicle} · {c.phone}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
