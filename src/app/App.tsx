@@ -322,6 +322,7 @@ function Inner() {
           operatorAccounts={store.operatorAccounts}
           courierAccounts={store.courierAccounts}
           partners={store.partners}
+          bankInfo={store.bankInfo}
           onAddOperator={store.addOperator}
           onUpdateOperator={store.updateOperator}
           onDeleteOperator={store.deleteOperator}
@@ -331,6 +332,7 @@ function Inner() {
           onAddPartner={store.addPartner}
           onUpdatePartner={store.updatePartner}
           onDeletePartner={store.deletePartner}
+          onUpdateBankInfo={store.updateBankInfo}
           onLogout={requestLogout}
         />
       )}
@@ -339,7 +341,10 @@ function Inner() {
         <CustomerApp
           orders={store.orders}
           partners={store.partners}
+          bankInfo={store.bankInfo}
           onAddOrder={store.addOrder}
+          onCancelOrder={store.cancelOrder}
+          onConfirmOrder={store.confirmOrder}
           myOrderId={myOrderId}
           setMyOrderId={setMyOrderId}
           userName={session.name}

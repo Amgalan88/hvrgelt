@@ -13,6 +13,7 @@ type OrderStep = "form" | "confirm" | "tracking";
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
   { key: "шинэ",        label: "Захиалга хүлээгдэж байна", sub: "Оператор хүргэгч томилж байна..." },
+  { key: "үнэ батлах",  label: "Үнэ батлахыг хүлээж байна", sub: "Та доорх товчоор үнийг батлана уу" },
   { key: "томилогдсон", label: "Хүргэгч томилогдлоо",      sub: "Хүргэгч таны ачааг авахаар явна" },
   { key: "авсан",       label: "Ачааг авлаа",              sub: "Хүргэгч таны захиалгыг хүргэж байна" },
   { key: "хүргэгдсэн", label: "Амжилттай хүргэгдлээ! 🎉", sub: "" },
@@ -33,7 +34,10 @@ const QUICK_EMOJIS = ["📦", "🧳", "🛒", "☕", "🏪", "📄", "🎁", "�
 interface CustomerAppProps {
   orders: Order[];
   partners: Partner[];
+  bankInfo: string;
   onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
+  onCancelOrder: (orderId: string) => void;
+  onConfirmOrder: (orderId: string) => void;
   myOrderId: string | null;
   setMyOrderId: (id: string | null) => void;
   userName: string;
@@ -72,7 +76,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
   );
 }
 
-export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOrder, onConfirmOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
@@ -537,10 +541,57 @@ export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrde
                   </div>
                 )}
 
+                {/* Cancel before assignment */}
                 {myOrder.status === "шинэ" && (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                    <p className="text-xs text-amber-300">Оператор хүргэгч томилж байна...</p>
+                  <div className="space-y-2">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                      <p className="text-xs text-amber-300">Оператор хүргэгч томилж байна...</p>
+                    </div>
+                    <button
+                      onClick={() => { onCancelOrder(myOrder.id); setMyOrderId(null); setOrderStep("form"); }}
+                      className="w-full border border-destructive/50 text-destructive py-2.5 rounded-xl text-sm hover:bg-destructive/10 transition-colors"
+                    >
+                      Захиалга цуцлах
+                    </button>
+                  </div>
+                )}
+
+                {/* Price approval */}
+                {myOrder.status === "үнэ батлах" && (
+                  <div className="space-y-3">
+                    <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-2">
+                      <p className="text-xs text-muted-foreground">Хүргэлтийн үнэ тогтоогдлоо</p>
+                      <p className="text-3xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                        ₮{myOrder.price.toLocaleString()}
+                      </p>
+                      {myOrder.courierName && (
+                        <p className="text-xs text-muted-foreground">Хүргэгч: {myOrder.courierName}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { onCancelOrder(myOrder.id); setMyOrderId(null); setOrderStep("form"); }}
+                        className="flex-1 border border-destructive/50 text-destructive py-3 rounded-2xl text-sm hover:bg-destructive/10 transition-colors"
+                      >
+                        Цуцлах
+                      </button>
+                      <button
+                        onClick={() => onConfirmOrder(myOrder.id)}
+                        className="flex-1 bg-primary text-white py-3 rounded-2xl text-sm hover:bg-primary/90 transition-colors"
+                        style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                      >
+                        Батлах ✓
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bank transfer info banner (shown after confirmation) */}
+                {myOrder.status === "томилогдсон" && bankInfo && (
+                  <div className="bg-green-500/10 border border-green-500/25 rounded-2xl p-4 space-y-1.5">
+                    <p className="text-xs font-semibold text-green-400">💳 Төлбөр шилжүүлэх мэдээлэл</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{bankInfo}</p>
                   </div>
                 )}
 

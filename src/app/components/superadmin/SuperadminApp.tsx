@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings } from "lucide-react";
 import type { OperatorAccount, CourierAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
 
-type Tab = "operators" | "couriers" | "partners";
+type Tab = "operators" | "couriers" | "partners" | "settings";
 
 interface SuperadminAppProps {
   operatorAccounts: OperatorAccount[];
@@ -19,6 +19,8 @@ interface SuperadminAppProps {
   onAddPartner: (data: Omit<Partner, "id">) => void;
   onUpdatePartner: (id: string, data: Partial<Omit<Partner, "id">>) => void;
   onDeletePartner: (id: string) => void;
+  bankInfo: string;
+  onUpdateBankInfo: (value: string) => void;
   onLogout: () => void;
 }
 
@@ -220,8 +222,11 @@ export function SuperadminApp({
   onAddOperator, onUpdateOperator, onDeleteOperator,
   onAddCourier, onUpdateCourier, onDeleteCourier,
   onAddPartner, onUpdatePartner, onDeletePartner,
+  bankInfo, onUpdateBankInfo,
   onLogout,
 }: SuperadminAppProps) {
+  const [bankDraft, setBankDraft] = useState(bankInfo);
+  const [bankSaved, setBankSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("operators");
   const [modal, setModal] = useState<
     | { type: "add-operator" }
@@ -280,6 +285,7 @@ export function SuperadminApp({
             { key: "operators" as Tab, label: "Операторууд", icon: Users },
             { key: "couriers" as Tab, label: "Хүргэгчид", icon: Truck },
             { key: "partners" as Tab, label: "Газрууд", icon: MapPin },
+            { key: "settings" as Tab, label: "Тохиргоо", icon: Settings },
           ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm transition-colors ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
@@ -441,6 +447,39 @@ export function SuperadminApp({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── SETTINGS ── */}
+        {tab === "settings" && (
+          <div className="space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Банкны мэдээлэл</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Хэрэглэгч захиалга батлах үед харагдах гүйлгээний мэдээлэл.</p>
+              <textarea
+                value={bankDraft}
+                onChange={(e) => { setBankDraft(e.target.value); setBankSaved(false); }}
+                rows={5}
+                placeholder={"Банк: Хаан банк\nДансны дугаар: 5001234567\nДансны нэр: Б. Болд\nУтас: 8520-5258"}
+                className="w-full bg-input-background border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-colors resize-none font-mono"
+              />
+              <button
+                onClick={async () => { await onUpdateBankInfo(bankDraft); setBankSaved(true); setTimeout(() => setBankSaved(false), 2000); }}
+                className="w-full bg-primary text-white py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors"
+                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+              >
+                {bankSaved ? "✓ Хадгалагдлаа" : "Хадгалах"}
+              </button>
+            </div>
+            {bankDraft && (
+              <div className="bg-green-500/10 border border-green-500/25 rounded-2xl p-4 space-y-1.5">
+                <p className="text-xs font-semibold text-green-400">Урьдчилан харах</p>
+                <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{bankDraft}</p>
+              </div>
+            )}
           </div>
         )}
       </div>

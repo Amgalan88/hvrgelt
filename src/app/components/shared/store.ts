@@ -156,6 +156,7 @@ export function useStore() {
   const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>([]);
   const [customerAccounts] = useState<CustomerAccount[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [bankInfo, setBankInfo] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   // ── Initial load + realtime subscriptions ──────────────────────────
@@ -192,8 +193,13 @@ export function useStore() {
     if (data) setPartners(data.map(rowToPartner));
   }, []);
 
+  const refreshSettings = useCallback(async () => {
+    const { data } = await supabase.from("settings").select("value").eq("key", "bank_info").single();
+    if (data) setBankInfo(data.value ?? "");
+  }, []);
+
   useEffect(() => {
-    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshPartners()]).finally(() => setLoading(false));
+    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshPartners(), refreshSettings()]).finally(() => setLoading(false));
 
     const ordersChannel = supabase
       .channel("orders-changes")
@@ -221,7 +227,7 @@ export function useStore() {
       supabase.removeChannel(couriersChannel);
       supabase.removeChannel(partnersChannel);
     };
-  }, [refreshOrders, refreshCouriers, refreshOperators, refreshPartners]);
+  }, [refreshOrders, refreshCouriers, refreshOperators, refreshPartners, refreshSettings]);
 
   // ── Couriers view-model (зөвхөн active) ─────────────────────────────
   const couriers: CourierUser[] = courierAccounts
@@ -321,7 +327,7 @@ export function useStore() {
       if (!cr) return;
       await supabase.from("couriers").update({ available: false }).eq("id", courierId);
       const patch: any = {
-        status: "томилогдсон",
+        status: "үнэ батлах",
         courier_id: courierId,
         courier_name: cr.name,
         courier_phone: cr.phone,
@@ -333,6 +339,34 @@ export function useStore() {
       await Promise.all([refreshOrders(), refreshCouriers()]);
     },
     [courierAccounts, refreshOrders, refreshCouriers],
+  );
+
+  const confirmOrder = useCallback(
+    async (orderId: string) => {
+      await supabase.from("orders").update({ status: "томилогдсон" }).eq("id", orderId);
+      await refreshOrders();
+    },
+    [refreshOrders],
+  );
+
+  const cancelOrder = useCallback(
+    async (orderId: string) => {
+      const order = orders.find((o) => o.id === orderId);
+      if (order?.courierId) {
+        await supabase.from("couriers").update({ available: true }).eq("id", order.courierId);
+      }
+      await supabase.from("orders").update({ status: "цуцлагдсан", courier_id: null, courier_name: null, courier_phone: null, eta: null }).eq("id", orderId);
+      await Promise.all([refreshOrders(), refreshCouriers()]);
+    },
+    [orders, refreshOrders, refreshCouriers],
+  );
+
+  const updateBankInfo = useCallback(
+    async (value: string) => {
+      await supabase.from("settings").upsert({ key: "bank_info", value });
+      setBankInfo(value);
+    },
+    [],
   );
 
   const courierUpdateStatus = useCallback(
@@ -515,13 +549,17 @@ export function useStore() {
     orders,
     couriers,
     partners,
+    bankInfo,
     loading,
     operatorAccounts,
     courierAccounts,
     customerAccounts,
     addOrder,
     assignCourier,
+    confirmOrder,
+    cancelOrder,
     courierUpdateStatus,
+    updateBankInfo,
     addOperator,
     updateOperator,
     deleteOperator,
