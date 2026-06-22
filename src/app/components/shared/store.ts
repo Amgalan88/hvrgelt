@@ -114,12 +114,12 @@ function rowToCourier(r: any): CourierAccount {
     authMethod: r.auth_method,
     authKey: r.auth_key,
     vehicle: r.vehicle,
-    available: r.available,
+    available: r.available ?? true,
     rating: Number(r.rating),
     totalDeliveries: r.total_deliveries,
     todayDeliveries: r.today_deliveries,
     createdAt: r.created_at,
-    active: r.active,
+    active: r.active ?? true,
   };
 }
 
@@ -145,7 +145,7 @@ function rowToOperator(r: any): OperatorAccount {
     authMethod: r.auth_method,
     authKey: r.auth_key,
     createdAt: r.created_at,
-    active: r.active,
+    active: r.active ?? true,
   };
 }
 
@@ -361,7 +361,7 @@ export function useStore() {
   const updateAccountAuth = useCallback(
     async (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => {
       const table = role === "operator" ? "operators" : "couriers";
-      await supabase.from(table).update({ auth_method: authMethod, auth_key: authKey }).eq("id", id);
+      await supabase.from(table).update({ auth_method: authMethod, auth_key: authKey, active: true }).eq("id", id);
       if (role === "operator") await refreshOperators();
       else await refreshCouriers();
     },
