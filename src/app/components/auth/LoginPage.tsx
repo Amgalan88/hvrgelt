@@ -13,6 +13,7 @@ interface LoginPageProps {
   resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
   addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
   updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
+  skipLanding?: boolean;
 }
 
 type Screen = "landing" | "phone" | "auth" | "first-setup" | "register";
@@ -26,9 +27,9 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, skipLanding }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
-  const [screen, setScreen] = useState<Screen>("landing");
+  const [screen, setScreen] = useState<Screen>(skipLanding ? "phone" : "landing");
 
   // Phone input
   const savedPhone = localStorage.getItem(SAVED_PHONE_KEY) ?? "";

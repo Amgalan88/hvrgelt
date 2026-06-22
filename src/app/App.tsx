@@ -10,7 +10,7 @@ import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
-import { Truck, LogOut } from "lucide-react";
+import { Truck, LogOut, ArrowRight, Package, Clock, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface Session {
@@ -29,6 +29,7 @@ function Inner() {
       return null;
     }
   });
+  const [landingDone, setLandingDone] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
@@ -47,7 +48,7 @@ function Inner() {
     const s = { role, id, name, phone };
     setSession(s);
     localStorage.setItem("hvrgelt_session", JSON.stringify(s));
-    setPinVerified(true); // LoginPage already verified auth for everyone
+    setPinVerified(true);
     setPinError("");
     if (role === "customer") loadCustomer(id);
   }
@@ -59,15 +60,115 @@ function Inner() {
     setPinVerified(false);
     setPinError("");
     setConfirmLogout(false);
+    setLandingDone(false);
     clearCustomer();
   }
 
   // Logout buttons ask for confirmation first
   const requestLogout = () => setConfirmLogout(true);
 
+  // ── Always show landing page first ──────────────────────────────────
+  if (!landingDone) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+        {/* Hero */}
+        <div className="relative flex-1 flex flex-col">
+          <img
+            src="https://images.unsplash.com/photo-1765808172074-702dc0371f93?w=800&h=900&fit=crop&auto=format"
+            alt="courier"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(7,9,15,0.2) 0%, rgba(7,9,15,0.95) 60%)" }} />
+
+          <nav className="relative z-10 flex items-center justify-between px-5 pt-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Truck className="w-4 h-4 text-white" />
+              </div>
+              <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "1.15rem", color: "#fff" }}>
+                hvrgelt<span className="text-primary">.mn</span>
+              </span>
+            </div>
+            <button
+              onClick={() => setLandingDone(true)}
+              className="text-sm text-white/70 hover:text-white transition-colors"
+            >
+              {session ? "Орох" : "Нэвтрэх"}
+            </button>
+          </nav>
+
+          <div className="relative z-10 mt-auto px-5 pb-8 space-y-5">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+              <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
+                Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
+              </h1>
+              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ хүргэгчтэй холбогдоорой.</p>
+            </motion.div>
+
+            {/* Feature chips */}
+            <motion.div className="flex gap-2 flex-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              {[
+                { icon: Clock, label: "30 минутад" },
+                { icon: Package, label: "Аливаа ачаа" },
+                { icon: Shield, label: "Найдвартай" },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 text-xs text-white/80">
+                  <Icon className="w-3 h-3" /> {label}
+                </div>
+              ))}
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  if (session) {
+                    setPinVerified(true);
+                    setLandingDone(true);
+                  } else {
+                    setLandingDone(true);
+                  }
+                }}
+                className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}
+              >
+                {session ? `Үргэлжлүүлэх` : "Эхлэх"} <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-background border-t border-border px-5 py-6">
+          <div className="max-w-sm mx-auto space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                <Truck className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900 }}>
+                hvrgelt<span className="text-primary">.mn</span>
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Дарханы хурдан, найдвартай хүргэлтийн үйлчилгээ. Захиалга өгөхөөс хүргэлт хүлээн авах хүртэл бүгдийг шийднэ.
+            </p>
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>📞 9973-9959</span>
+              <span>📍 Дархан хот</span>
+            </div>
+            <div className="border-t border-border pt-3 text-xs text-muted-foreground/50">
+              © 2025 hvrgelt.mn — Бүх эрх хуулиар хамгаалагдсан
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <LoginPage
+        skipLanding
         onLogin={handleLogin}
         resolveByPhone={store.resolveByPhone}
         addCustomer={store.addCustomer}
