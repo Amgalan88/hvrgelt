@@ -43,49 +43,36 @@ interface CustomerAppProps {
   onLogout: () => void;
 }
 
-// OpenStreetMap embed helper
-function MapEmbed({ from, to, theme }: { from: string; to: string; theme: "dark" | "light" }) {
-  const query = encodeURIComponent(from);
-  const mapFilter = theme === "dark" ? "invert(1) hue-rotate(180deg) brightness(0.85)" : "none";
+// Route preview — Google Maps link only (no fake embedded map)
+function RoutePreview({ from, to }: { from: string; to: string }) {
+  const mapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(from + " Дархан Монгол")}/${encodeURIComponent(to + " Дархан Монгол")}`;
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-border" style={{ height: 160 }}>
-      <iframe
-        title="Хүргэлтийн байршил"
-        src={`https://www.openstreetmap.org/export/embed.html?bbox=106.7,47.8,107.1,48.0&layer=mapnik&marker=47.9,106.9`}
-        className="w-full h-full"
-        style={{ filter: mapFilter, border: "none" }}
-        loading="lazy"
-      />
-      <div className="absolute inset-0 pointer-events-none">
-        {/* from pin */}
-        <div className="absolute top-1/3 left-1/3 flex flex-col items-center">
-          <div className="w-5 h-5 rounded-full bg-green-400 border-2 border-white shadow-lg" />
-          <div className="text-xs bg-card border border-border px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap max-w-24 truncate shadow">
-            {from.split(",")[0]}
-          </div>
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center justify-between bg-secondary/50 border border-border rounded-2xl px-4 py-3 hover:border-primary/40 hover:bg-secondary/80 transition-all group"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+          <div className="w-px h-4 bg-border" />
+          <MapPin className="w-3 h-3 text-primary" />
         </div>
-        {/* to pin */}
-        <div className="absolute top-1/2 right-1/3 flex flex-col items-center">
-          <div className="w-5 h-5 rounded-full bg-primary border-2 border-white shadow-lg" />
-          <div className="text-xs bg-card border border-border px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap max-w-24 truncate shadow">
-            {to.split(",")[0]}
-          </div>
+        <div className="min-w-0">
+          <p className="text-xs text-foreground truncate">{from}</p>
+          <p className="text-xs text-muted-foreground truncate mt-1">{to}</p>
         </div>
       </div>
-      <a
-        href={`https://www.google.com/maps/dir/${encodeURIComponent(from + " Монгол")}/${encodeURIComponent(to + " Монгол")}`}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute bottom-2 right-2 pointer-events-auto flex items-center gap-1 bg-card border border-border px-2 py-1 rounded-lg text-xs text-primary hover:bg-primary/10 transition-colors shadow"
-      >
-        <MapPin className="w-3 h-3" /> Google Maps →
-      </a>
-    </div>
+      <span className="shrink-0 text-xs text-primary flex items-center gap-1 ml-3 group-hover:underline">
+        Google Maps <ArrowRight className="w-3 h-3" />
+      </span>
+    </a>
   );
 }
 
 export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
-  const { theme, savedAddresses, quickOrders, saveQuickOrders } = useUser();
+  const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
   const [orderStep, setOrderStep] = useState<OrderStep>(myOrderId ? "tracking" : "form");
@@ -429,7 +416,7 @@ export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrde
                 <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.3rem" }}>Баталгаажуулах</h2>
 
                 {/* Map */}
-                <MapEmbed from={fromAddr} to={toAddr} theme={theme} />
+                <RoutePreview from={fromAddr} to={toAddr} />
 
                 {/* Route */}
                 <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
@@ -499,7 +486,7 @@ export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrde
                 </div>
 
                 {/* Map */}
-                <MapEmbed from={myOrder.fromAddress} to={myOrder.toAddress} theme={theme} />
+                <RoutePreview from={myOrder.fromAddress} to={myOrder.toAddress} />
 
                 {/* Progress steps */}
                 <div className="bg-card border border-border rounded-2xl p-4">
