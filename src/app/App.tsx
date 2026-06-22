@@ -10,7 +10,7 @@ import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
-import { Truck, LogOut, ArrowRight, Package, Clock, Shield } from "lucide-react";
+import { Truck, LogOut, ArrowRight, Package, Clock, Shield, ChevronLeft, Phone, MapPin as MapPinIcon, FileText, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface Session {
@@ -30,6 +30,7 @@ function Inner() {
     }
   });
   const [landingDone, setLandingDone] = useState(false);
+  const [legalPage, setLegalPage] = useState<"terms" | "privacy" | "about" | "contact" | null>(null);
   const [pinVerified, setPinVerified] = useState(false);
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
@@ -67,6 +68,81 @@ function Inner() {
   // Logout buttons ask for confirmation first
   const requestLogout = () => setConfirmLogout(true);
 
+  // ── Legal pages ─────────────────────────────────────────────────────
+  if (legalPage) {
+    const pages = {
+      terms: {
+        title: "Үйлчилгээний нөхцөл",
+        icon: FileText,
+        content: [
+          { heading: "1. Ерөнхий заалт", body: "hvrgelt.mn нь Дархан хотод үйл ажиллагаа явуулдаг хүргэлтийн үйлчилгээ юм. Платформыг ашигласнаар та доорх нөхцөлийг зөвшөөрсөнд тооцогдоно." },
+          { heading: "2. Үйлчилгээний тайлбар", body: "Бид хэрэглэгчийн захиалгыг хүлээн авч, хүргэгчээр дамжуулан тогтоосон хаягт хүргэх үйлчилгээ үзүүлнэ. Захиалгын үнийг оператор тогтооно." },
+          { heading: "3. Хариуцлага", body: "Хүргэлтийн явцад эвдэрч гэмтсэн болон алдагдсан эд зүйлийн хариуцлагыг hvrgelt.mn хүлээнэ. Ачааг хүлээн авахдаа заавал шалгана уу." },
+          { heading: "4. Захиалга цуцлах", body: "Хүргэгч томилогдохоос өмнө захиалгыг цуцлах боломжтой. Томилогдсоны дараа цуцлах тохиолдолд нэмэлт төлбөр гарч болно." },
+          { heading: "5. Төлбөр тооцоо", body: "Хүргэлтийн хөлс нь зай, ачааны жин, цаг зэргээс хамаарна. Доод хөлс 5,000₮. Төлбөрийг хүргэлтийн дараа бэлнээр эсвэл шилжүүлгээр төлнө." },
+          { heading: "6. Хязгаарлагдмал ачаа", body: "Хууль бус, аюултай, хортой бодис агуулсан болон мал амьтан тээвэрлэхийг хориглоно. Ийм захиалгыг цуцлах эрхийг бид хадгална." },
+        ],
+      },
+      privacy: {
+        title: "Нууцлалын бодлого",
+        icon: Lock,
+        content: [
+          { heading: "1. Мэдээлэл цуглуулах", body: "Бид таны нэр, утасны дугаар болон хүргэлтийн хаягийг захиалга хийх зорилгоор цуглуулна. Бусад хувийн мэдээллийг цуглуулдаггүй." },
+          { heading: "2. Мэдээлэл ашиглах", body: "Таны мэдээллийг зөвхөн захиалгыг амжилттай хүргэхэд болон харилцагчтай холбоо барихад ашиглана. Гуравдагч этгээдэд хуваалцахгүй." },
+          { heading: "3. Мэдээллийн аюулгүй байдал", body: "Таны өгөгдлийг Supabase платформд шифрлэгдсэн байдлаар хадгалдаг. PIN болон Pattern кодыг зөвхөн таны төхөөрөмжид хадгална." },
+          { heading: "4. Мэдээлэл устгах", body: "Өөрийн бүртгэл болон мэдээллийг устгахыг хүсвэл 85205258 дугаарт холбогдоно уу." },
+          { heading: "5. Cookie", body: "Бид таны нэвтрэлтийн мэдээллийг браузерийн localStorage-д хадгалдаг. Энэ нь дахин нэвтрэхгүйгээр үйлчилгээг ашиглах боломж олгоно." },
+        ],
+      },
+      about: {
+        title: "Бидний тухай",
+        icon: Truck,
+        content: [
+          { heading: "hvrgelt.mn гэж юу вэ?", body: "hvrgelt.mn нь Дархан хотын анхны мобайл хүргэлтийн платформ юм. 2024 оноос эхлэн үйл ажиллагаагаа явуулж байна." },
+          { heading: "Манай зорилго", body: "Дарханчуудад хурдан, найдвартай, хямд хүргэлтийн үйлчилгээг нэг дороос санал болгох. 30 секундэд захиалга өгч, 30 минутад хүлээж авна." },
+          { heading: "Хамт олон", body: "Бид 30 гаруй мэргэшсэн хүргэгч, туршлагатай операторуудын хамт ажилладаг. Хотын аль ч цэгт хүргэнэ." },
+          { heading: "Холбоо барих", body: "📞 85205258\n📍 Дархан хот\n🕐 Ажлын цаг: 08:00 – 22:00" },
+        ],
+      },
+      contact: {
+        title: "Холбоо барих",
+        icon: Phone,
+        content: [
+          { heading: "Утас", body: "📞 85205258 — Өдрийн 08:00–22:00 цагт ажилладаг." },
+          { heading: "Байршил", body: "📍 Дархан хот, Монгол улс" },
+          { heading: "Нийгмийн сүлжээ", body: "Facebook: facebook.com/hvrgelt.mn\nInstagram: instagram.com/hvrgelt.mn" },
+          { heading: "Санал хүсэлт", body: "Үйлчилгээний чанарыг сайжруулахад туслах санал хүсэлтээ манай Facebook хуудсаар илгээнэ үү." },
+        ],
+      },
+    };
+    const p = pages[legalPage];
+    const Icon = p.icon;
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setLegalPage(null)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="w-4 h-4" /> Буцах
+          </button>
+          <div className="flex items-center gap-2 ml-1">
+            <Icon className="w-4 h-4 text-primary" />
+            <h1 className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{p.title}</h1>
+          </div>
+        </header>
+        <div className="flex-1 max-w-sm mx-auto w-full px-5 py-6 space-y-6">
+          {p.content.map((section) => (
+            <div key={section.heading} className="space-y-2">
+              <h2 className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Roboto Slab', serif" }}>{section.heading}</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{section.body}</p>
+            </div>
+          ))}
+        </div>
+        <footer className="border-t border-border px-5 py-4 text-xs text-muted-foreground/50 text-center">
+          © 2025 hvrgelt.mn
+        </footer>
+      </div>
+    );
+  }
+
   // ── Always show landing page first ──────────────────────────────────
   if (!landingDone) {
     return (
@@ -102,14 +178,14 @@ function Inner() {
               <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
-              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ хүргэгчтэй холбогдоорой.</p>
+              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 30+ хүргэгчтэй холбогдоорой.</p>
             </motion.div>
 
             {/* Feature chips */}
             <motion.div className="flex gap-2 flex-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
               {[
                 { icon: Clock, label: "30 минутад" },
-                { icon: Package, label: "Аливаа ачаа" },
+
                 { icon: Package, label: "+ Оператортай" },
                 { icon: Package, label: "Хямд үнийн сонголттой" },
                 { icon: Shield, label: "Найдвартай" },
@@ -150,7 +226,7 @@ function Inner() {
                 Захиалга өгөхөөс хүргэлт хүлээн авах хүртэл бүгдийг манай хамт олон танд шийдэж ажиллана.
               </p>
               <div className="flex gap-4 text-xs text-muted-foreground pt-0.5">
-                <a href="tel:85205258" className="hover:text-foreground transition-colors">📞 9973-9959</a>
+                <a href="tel:85205258" className="hover:text-foreground transition-colors">📞 8520-5258</a>
                 <span>📍 Дархан хот</span>
               </div>
             </div>
@@ -181,10 +257,10 @@ function Inner() {
 
             {/* Legal links */}
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Үйлчилгээний нөхцөл</a>
-              <a href="#" className="hover:text-foreground transition-colors">Нууцлалын бодлого</a>
-              <a href="#" className="hover:text-foreground transition-colors">Бидний тухай</a>
-              <a href="#" className="hover:text-foreground transition-colors">Холбоо барих</a>
+              <button onClick={() => setLegalPage("terms")} className="hover:text-foreground transition-colors">Үйлчилгээний нөхцөл</button>
+              <button onClick={() => setLegalPage("privacy")} className="hover:text-foreground transition-colors">Нууцлалын бодлого</button>
+              <button onClick={() => setLegalPage("about")} className="hover:text-foreground transition-colors">Бидний тухай</button>
+              <button onClick={() => setLegalPage("contact")} className="hover:text-foreground transition-colors">Холбоо барих</button>
             </div>
 
             {/* Copyright */}
