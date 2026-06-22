@@ -1,6 +1,12 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
 
+// Cloudinary auto-transform: ширэг болгох + webp + lazy
+export function cloudinaryUrl(url: string, width = 600): string {
+  if (!url || !url.includes("cloudinary.com")) return url;
+  return url.replace("/upload/", `/upload/w_${width},c_fill,f_auto,q_auto/`);
+}
+
 export function cloudinaryConfigured() {
   return !!(CLOUD_NAME && UPLOAD_PRESET);
 }
