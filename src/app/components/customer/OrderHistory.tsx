@@ -113,11 +113,11 @@ function OrderCard({ order, onTrack }: { order: Order; onTrack: (id: string) => 
           <div className="flex-1 space-y-2 min-w-0">
             <div>
               <p className="text-xs text-muted-foreground">Авах хаяг</p>
-              <p className="text-sm text-foreground leading-tight truncate">{order.fromAddress}</p>
+              <p className="text-sm text-foreground leading-snug">{order.fromAddress}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Хүргэх хаяг</p>
-              <p className="text-sm text-foreground leading-tight truncate">{order.toAddress}</p>
+              <p className="text-sm text-foreground leading-snug">{order.toAddress}</p>
             </div>
           </div>
           <div className="text-right shrink-0">

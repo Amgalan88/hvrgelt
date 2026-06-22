@@ -193,7 +193,7 @@ export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: Se
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{addr.label}</p>
-                <p className="text-xs text-muted-foreground truncate">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
               </div>
               <button
                 onClick={() => setEditAddr(addr)}

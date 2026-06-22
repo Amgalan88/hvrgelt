@@ -154,8 +154,8 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                         {STATUS_LABEL[order.status]}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {order.fromAddress.split(",")[0]} → {order.toAddress.split(",")[0]}
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {order.fromAddress} → {order.toAddress}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

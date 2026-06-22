@@ -216,7 +216,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium truncate max-w-40">{o.toAddress}</p>
+                      <p className="text-sm font-medium leading-snug">{o.toAddress}</p>
                       <p className="text-xs text-muted-foreground">{o.deliveredAt}</p>
                     </div>
                   </div>

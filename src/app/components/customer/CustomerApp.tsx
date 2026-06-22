@@ -65,8 +65,8 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
           <MapPin className="w-3 h-3 text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-foreground truncate">{from}</p>
-          <p className="text-xs text-muted-foreground truncate mt-1">{to}</p>
+          <p className="text-xs text-foreground leading-relaxed">{from}</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{to}</p>
         </div>
       </div>
       <span className="shrink-0 text-xs text-primary flex items-center gap-1 ml-3 group-hover:underline">
@@ -382,7 +382,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium leading-none">{addr.label}</p>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
                           </div>
                         </button>
                       );
@@ -646,7 +646,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                     <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{p.emoji}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">{p.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.address}{p.detail ? ` · ${p.detail}` : ""}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{p.address}{p.detail ? ` · ${p.detail}` : ""}</p>
                     </div>
                     <button
                       onClick={() => orderFromPartner(p)}
@@ -743,8 +743,8 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl mx-auto mb-3">{confirmQO.emoji}</div>
             <p className="font-bold mb-2" style={{ fontFamily: "'Roboto Slab', serif" }}>{confirmQO.label}</p>
             <div className="text-xs text-muted-foreground space-y-0.5 mb-3 text-left bg-secondary/40 rounded-xl p-3">
-              <p className="truncate"><span className="text-green-400">●</span> {confirmQO.fromAddress}{confirmQO.fromDetail ? `, ${confirmQO.fromDetail}` : ""}</p>
-              <p className="truncate"><span className="text-primary">◆</span> {confirmQO.toAddress}{confirmQO.toDetail ? `, ${confirmQO.toDetail}` : ""}</p>
+              <p className="leading-relaxed"><span className="text-green-400">●</span> {confirmQO.fromAddress}{confirmQO.fromDetail ? `, ${confirmQO.fromDetail}` : ""}</p>
+              <p className="leading-relaxed"><span className="text-primary">◆</span> {confirmQO.toAddress}{confirmQO.toDetail ? `, ${confirmQO.toDetail}` : ""}</p>
             </div>
             <p className="text-sm text-muted-foreground mb-5">Хурдан захиалга үүсгэхэд итгэлтэй байна уу?</p>
             <div className="flex gap-3">

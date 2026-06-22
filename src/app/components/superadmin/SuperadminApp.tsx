@@ -431,7 +431,7 @@ export function SuperadminApp({
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                       <MapPin className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{p.address}{p.detail ? ` · ${p.detail}` : ""}</span>
+                      <span className="leading-relaxed">{p.address}{p.detail ? ` · ${p.detail}` : ""}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
