@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings } from "lucide-react";
+import { useState, useRef } from "react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader } from "lucide-react";
 import type { OperatorAccount, CourierAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
+import { uploadToCloudinary, cloudinaryConfigured } from "../../lib/cloudinary";
 
 type Tab = "operators" | "couriers" | "partners" | "settings";
 
@@ -174,6 +175,24 @@ function PartnerModal({ initial, onSave, onClose }: {
   const [address, setAddress] = useState(initial?.address ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
   const [area, setArea] = useState(initial?.area ?? "Дархан");
+  const [image, setImage] = useState(initial?.image ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setUploadError("");
+    try {
+      const url = await uploadToCloudinary(file);
+      setImage(url);
+    } catch (err: any) {
+      setUploadError(err.message ?? "Upload алдаа");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <Modal title={initial?.id ? "Газар засах" : "Газар нэмэх"} onClose={onClose}>
@@ -188,7 +207,31 @@ function PartnerModal({ initial, onSave, onClose }: {
           ))}
         </div>
       </Field>
-      <Field label="Emoji">
+      <Field label="Зураг (Cloudinary)">
+        <div className="space-y-2">
+          {image ? (
+            <div className="relative">
+              <img src={image} alt="preview" className="w-full h-32 object-cover rounded-xl border border-border" />
+              <button
+                onClick={() => setImage("")}
+                className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+              ><X className="w-3.5 h-3.5" /></button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || !cloudinaryConfigured()}
+              className="w-full h-24 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all disabled:opacity-40"
+            >
+              {uploading ? <Loader className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+              <span className="text-xs">{uploading ? "Upload хийж байна..." : cloudinaryConfigured() ? "Зураг сонгох" : ".env-д Cloudinary key оруулна уу"}</span>
+            </button>
+          )}
+          {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+        </div>
+      </Field>
+      <Field label="Emoji (зураг байхгүй үед)">
         <div className="flex flex-wrap gap-1.5">
           {PARTNER_EMOJIS.map((e) => (
             <button key={e} onClick={() => setEmoji(e)}
@@ -204,8 +247,8 @@ function PartnerModal({ initial, onSave, onClose }: {
       <div className="flex gap-2 pt-2">
         <button onClick={onClose} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:border-primary/30 transition-colors">Болих</button>
         <button
-          onClick={() => { if (name && address) { onSave({ name, category, emoji, address, detail, area }); onClose(); } }}
-          disabled={!name || !address}
+          onClick={() => { if (name && address) { onSave({ name, category, emoji, address, detail, area, image: image || undefined }); onClose(); } }}
+          disabled={!name || !address || uploading}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
           style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
         >

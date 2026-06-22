@@ -132,6 +132,7 @@ function rowToPartner(r: any): Partner {
     address: r.address,
     detail: r.detail ?? "",
     area: r.area ?? "",
+    image: r.image ?? undefined,
   };
 }
 

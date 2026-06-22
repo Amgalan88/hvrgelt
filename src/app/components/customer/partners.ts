@@ -11,6 +11,7 @@ export interface Partner {
   address: string; // авах дүүрэг/бүс
   detail: string;  // гудамж, байр
   area: string;    // хот/бүс
+  image?: string;  // Cloudinary URL
 }
 
 export const PARTNER_CATEGORIES: { key: PartnerCategory; emoji: string }[] = [

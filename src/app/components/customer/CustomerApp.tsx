@@ -643,7 +643,11 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut" }}
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0">{p.emoji}</div>
+                    <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+                      {p.image
+                        ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        : p.emoji}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">{p.name}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{p.address}{p.detail ? ` · ${p.detail}` : ""}</p>
