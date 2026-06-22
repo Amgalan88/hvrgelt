@@ -41,6 +41,7 @@ interface CustomerAppProps {
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
+  onGoHome: () => void;
 }
 
 // Route preview — Google Maps link only (no fake embedded map)
@@ -71,7 +72,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
   );
 }
 
-export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
@@ -707,6 +708,15 @@ export function CustomerApp({ orders, partners, onAddOrder, myOrderId, setMyOrde
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
         <div className="max-w-sm mx-auto flex">
+          {/* Нүүр — landing page руу буцах */}
+          <button
+            onClick={onGoHome}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-xs">Нүүр</span>
+          </button>
+
           {([
             { key: "order" as AppTab, label: "Захиалга", icon: Truck },
             { key: "places" as AppTab, label: "Газрууд", icon: Store },
