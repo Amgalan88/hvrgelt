@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon } from "lucide-react";
+import { useState, Fragment } from "react";
+import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon, Trash2 } from "lucide-react";
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
 import { Spinner } from "../shared/Spinner";
 import { useUser } from "../shared/UserContext";
@@ -42,16 +42,32 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const { theme, toggleTheme } = useUser();
 
+  const HIDDEN_KEY = "hvrgelt_op_hidden_cancelled";
+  const [hiddenCancelled, setHiddenCancelled] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]")); }
+    catch { return new Set(); }
+  });
+
+  function clearCancelled(list: Order[]) {
+    const next = new Set(hiddenCancelled);
+    list.forEach((o) => next.add(o.id));
+    setHiddenCancelled(next);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+  }
+
   const newCount = orders.filter((o) => o.status === "шинэ").length;
-  const activeCount = orders.filter((o) => ["томилогдсон", "авсан"].includes(o.status)).length;
+  const activeCount = orders.filter((o) => ["томилогдсон", "авсан", "үнэ батлах"].includes(o.status)).length;
   const doneCount = orders.filter((o) => o.status === "хүргэгдсэн").length;
 
   const filtered = orders.filter((o) => {
-    if (filter === "шинэ") return o.status === "шинэ";
+    if (filter === "шинэ") return o.status === "шинэ" || o.status === "үнэ батлах";
     if (filter === "идэвхтэй") return ["томилогдсон", "авсан"].includes(o.status);
-    if (filter === "дууссан") return o.status === "хүргэгдсэн" || o.status === "цуцлагдсан";
+    if (filter === "дууссан") return o.status === "хүргэгдсэн" || (o.status === "цуцлагдсан" && !hiddenCancelled.has(o.id));
     return true;
   });
+
+  const deliveredOrders = filter === "дууссан" ? filtered.filter((o) => o.status === "хүргэгдсэн") : [];
+  const cancelledOrders = filter === "дууссан" ? filtered.filter((o) => o.status === "цуцлагдсан") : [];
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -139,12 +155,33 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
             </div>
           )}
 
-          {filtered.map((order) => {
+          {(filter === "дууссан"
+            ? [...deliveredOrders, ...cancelledOrders]
+            : filtered
+          ).map((order, idx, arr) => {
             const expanded = expandedId === order.id;
             const canAssign = order.status === "шинэ";
+            const prevStatus = idx > 0 ? arr[idx - 1].status : null;
+            const showDeliveredHeader = filter === "дууссан" && order.status === "хүргэгдсэн" && prevStatus !== "хүргэгдсэн";
+            const showCancelledHeader = filter === "дууссан" && order.status === "цуцлагдсан" && prevStatus !== "цуцлагдсан";
 
             return (
-              <div key={order.id} className={`bg-card border rounded-xl overflow-hidden ${order.status === "шинэ" ? "border-amber-500/30" : "border-border"}`}>
+              <Fragment key={order.id}>
+                {showDeliveredHeader && (
+                  <p className="text-xs text-green-400 font-medium pt-1 px-0.5">✓ Хүргэгдсэн ({deliveredOrders.length})</p>
+                )}
+                {showCancelledHeader && (
+                  <div className="flex items-center justify-between pt-2 pb-0.5 px-0.5">
+                    <p className="text-xs text-red-400 font-medium">✕ Цуцлагдсан ({cancelledOrders.length})</p>
+                    <button
+                      onClick={() => clearCancelled(cancelledOrders)}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Цэвэрлэх
+                    </button>
+                  </div>
+                )}
+              <div className={`bg-card border rounded-xl overflow-hidden ${order.status === "шинэ" ? "border-amber-500/30" : "border-border"}`}>
                 {/* Row */}
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
@@ -308,6 +345,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                   </div>
                 )}
               </div>
+              </Fragment>
             );
           })}
         </div>
