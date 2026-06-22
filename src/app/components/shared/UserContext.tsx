@@ -61,18 +61,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
-  // Load a customer's saved addresses + quick orders from the DB on login
+  // Load a customer's saved data + auth method from the DB on login / session restore
   const loadCustomer = useCallback(async (cid: string) => {
     setCustomerId(cid);
-    const { data } = await supabase.from("customers").select("addresses, quick_orders").eq("id", cid).single();
+    const { data } = await supabase
+      .from("customers")
+      .select("addresses, quick_orders, auth_method, auth_key")
+      .eq("id", cid)
+      .single();
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
     setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
+    if (data?.auth_method === "pin") { setPin(data.auth_key); setPattern(null); }
+    else if (data?.auth_method === "pattern") { setPattern(data.auth_key); setPin(null); }
   }, []);
 
   const clearCustomer = useCallback(() => {
     setCustomerId(null);
     setSavedAddresses([]);
     setQuickOrders([]);
+    setPin(null);
+    setPattern(null);
   }, []);
 
   // Persist the full address list to the DB
