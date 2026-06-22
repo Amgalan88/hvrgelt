@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X } from "lucide-react";
+import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon } from "lucide-react";
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
 import { Spinner } from "../shared/Spinner";
+import { useUser } from "../shared/UserContext";
 
 interface OperatorAppProps {
   orders: Order[];
@@ -13,19 +14,21 @@ interface OperatorAppProps {
 }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  шинэ:        "Шинэ",
-  томилогдсон: "Томилогдсон",
-  авсан:       "Ачаа авсан",
-  хүргэгдсэн: "Хүргэгдсэн",
-  цуцлагдсан: "Цуцлагдсан",
+  шинэ:          "Шинэ",
+  "үнэ батлах":  "Үнэ батлах хүлээж",
+  томилогдсон:   "Томилогдсон",
+  авсан:         "Ачаа авсан",
+  хүргэгдсэн:   "Хүргэгдсэн",
+  цуцлагдсан:   "Цуцлагдсан",
 };
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
-  шинэ:        "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  томилогдсон: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  авсан:       "bg-primary/20 text-primary border-primary/30",
-  хүргэгдсэн: "bg-green-500/20 text-green-400 border-green-500/30",
-  цуцлагдсан: "bg-red-500/20 text-red-400 border-red-500/30",
+  шинэ:          "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  "үнэ батлах":  "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  томилогдсон:   "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  авсан:         "bg-primary/20 text-primary border-primary/30",
+  хүргэгдсэн:   "bg-green-500/20 text-green-400 border-green-500/30",
+  цуцлагдсан:   "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
 const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
@@ -37,6 +40,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("5000");
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const { theme, toggleTheme } = useUser();
 
   const newCount = orders.filter((o) => o.status === "шинэ").length;
   const activeCount = orders.filter((o) => ["томилогдсон", "авсан"].includes(o.status)).length;
@@ -69,6 +73,9 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                 <span className="text-xs text-amber-400 font-mono">{newCount} шинэ</span>
               </div>
             )}
+            <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4" />
             </button>

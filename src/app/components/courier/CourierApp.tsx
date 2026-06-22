@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation } from "lucide-react";
+import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon } from "lucide-react";
 import type { Order, CourierUser } from "../shared/types";
+import { useUser } from "../shared/UserContext";
 
 interface CourierAppProps {
   orders: Order[];
@@ -18,6 +19,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
   const [tab, setTab] = useState<"active" | "done">("active");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
+  const { theme, toggleTheme } = useUser();
 
   const courier = courierInfo;
 
@@ -51,9 +53,14 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
             </div>
           </div>
         </div>
-        <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
       <div className="max-w-sm mx-auto w-full px-4 py-4 space-y-4">
