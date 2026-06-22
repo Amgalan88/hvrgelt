@@ -3,11 +3,12 @@ import { MapPin, Package, ChevronRight, Clock, CheckCircle, XCircle, Trash2 } fr
 import type { Order, OrderStatus } from "../shared/types";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
-  шинэ:        { label: "Хүлээгдэж байна",    color: "text-amber-400",  icon: Clock },
-  томилогдсон: { label: "Хүргэгч томилогдсон", color: "text-blue-400",   icon: Clock },
-  авсан:       { label: "Ачаа авсан",          color: "text-primary",    icon: Clock },
-  хүргэгдсэн: { label: "Хүргэгдсэн",          color: "text-green-400",  icon: CheckCircle },
-  цуцлагдсан: { label: "Цуцлагдсан",          color: "text-red-400",    icon: XCircle },
+  шинэ:          { label: "Хүлээгдэж байна",      color: "text-amber-400",  icon: Clock },
+  "үнэ батлах":  { label: "Үнэ батлахыг хүлээж", color: "text-orange-400", icon: Clock },
+  томилогдсон:   { label: "Хүргэгч томилогдсон",  color: "text-blue-400",   icon: Clock },
+  авсан:         { label: "Ачаа авсан",            color: "text-primary",    icon: Clock },
+  хүргэгдсэн:   { label: "Хүргэгдсэн",            color: "text-green-400",  icon: CheckCircle },
+  цуцлагдсан:   { label: "Цуцлагдсан",            color: "text-red-400",    icon: XCircle },
 };
 
 interface OrderHistoryProps {
@@ -78,7 +79,14 @@ export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
             </button>
           </div>
           <div className="space-y-2">
-            {past.map((o) => <OrderCard key={o.id} order={o} onTrack={onTrack} />)}
+            {past.map((o) => (
+              <OrderCard
+                key={o.id}
+                order={o}
+                onTrack={onTrack}
+                onHide={o.status === "цуцлагдсан" ? () => clearPast([o]) : undefined}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -86,7 +94,7 @@ export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
   );
 }
 
-function OrderCard({ order, onTrack }: { order: Order; onTrack: (id: string) => void }) {
+function OrderCard({ order, onTrack, onHide }: { order: Order; onTrack: (id: string) => void; onHide?: () => void }) {
   const cfg = STATUS_CONFIG[order.status];
   const Icon = cfg.icon;
   const isActive = !["хүргэгдсэн", "цуцлагдсан"].includes(order.status);
@@ -163,6 +171,15 @@ function OrderCard({ order, onTrack }: { order: Order; onTrack: (id: string) => 
               <CheckCircle className="w-3.5 h-3.5" />
               {order.deliveredAt && `${order.deliveredAt}-д хүргэгдсэн`}
             </div>
+          )}
+
+          {order.status === "цуцлагдсан" && onHide && (
+            <button
+              onClick={onHide}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Устгах
+            </button>
           )}
         </div>
       </div>
