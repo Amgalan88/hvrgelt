@@ -3,3 +3,7 @@ dist/
 .env
 .env.local
 *.log
+# Capacitor build outputs (keep android/ source, ignore build)
+android/.gradle/
+android/app/build/
+android/build/

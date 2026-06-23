@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">hvrgelt.mn</string>
+    <string name="title_activity_main">hvrgelt.mn</string>
+    <string name="package_name">mn.hvrgelt.app</string>
+    <string name="custom_url_scheme">mn.hvrgelt.app</string>
+</resources>
