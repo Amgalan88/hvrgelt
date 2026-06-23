@@ -8,8 +8,12 @@
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
   </defs>
+
+  <!-- Background -->
   <rect width="512" height="512" rx="90" fill="#ff5a1f"/>
   <rect width="512" height="512" rx="90" fill="url(#glow)"/>
+
+  <!-- Truck icon -->
   <g transform="translate(256,182) scale(8) translate(-12,-12)"
      stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
@@ -18,9 +22,24 @@
     <circle cx="7" cy="18" r="2"/>
     <circle cx="17" cy="18" r="2"/>
   </g>
+
+  <!-- Divider -->
   <line x1="72" y1="336" x2="440" y2="336" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-  <text x="256" y="402" text-anchor="middle" fill="white"
-        font-family="'Roboto Slab', serif" font-weight="900" font-size="78">ДАРХАН</text>
-  <text x="256" y="462" text-anchor="middle" fill="white"
-        font-family="'Roboto Slab', serif" font-weight="900" font-size="44" letter-spacing="5">хүргэлт</text>
+
+  <!-- ДАРХАН — Roboto Slab Black -->
+  <text x="256" y="402"
+        text-anchor="middle"
+        fill="white"
+        font-family="'Roboto Slab', serif"
+        font-weight="900"
+        font-size="78">ДАРХАН</text>
+
+  <!-- хүргэлт — same font -->
+  <text x="256" y="462"
+        text-anchor="middle"
+        fill="white"
+        font-family="'Roboto Slab', serif"
+        font-weight="900"
+        font-size="44"
+        letter-spacing="5">хүргэлт</text>
 </svg>

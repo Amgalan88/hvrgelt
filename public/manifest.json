@@ -1,11 +1,11 @@
 {
-  "name": "hvrgelt.mn — Дарханы хүргэлт",
-  "short_name": "hvrgelt.mn",
+  "name": "Дархан хүргэлт",
+  "short_name": "Дархан хүргэлт",
   "description": "Дарханы хурдан, найдвартай хүргэлтийн үйлчилгээ",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#07090f",
+  "background_color": "#ff5a1f",
   "theme_color": "#ff5a1f",
   "lang": "mn",
   "icons": [
@@ -14,6 +14,12 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
