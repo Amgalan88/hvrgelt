@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon } from "lucide-react";
 import type { Order, CourierUser } from "../shared/types";
 import { useUser } from "../shared/UserContext";
+import { Logo } from "../shared/Logo";
 
 interface CourierAppProps {
   orders: Order[];
@@ -41,16 +42,11 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <header className="bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>
-            {courierName[0]}
-          </div>
-          <div>
-            <p className="text-sm font-medium leading-none">{courierName}</p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span className="text-xs text-muted-foreground">{courier?.rating} · {courier?.vehicle && VEHICLE_ICON[courier.vehicle]}</span>
-            </div>
+        <div className="flex flex-col gap-0.5">
+          <Logo size="sm" />
+          <div className="flex items-center gap-1 ml-10">
+            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+            <span className="text-xs text-muted-foreground">{courierName} · {courier?.rating} {courier?.vehicle && VEHICLE_ICON[courier.vehicle]}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">

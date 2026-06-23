@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { Truck, ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock } from "lucide-react";
+import { Logo as AppLogo } from "../shared/Logo";
 import { Spinner } from "../shared/Spinner";
 import type { UserRole } from "../shared/types";
 import type { AccountLookup } from "../shared/store";
@@ -206,16 +207,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   // ── Logo bar ─────────────────────────────────────────────────────
   function Logo() {
-    return (
-      <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <Truck className="w-4 h-4 text-white" />
-        </div>
-        <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "1.1rem" }}>
-          hvrgelt<span className="text-primary">.mn</span>
-        </span>
-      </div>
-    );
+    return <div className="mb-6"><AppLogo /></div>;
   }
 
   // ── LANDING ───────────────────────────────────────────────────────

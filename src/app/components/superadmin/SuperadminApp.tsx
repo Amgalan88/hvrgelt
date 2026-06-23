@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search } from "lucide-react";
+import { Logo } from "../shared/Logo";
 import type { OperatorAccount, CourierAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
@@ -294,14 +295,9 @@ export function SuperadminApp({
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-700 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold leading-none" style={{ fontFamily: "'Roboto Slab', serif" }}>hvrgelt.mn</p>
-              <p className="text-xs text-primary leading-none mt-0.5">Супер Админ</p>
-            </div>
+          <div className="flex flex-col gap-0.5">
+            <Logo size="sm" />
+            <p className="text-xs text-primary leading-none ml-10">Супер Админ</p>
           </div>
           <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg transition-colors">
             <LogOut className="w-3.5 h-3.5" /> Гарах

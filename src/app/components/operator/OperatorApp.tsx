@@ -3,6 +3,7 @@ import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCi
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
 import { Spinner } from "../shared/Spinner";
 import { useUser } from "../shared/UserContext";
+import { Logo } from "../shared/Logo";
 
 interface OperatorAppProps {
   orders: Order[];
@@ -73,14 +74,9 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
-              <span className="text-purple-400 font-bold text-xs">{operatorName[0]}</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium leading-none">{operatorName}</p>
-              <p className="text-xs text-purple-400 leading-none mt-0.5">Оператор</p>
-            </div>
+          <div className="flex flex-col gap-0.5">
+            <Logo size="sm" />
+            <p className="text-xs text-purple-400 leading-none ml-10">{operatorName} · Оператор</p>
           </div>
           <div className="flex items-center gap-3">
             {newCount > 0 && (

@@ -10,7 +10,8 @@ import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
-import { Truck, LogOut, ArrowRight, Package, Clock, Shield, ChevronLeft, Phone, MapPin as MapPinIcon, FileText, Lock } from "lucide-react";
+import { Truck, LogOut, ArrowRight, Package, Clock, Shield, ChevronLeft, Phone, FileText, Lock } from "lucide-react";
+import { Logo } from "./components/shared/Logo";
 import { motion, AnimatePresence } from "motion/react";
 
 interface Session {
@@ -157,14 +158,7 @@ function Inner() {
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(7,9,15,0.2) 0%, rgba(7,9,15,0.95) 60%)" }} />
 
           <nav className="relative z-10 flex items-center justify-between px-5 pt-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Truck className="w-4 h-4 text-white" />
-              </div>
-              <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "1.15rem", color: "#fff" }}>
-                hvrgelt<span className="text-primary">.mn</span>
-              </span>
-            </div>
+            <Logo textColor="#fff" />
             <button
               onClick={() => setLandingDone(true)}
               className="text-sm text-white/70 hover:text-white transition-colors"
@@ -275,13 +269,8 @@ function Inner() {
     const greeting = `Сайн байна уу, ${session.name.split(".")[0] ?? session.name}!`;
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
-        <div className="flex items-center gap-2 px-5 pt-6">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Truck className="w-4 h-4 text-white" />
-          </div>
-          <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "1.1rem" }}>
-            hvrgelt<span className="text-primary">.mn</span>
-          </span>
+        <div className="px-5 pt-6">
+          <Logo />
         </div>
         <div className="flex-1 flex items-center justify-center">
           {pattern ? (

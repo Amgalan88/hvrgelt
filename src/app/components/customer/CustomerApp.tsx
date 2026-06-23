@@ -8,6 +8,7 @@ import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
 import { cloudinaryUrl } from "../../lib/cloudinary";
+import { Logo } from "../shared/Logo";
 
 type AppTab = "order" | "places" | "history" | "settings";
 type OrderStep = "form" | "confirm" | "tracking";
@@ -221,14 +222,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Truck className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}>
-            hvrgelt<span className="text-primary">.mn</span>
-          </span>
-        </div>
+        <Logo size="sm" />
         <div className="flex items-center gap-2">
           {tab === "order" && myOrder && orderStep === "tracking" && (
             <button onClick={handleNewOrder} className="text-xs border border-border px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
