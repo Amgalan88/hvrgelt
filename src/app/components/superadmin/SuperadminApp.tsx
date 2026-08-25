@@ -1,16 +1,17 @@
 import { useState, useRef } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound } from "lucide-react";
 import { Logo } from "../shared/Logo";
-import type { OperatorAccount, CourierAccount } from "../shared/store";
+import type { OperatorAccount, CourierAccount, CustomerAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
 import { uploadToCloudinary, cloudinaryConfigured } from "../../lib/cloudinary";
 
-type Tab = "operators" | "couriers" | "partners" | "settings";
+type Tab = "operators" | "couriers" | "customers" | "partners" | "settings";
 
 interface SuperadminAppProps {
   operatorAccounts: OperatorAccount[];
   courierAccounts: CourierAccount[];
+  customerAccounts: CustomerAccount[];
   partners: Partner[];
   onAddOperator: (data: { name: string; username: string; password: string; phone: string }) => void;
   onUpdateOperator: (id: string, data: Partial<Omit<OperatorAccount, "id">>) => void;
@@ -18,6 +19,7 @@ interface SuperadminAppProps {
   onAddCourier: (data: { name: string; username: string; password: string; phone: string; vehicle: CourierAccount["vehicle"] }) => void;
   onUpdateCourier: (id: string, data: Partial<Omit<CourierAccount, "id">>) => void;
   onDeleteCourier: (id: string) => void;
+  onResetCustomerAuth: (id: string) => void;
   onAddPartner: (data: Omit<Partner, "id">) => void;
   onUpdatePartner: (id: string, data: Partial<Omit<Partner, "id">>) => void;
   onDeletePartner: (id: string) => void;
@@ -164,6 +166,23 @@ function ConfirmDelete({ name, onConfirm, onClose }: { name: string; onConfirm: 
   );
 }
 
+// ── Confirm reset PIN/Pattern modal ─────────────────────────────────
+function ConfirmReset({ name, onConfirm, onClose }: { name: string; onConfirm: () => void; onClose: () => void }) {
+  return (
+    <Modal title="PIN/Pattern цэвэрлэх" onClose={onClose}>
+      <p className="text-sm text-muted-foreground">
+        <span className="text-foreground font-medium">{name}</span>-ийн PIN/Pattern-г цэвэрлэх үү?
+        Дараагийн нэвтрэлт дээр шинэ PIN эсвэл Pattern тохируулах хүсэлт гарна.
+      </p>
+      <p className="text-xs text-amber-400">Утсаар холбогдож хэрэглэгчийг баталгаажуулсны дараа л энэ товчийг дарна уу.</p>
+      <div className="flex gap-2 pt-2">
+        <button onClick={onClose} className="flex-1 border border-border py-2.5 rounded-xl text-sm">Болих</button>
+        <button onClick={() => { onConfirm(); onClose(); }} className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">Цэвэрлэх</button>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Partner modal ─────────────────────────────────────────────────────
 function PartnerModal({ initial, onSave, onClose }: {
   initial?: Partial<Partner>;
@@ -262,9 +281,10 @@ function PartnerModal({ initial, onSave, onClose }: {
 
 // ── Main superadmin app ───────────────────────────────────────────────
 export function SuperadminApp({
-  operatorAccounts, courierAccounts, partners,
+  operatorAccounts, courierAccounts, customerAccounts, partners,
   onAddOperator, onUpdateOperator, onDeleteOperator,
   onAddCourier, onUpdateCourier, onDeleteCourier,
+  onResetCustomerAuth,
   onAddPartner, onUpdatePartner, onDeletePartner,
   bankInfo, onUpdateBankInfo,
   onLogout,
@@ -274,6 +294,7 @@ export function SuperadminApp({
   const [tab, setTab] = useState<Tab>("operators");
   const [partnerCat, setPartnerCat] = useState<string>("бүгд");
   const [partnerSearch, setPartnerSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [modal, setModal] = useState<
     | { type: "add-operator" }
     | { type: "edit-operator"; item: OperatorAccount }
@@ -282,6 +303,7 @@ export function SuperadminApp({
     | { type: "add-partner" }
     | { type: "edit-partner"; item: Partner }
     | { type: "delete"; id: string; name: string; role: "operator" | "courier" | "partner" }
+    | { type: "reset-customer"; id: string; name: string }
     | null
   >(null);
 
@@ -325,6 +347,7 @@ export function SuperadminApp({
           {([
             { key: "operators" as Tab, label: "Операторууд", icon: Users },
             { key: "couriers" as Tab, label: "Хүргэгчид", icon: Truck },
+            { key: "customers" as Tab, label: "Хэрэглэгчид", icon: Smartphone },
             { key: "partners" as Tab, label: "Газрууд", icon: MapPin },
             { key: "settings" as Tab, label: "Тохиргоо", icon: Settings },
           ]).map(({ key, label, icon: Icon }) => (
@@ -445,6 +468,70 @@ export function SuperadminApp({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── CUSTOMERS ── */}
+        {tab === "customers" && (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">{customerAccounts.length} хэрэглэгч</p>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="Нэр эсвэл утасны дугаараар хайх..."
+                className="w-full bg-input-background border border-border rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+              />
+              {customerSearch && (
+                <button onClick={() => setCustomerSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {(() => {
+              const q = customerSearch.trim().toLowerCase();
+              const list = q
+                ? customerAccounts.filter((c) => c.name.toLowerCase().includes(q) || c.phone.includes(q))
+                : customerAccounts;
+              if (!list.length) {
+                return <p className="text-sm text-muted-foreground text-center py-8">{q ? "Тохирох хэрэглэгч олдсонгүй" : "Хэрэглэгч бүртгэгдээгүй байна"}</p>;
+              }
+              return list.map((cu) => (
+                <div key={cu.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shrink-0" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                      {cu.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{cu.name}</p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cu.authMethod === "reset" ? "bg-amber-500/15 text-amber-400 border-amber-500/30" : "bg-secondary text-muted-foreground border-border"}`}>
+                          {cu.authMethod === "pin" ? "PIN" : cu.authMethod === "pattern" ? "Pattern" : "Шинээр тохируулна"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span className="font-mono">{cu.phone}</span>
+                        <span>·</span>
+                        <span>{cu.createdAt}-аас</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setModal({ type: "reset-customer", id: cu.id, name: cu.name })}
+                      disabled={cu.authMethod === "reset"}
+                      className="flex items-center gap-1.5 shrink-0 text-xs border border-border px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-40"
+                      title="PIN/Pattern цэвэрлэх"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Цэвэрлэх
+                    </button>
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         )}
 
@@ -605,6 +692,13 @@ export function SuperadminApp({
             modal.role === "courier" ? onDeleteCourier(modal.id) :
             onDeletePartner(modal.id)
           }
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === "reset-customer" && (
+        <ConfirmReset
+          name={modal.name}
+          onConfirm={() => onResetCustomerAuth(modal.id)}
           onClose={() => setModal(null)}
         />
       )}

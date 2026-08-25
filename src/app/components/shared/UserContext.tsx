@@ -64,11 +64,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Load a customer's saved data + auth method from the DB on login / session restore
   const loadCustomer = useCallback(async (cid: string) => {
     setCustomerId(cid);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("customers")
       .select("addresses, quick_orders, auth_method, auth_key")
       .eq("id", cid)
       .single();
+    // Сүлжээний алдаа гарвал хадгалсан хаяг/PIN-ийг хоослохгүй, дараагийн
+    // амжилттай ачаалалт хүртэл өмнөх утгыг хэвээр үлдээнэ.
+    if (error) { console.error("loadCustomer failed", error); return; }
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
     setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
     if (data?.auth_method === "pin") { setPin(data.auth_key); setPattern(null); }

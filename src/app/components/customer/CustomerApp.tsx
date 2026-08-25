@@ -717,7 +717,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
         {tab === "settings" && (
           <div className="space-y-4">
             <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
-            <SettingsPage userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
+            <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
         )}
 

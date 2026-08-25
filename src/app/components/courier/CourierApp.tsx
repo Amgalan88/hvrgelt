@@ -3,6 +3,7 @@ import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronR
 import type { Order, CourierUser } from "../shared/types";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
+import { PushToggle } from "../shared/PushToggle";
 
 interface CourierAppProps {
   orders: Order[];
@@ -50,6 +51,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <PushToggle role="courier" userId={courierId} />
           <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>

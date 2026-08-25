@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser } from "./types";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { supabase } from "../../lib/supabase";
+import { normalizePhone } from "../../lib/phone";
 
 // ── Auth method types ─────────────────────────────────────────────────
-export type AuthMethod = "pin" | "pattern" | "password";
+export type AuthMethod = "pin" | "pattern" | "password" | "reset";
 
 export interface AccountLookup {
   role: "customer" | "operator" | "courier" | "superadmin";
@@ -48,7 +49,7 @@ export interface CustomerAccount {
   id: string;
   name: string;
   phone: string;
-  authMethod: "pin" | "pattern";
+  authMethod: "pin" | "pattern" | "reset";
   authKey: string;
   createdAt: string;
 }
@@ -136,6 +137,17 @@ function rowToPartner(r: any): Partner {
   };
 }
 
+function rowToCustomer(r: any): CustomerAccount {
+  return {
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    authMethod: r.auth_method,
+    authKey: r.auth_key,
+    createdAt: r.created_at,
+  };
+}
+
 function rowToOperator(r: any): OperatorAccount {
   return {
     id: r.id,
@@ -155,7 +167,7 @@ export function useStore() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [operatorAccounts, setOperatorAccounts] = useState<OperatorAccount[]>([]);
   const [courierAccounts, setCourierAccounts] = useState<CourierAccount[]>([]);
-  const [customerAccounts] = useState<CustomerAccount[]>([]);
+  const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [bankInfo, setBankInfo] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -185,6 +197,14 @@ export function useStore() {
     if (data) setOperatorAccounts(data.map(rowToOperator));
   }, []);
 
+  const refreshCustomers = useCallback(async () => {
+    const { data } = await supabase
+      .from("customers")
+      .select("id, name, phone, auth_method, auth_key, created_at")
+      .order("created_at", { ascending: false });
+    if (data) setCustomerAccounts(data.map(rowToCustomer));
+  }, []);
+
   const refreshPartners = useCallback(async () => {
     const { data } = await supabase
       .from("partners")
@@ -200,7 +220,7 @@ export function useStore() {
   }, []);
 
   useEffect(() => {
-    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshPartners(), refreshSettings()]).finally(() => setLoading(false));
+    Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshCustomers(), refreshPartners(), refreshSettings()]).finally(() => setLoading(false));
 
     const ordersChannel = supabase
       .channel("orders-changes")
@@ -228,7 +248,7 @@ export function useStore() {
       supabase.removeChannel(couriersChannel);
       supabase.removeChannel(partnersChannel);
     };
-  }, [refreshOrders, refreshCouriers, refreshOperators, refreshPartners, refreshSettings]);
+  }, [refreshOrders, refreshCouriers, refreshOperators, refreshCustomers, refreshPartners, refreshSettings]);
 
   // ── Couriers view-model (зөвхөн active) ─────────────────────────────
   const couriers: CourierUser[] = courierAccounts
@@ -245,25 +265,31 @@ export function useStore() {
     }));
 
   // ── Phone-based auth lookup (DB) ────────────────────────────────────
+  // Сүлжээ тасрах/Supabase түр нойрсох үед алдаа "бүртгэлгүй" гэж
+  // андуураад дахин бүртгүүлэх шаардлагатай мэт харагдахаас сэргийлж,
+  // алдааг зааж throw хийнэ — LoginPage үүнийг "олдсонгүй"-гээс ялгаж харна.
   const resolveByPhone = useCallback(async (rawPhone: string): Promise<AccountLookup | null> => {
-    const phone = rawPhone.replace(/\D/g, "");
+    const phone = normalizePhone(rawPhone);
 
-    if (phone === SUPERADMIN.phone.replace(/\D/g, ""))
+    if (phone === normalizePhone(SUPERADMIN.phone))
       return { role: "superadmin", id: SUPERADMIN.id, name: SUPERADMIN.name, authMethod: "password", authKey: SUPERADMIN.password };
 
-    const { data: ops } = await supabase.from("operators").select("*").eq("phone", phone).eq("active", true).limit(1);
+    const { data: ops, error: opsErr } = await supabase.from("operators").select("*").eq("phone", phone).eq("active", true).limit(1);
+    if (opsErr) throw opsErr;
     if (ops && ops.length) {
       const o = ops[0];
       return { role: "operator", id: o.id, name: o.name, authMethod: o.auth_method, authKey: o.auth_key };
     }
 
-    const { data: crs } = await supabase.from("couriers").select("*").eq("phone", phone).eq("active", true).limit(1);
+    const { data: crs, error: crsErr } = await supabase.from("couriers").select("*").eq("phone", phone).eq("active", true).limit(1);
+    if (crsErr) throw crsErr;
     if (crs && crs.length) {
       const c = crs[0];
       return { role: "courier", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
     }
 
-    const { data: cus } = await supabase.from("customers").select("*").eq("phone", phone).limit(1);
+    const { data: cus, error: cusErr } = await supabase.from("customers").select("*").eq("phone", phone).limit(1);
+    if (cusErr) throw cusErr;
     if (cus && cus.length) {
       const c = cus[0];
       return { role: "customer", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
@@ -279,12 +305,18 @@ export function useStore() {
       const { error } = await supabase.from("customers").insert({
         id,
         name: data.name,
-        phone: data.phone,
+        phone: normalizePhone(data.phone),
         auth_method: data.authMethod,
         auth_key: data.authKey,
         created_at: new Date().toISOString().slice(0, 10),
       });
-      if (error) throw error;
+      if (error) {
+        // 23505 = unique_violation (энэ дугаар өөр төхөөрөмжөөс аль хэдийн бүртгүүлсэн байж болно)
+        if ((error as { code?: string }).code === "23505") {
+          throw new Error("Энэ дугаар аль хэдийн бүртгэлтэй байна. Нэвтэрч орно уу.");
+        }
+        throw error;
+      }
       return id;
     },
     [],
@@ -409,6 +441,18 @@ export function useStore() {
       await supabase.from("customers").update({ auth_method: authMethod, auth_key: authKey }).eq("id", id);
     },
     [],
+  );
+
+  // ── Superadmin: PIN/Pattern мартсан хэрэглэгчийн нууцлалыг цэвэрлэх ─
+  // Дараагийн нэвтрэлт дээр (утсаар баталгаажуулсны дараа) хэрэглэгч
+  // шинэ PIN/Pattern-аа шууд тохируулна — нэмэлт баталгаажуулалт шаардахгүй,
+  // учир нь admin аль хэдийн утсаар хэрэглэгчийг таньсан байна.
+  const resetCustomerAuth = useCallback(
+    async (id: string) => {
+      await supabase.from("customers").update({ auth_method: "reset", auth_key: "" }).eq("id", id);
+      await refreshCustomers();
+    },
+    [refreshCustomers],
   );
 
   // ── Superadmin: operator CRUD ───────────────────────────────────────
@@ -574,5 +618,6 @@ export function useStore() {
     addCustomer,
     updateAccountAuth,
     updateCustomerAuth,
+    resetCustomerAuth,
   };
 }

@@ -4,10 +4,12 @@ import type { Order, OrderStatus, CourierUser } from "../shared/types";
 import { Spinner } from "../shared/Spinner";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
+import { PushToggle } from "../shared/PushToggle";
 
 interface OperatorAppProps {
   orders: Order[];
   couriers: CourierUser[];
+  operatorId: string;
   operatorName: string;
   onAssign: (orderId: string, courierId: string, price: number) => void | Promise<void>;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
@@ -36,7 +38,7 @@ const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", ав
 
 type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан";
 
-export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdateStatus, onLogout }: OperatorAppProps) {
+export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssign, onUpdateStatus, onLogout }: OperatorAppProps) {
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("5000");
@@ -85,6 +87,7 @@ export function OperatorApp({ orders, couriers, operatorName, onAssign, onUpdate
                 <span className="text-xs text-amber-400 font-mono">{newCount} шинэ</span>
               </div>
             )}
+            <PushToggle role="operator" userId={operatorId} />
             <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>

@@ -260,6 +260,7 @@ function Inner() {
         resolveByPhone={store.resolveByPhone}
         addCustomer={store.addCustomer}
         updateAccountAuth={store.updateAccountAuth}
+        updateCustomerAuth={store.updateCustomerAuth}
       />
     );
   }
@@ -312,6 +313,7 @@ function Inner() {
         <SuperadminApp
           operatorAccounts={store.operatorAccounts}
           courierAccounts={store.courierAccounts}
+          customerAccounts={store.customerAccounts}
           partners={store.partners}
           bankInfo={store.bankInfo}
           onAddOperator={store.addOperator}
@@ -320,6 +322,7 @@ function Inner() {
           onAddCourier={store.addCourier}
           onUpdateCourier={store.updateCourier}
           onDeleteCourier={store.deleteCourier}
+          onResetCustomerAuth={store.resetCustomerAuth}
           onAddPartner={store.addPartner}
           onUpdatePartner={store.updatePartner}
           onDeletePartner={store.deletePartner}
@@ -351,6 +354,7 @@ function Inner() {
         <OperatorApp
           orders={store.orders}
           couriers={store.couriers}
+          operatorId={session.id}
           operatorName={session.name}
           onAssign={store.assignCourier}
           onUpdateStatus={() => { }}

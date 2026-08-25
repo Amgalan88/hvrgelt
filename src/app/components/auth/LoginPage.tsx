@@ -8,12 +8,14 @@ import type { AccountLookup } from "../shared/store";
 import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
+import { normalizePhone, isValidPhone } from "../../lib/phone";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
   resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
   addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
   updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
+  updateCustomerAuth: (id: string, authMethod: "pin" | "pattern", authKey: string) => void;
   skipLanding?: boolean;
 }
 
@@ -28,7 +30,7 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, skipLanding }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, skipLanding }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
   const [screen, setScreen] = useState<Screen>(skipLanding ? "phone" : "landing");
 
@@ -94,8 +96,8 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // ── Phone submit ─────────────────────────────────────────────────
   async function handlePhoneSubmit() {
     if (submitting) return;
-    const clean = phone.replace(/\D/g, "");
-    if (clean.length < 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
+    const clean = normalizePhone(phone);
+    if (clean.length !== 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
     setSubmitting(true);
     try {
       const found = await resolveByPhone(clean);
@@ -105,11 +107,23 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         return;
       }
       setAccount(found);
+      // Admin PIN/Pattern-ийг нь цэвэрлэсэн бол (утсаар аль хэдийн
+      // баталгаажуулсан) шинэ нууцлал тохируулах руу шууд шилжинэ.
+      if (found.authMethod === "reset") {
+        setSetupStep("choose");
+        setSetupPinFirst(""); setSetupPatternFirst(""); setSetupError("");
+        setScreen("first-setup");
+        return;
+      }
       setAuthStep(found.authMethod as AuthStep);
       setFailCount(0);
       setLockUntil(0);
       setAuthError("");
       setScreen("auth");
+    } catch {
+      // Сүлжээ/сервер алдаа гарвал "бүртгэлгүй" гэж андуураад дахин
+      // бүртгүүлэх шаардлагатай мэт харуулахгүй — дахин оролдохыг санал болгоно.
+      setPhoneError("Сүлжээний алдаа гарлаа. Дахин оролдоно уу.");
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +146,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         if (account.authMethod === "pin") { setPin(entered); setPattern(null); }
         else if (account.authMethod === "pattern") { setPattern(entered); setPin(null); }
       }
-      onLogin(account.role, account.id, account.name, phone.replace(/\D/g, ""));
+      onLogin(account.role, account.id, account.name, normalizePhone(phone));
     } else {
       handleFail(
         account.authMethod === "pin"     ? "PIN буруу байна" :
@@ -146,9 +160,14 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   function handleSetupPin(pin: string) {
     if (!setupPinFirst) { setSetupPinFirst(pin); return; }
     if (pin === setupPinFirst) {
-      updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pin", pin);
+      if (account!.role === "customer") {
+        updateCustomerAuth(account!.id, "pin", pin);
+        setPin(pin); setPattern(null);
+      } else {
+        updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pin", pin);
+      }
       localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name, phone.replace(/\D/g, ""));
+      onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
     } else {
       setSetupPinFirst("");
       setSetupError("PIN таарсангүй. Дахин оруулна уу.");
@@ -159,9 +178,14 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   function handleSetupPattern(pattern: string) {
     if (!setupPatternFirst) { setSetupPatternFirst(pattern); return; }
     if (pattern === setupPatternFirst) {
-      updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pattern", pattern);
+      if (account!.role === "customer") {
+        updateCustomerAuth(account!.id, "pattern", pattern);
+        setPattern(pattern); setPin(null);
+      } else {
+        updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pattern", pattern);
+      }
       localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name, phone.replace(/\D/g, ""));
+      onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
     } else {
       setSetupPatternFirst("");
       setSetupError("Pattern таарсангүй. Дахин зурна уу.");
@@ -173,10 +197,15 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   async function handlePinEntry(pin: string) {
     if (!pinFirst) { setPinFirst(pin); return; }
     if (pin === pinFirst) {
-      setPin(pin); setPattern(null);
-      const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pin", authKey: pin });
-      localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-      onLogin("customer", id, rName.trim(), rPhone.replace(/\D/g, ""));
+      try {
+        const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pin", authKey: pin });
+        setPin(pin); setPattern(null);
+        localStorage.setItem(SAVED_PHONE_KEY, rPhone);
+        onLogin("customer", id, rName.trim(), normalizePhone(rPhone));
+      } catch (e) {
+        setPinFirst("");
+        setRegError(e instanceof Error ? e.message : "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
+      }
     } else {
       setPinFirst("");
       setRegError("PIN таарсангүй. Дахин оруулна уу.");
@@ -187,10 +216,15 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   async function handlePatternEntry(pattern: string) {
     if (!patternFirst) { setPatternFirst(pattern); return; }
     if (pattern === patternFirst) {
-      setPattern(pattern); setPin(null);
-      const id = await addCustomer({ name: rName.trim(), phone: rPhone.replace(/\D/g, ""), authMethod: "pattern", authKey: pattern });
-      localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-      onLogin("customer", id, rName.trim(), rPhone.replace(/\D/g, ""));
+      try {
+        const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pattern", authKey: pattern });
+        setPattern(pattern); setPin(null);
+        localStorage.setItem(SAVED_PHONE_KEY, rPhone);
+        onLogin("customer", id, rName.trim(), normalizePhone(rPhone));
+      } catch (e) {
+        setPatternFirst("");
+        setRegError(e instanceof Error ? e.message : "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
+      }
     } else {
       setPatternFirst("");
       setRegError("Pattern таарсангүй. Дахин зурна уу.");
@@ -302,7 +336,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <div className="mt-6">
           <button
             onClick={handlePhoneSubmit}
-            disabled={phone.replace(/\D/g, "").length < 8 || submitting}
+            disabled={!isValidPhone(phone) || submitting}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
           >
@@ -441,10 +475,12 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
           <Logo />
           <div className="mb-8">
             <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.5rem" }}>
-              Тавтай морил, {greeting}!
+              {account.role === "customer" ? `Сайн байна уу, ${greeting}!` : `Тавтай морил, ${greeting}!`}
             </h2>
             <p className="text-muted-foreground text-sm mt-2">
-              Анхны нэвтрэлт амжилттай. Цаашид ашиглах нууцлалаа тохируулна уу.
+              {account.role === "customer"
+                ? "Таны нууцлал цэвэрлэгдсэн байна. Шинэ PIN эсвэл Pattern-аа тохируулна уу."
+                : "Анхны нэвтрэлт амжилттай. Цаашид ашиглах нууцлалаа тохируулна уу."}
             </p>
           </div>
           <div className="space-y-3 flex-1">
@@ -579,7 +615,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <div className="mt-6 space-y-3">
           <button
             onClick={() => setRegStep("choose")}
-            disabled={!rName.trim() || rPhone.replace(/\D/g, "").length < 8}
+            disabled={!rName.trim() || !isValidPhone(rPhone)}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
           >

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock, Bell, BellOff } from "lucide-react";
 import { useUser, type SavedAddress } from "../shared/UserContext";
 import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
+import { pushConfigured, pushSupported, notificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribed } from "../../lib/push";
 
 const ICON_MAP = {
   home: { icon: Home, label: "Гэр", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
@@ -98,6 +99,7 @@ function AddAddressModal({ initial, onClose, onSave }: AddAddressModalProps) {
 }
 
 interface SettingsPageProps {
+  userId: string;
   userName: string;
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
@@ -110,7 +112,7 @@ type LockFlow =
   | "pattern-new" | "pattern-confirm"
   | null;
 
-export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
+export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
   const { theme, toggleTheme, savedAddresses, addAddress, updateAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
   const [showAdd, setShowAdd] = useState(false);
   const [editAddr, setEditAddr] = useState<SavedAddress | null>(null);
@@ -118,6 +120,34 @@ export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: Se
   const [pending, setPending] = useState("");
   const [lockError, setLockError] = useState("");
   const [target, setTarget] = useState<"pin" | "pattern">("pin");
+
+  // ── Push мэдэгдэл ────────────────────────────────────────────────
+  const [notifOn, setNotifOn] = useState(false);
+  const [notifBusy, setNotifBusy] = useState(false);
+  const [notifError, setNotifError] = useState("");
+
+  useEffect(() => {
+    isSubscribed().then(setNotifOn);
+  }, []);
+
+  async function handleToggleNotif() {
+    if (notifBusy) return;
+    setNotifBusy(true);
+    setNotifError("");
+    try {
+      if (notifOn) {
+        await unsubscribeFromPush();
+        setNotifOn(false);
+      } else {
+        await subscribeToPush("customer", userId);
+        setNotifOn(true);
+      }
+    } catch (e) {
+      setNotifError(e instanceof Error ? e.message : "Алдаа гарлаа. Дахин оролдоно уу.");
+    } finally {
+      setNotifBusy(false);
+    }
+  }
 
   // alias for backward compat
   const pinFlow = lockFlow;
@@ -164,6 +194,47 @@ export function SettingsPage({ userName, userPhone, onUpdateAuth, onLogout }: Se
           </button>
         </div>
       </div>
+
+      {/* Push мэдэгдэл */}
+      {pushConfigured() && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "0.7rem" }}>Мэдэгдэл</p>
+          </div>
+          {!pushSupported() ? (
+            <div className="px-4 py-3 flex items-center gap-3 text-muted-foreground">
+              <BellOff className="w-5 h-5" />
+              <p className="text-sm">Энэ browser push мэдэгдэл дэмждэггүй</p>
+            </div>
+          ) : notificationPermission() === "denied" ? (
+            <div className="px-4 py-3 flex items-center gap-3 text-muted-foreground">
+              <BellOff className="w-5 h-5" />
+              <div>
+                <p className="text-sm">Мэдэгдэл хориглогдсон байна</p>
+                <p className="text-xs mt-0.5">Browser-ийн сайтын тохиргооноос зөвшөөрнө үү</p>
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {notifOn ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
+                <div>
+                  <p className="text-sm font-medium">Захиалгын мэдэгдэл</p>
+                  <p className="text-xs text-muted-foreground">Статус өөрчлөгдөх бүрд push мэдэгдэл авна</p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleNotif}
+                disabled={notifBusy}
+                className={`w-12 h-6 rounded-full border transition-all relative disabled:opacity-50 ${notifOn ? "bg-primary border-primary" : "bg-secondary border-border"}`}
+              >
+                <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform absolute top-0.5 ${notifOn ? "translate-x-6" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+          )}
+          {notifError && <p className="text-xs text-destructive px-4 pb-3">{notifError}</p>}
+        </div>
+      )}
 
       {/* Saved addresses */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
