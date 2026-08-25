@@ -13,15 +13,16 @@
   <rect width="512" height="512" rx="90" fill="#ff5a1f"/>
   <rect width="512" height="512" rx="90" fill="url(#glow)"/>
 
-  <!-- Truck icon -->
-  <g transform="translate(256,182) scale(8) translate(-12,-12)"
-     stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-    <path d="M15 18H9"/>
-    <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
-    <circle cx="7" cy="18" r="2"/>
-    <circle cx="17" cy="18" r="2"/>
-  </g>
+  <!-- 1961 — сүлд тоо, medallion хэлбэртэй -->
+  <circle cx="256" cy="200" r="115" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="7"/>
+  <circle cx="256" cy="200" r="99" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+  <text x="256" y="222"
+        text-anchor="middle"
+        fill="white"
+        font-family="'Roboto Slab', serif"
+        font-weight="900"
+        font-size="86"
+        letter-spacing="1">1961</text>
 
   <!-- Divider -->
   <line x1="72" y1="336" x2="440" y2="336" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>

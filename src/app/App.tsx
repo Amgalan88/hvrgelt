@@ -151,8 +151,8 @@ function Inner() {
         {/* Hero */}
         <div className="relative flex-1 flex flex-col">
           <img
-            src="https://images.unsplash.com/photo-1765808172074-702dc0371f93?w=800&h=900&fit=crop&auto=format"
-            alt="courier"
+            src="/banner.jpg"
+            alt="Дархан хот"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(7,9,15,0.2) 0%, rgba(7,9,15,0.95) 60%)" }} />
@@ -169,10 +169,21 @@ function Inner() {
 
           <div className="relative z-10 mt-auto px-5 pb-8 space-y-5">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+              <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/40 rounded-full px-3 py-1 text-xs text-primary mb-3">
+                🎉 Дархан хотын 65 жилийн ойг тохиолдуулан нээгдлээ
+              </div>
               <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
               <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 30+ хүргэгчтэй холбогдоорой.</p>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3">
+                <a href="tel:99371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.15rem" }}>
+                  <Phone className="w-4 h-4" /> 9937-1961
+                </a>
+                <a href="tel:95371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.15rem" }}>
+                  <Phone className="w-4 h-4" /> 9537-1961
+                </a>
+              </div>
             </motion.div>
 
             {/* Feature chips */}

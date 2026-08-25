@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
-import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock, Bell, BellOff } from "lucide-react";
-import { useUser, type SavedAddress } from "../shared/UserContext";
+import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock, Bell, BellOff, CheckCircle } from "lucide-react";
+import { useUser, type SavedAddress, type AccentColor } from "../shared/UserContext";
 import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { pushConfigured, pushSupported, notificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribed } from "../../lib/push";
+
+const ACCENT_SWATCHES: { key: AccentColor; label: string; color: string }[] = [
+  { key: "orange", label: "Улбар шар", color: "#ff5a1f" },
+  { key: "blue", label: "Хөх", color: "#3b82f6" },
+  { key: "green", label: "Ногоон", color: "#10b981" },
+  { key: "violet", label: "Ягаан час", color: "#a855f7" },
+];
 
 const ICON_MAP = {
   home: { icon: Home, label: "Гэр", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
@@ -113,7 +120,7 @@ type LockFlow =
   | null;
 
 export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
-  const { theme, toggleTheme, savedAddresses, addAddress, updateAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
+  const { theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
   const [showAdd, setShowAdd] = useState(false);
   const [editAddr, setEditAddr] = useState<SavedAddress | null>(null);
   const [lockFlow, setLockFlow] = useState<LockFlow>(null);
@@ -192,6 +199,27 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
           >
             <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform absolute top-0.5 ${theme === "dark" ? "translate-x-6" : "translate-x-0.5"}`} />
           </button>
+        </div>
+        <div className="px-4 py-3 border-t border-border">
+          <p className="text-sm font-medium mb-2.5">Өнгөний загвар</p>
+          <div className="flex gap-3">
+            {ACCENT_SWATCHES.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setAccentColor(s.key)}
+                title={s.label}
+                className="flex flex-col items-center gap-1.5"
+              >
+                <span
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
+                  style={{ backgroundColor: s.color, boxShadow: accentColor === s.key ? `0 0 0 2px var(--card), 0 0 0 4px ${s.color}` : "none" }}
+                >
+                  {accentColor === s.key && <CheckCircle className="w-4 h-4 text-white" />}
+                </span>
+                <span className="text-xs text-muted-foreground">{s.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -19,9 +19,13 @@ export interface QuickOrder {
   toDetail: string;
 }
 
+export type AccentColor = "orange" | "blue" | "green" | "violet";
+
 interface UserContextValue {
   theme: "dark" | "light";
   toggleTheme: () => void;
+  accentColor: AccentColor;
+  setAccentColor: (c: AccentColor) => void;
   savedAddresses: SavedAddress[];
   addAddress: (a: Omit<SavedAddress, "id">) => void;
   updateAddress: (id: string, a: Omit<SavedAddress, "id">) => void;
@@ -36,10 +40,17 @@ interface UserContextValue {
   setPattern: (p: string | null) => void;
 }
 
+const ACCENT_KEY = "hvrgelt_accent";
+const ACCENT_COLORS: AccentColor[] = ["orange", "blue", "green", "violet"];
+
 const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
+    const saved = localStorage.getItem(ACCENT_KEY) as AccentColor | null;
+    return saved && ACCENT_COLORS.includes(saved) ? saved : "orange";
+  });
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [quickOrders, setQuickOrders] = useState<QuickOrder[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -57,8 +68,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    for (const c of ACCENT_COLORS) root.classList.remove(`accent-${c}`);
+    if (accentColor !== "orange") root.classList.add(`accent-${accentColor}`);
+  }, [accentColor]);
+
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }
+
+  function setAccentColor(c: AccentColor) {
+    setAccentColorState(c);
+    localStorage.setItem(ACCENT_KEY, c);
   }
 
   // Load a customer's saved data + auth method from the DB on login / session restore
@@ -111,7 +133,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, savedAddresses, addAddress, updateAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );
