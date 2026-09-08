@@ -1,10 +1,21 @@
 import { useState, Fragment } from "react";
-import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon, Trash2 } from "lucide-react";
+import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon, Trash2, Download } from "lucide-react";
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
 import { Spinner } from "../shared/Spinner";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
+import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
+import { serviceById } from "../customer/services";
+import { ExportModal } from "./ExportModal";
+
+const OPERATOR_HELP_STEPS = [
+  "\"Шинэ\" tab дээр ирсэн захиалгуудыг харна.",
+  "Захиалгыг нээгээд хүргэлтийн үнийг тогтооно.",
+  "Боломжтой хүргэгчийг сонгож томилно.",
+  "Хэрэглэгч апп дээрээ үнийг баталгаажуулмагц захиалга \"Идэвхтэй\" болно.",
+  "Хүргэгдсэний дараа захиалга автоматаар \"Хүргэгдсэн\" болж жагсаалтаас арилна.",
+];
 
 interface OperatorAppProps {
   orders: Order[];
@@ -44,6 +55,8 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
   const [priceInput, setPriceInput] = useState("5000");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const { theme, toggleTheme } = useUser();
+  const [helpOpen, setHelpOpen] = useFirstVisitHelp("operator");
+  const [exportOpen, setExportOpen] = useState(false);
 
   const HIDDEN_KEY = "hvrgelt_op_hidden_cancelled";
   const [hiddenCancelled, setHiddenCancelled] = useState<Set<string>>(() => {
@@ -87,6 +100,14 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
                 <span className="text-xs text-amber-400 font-mono">{newCount} шинэ</span>
               </div>
             )}
+            <button
+              onClick={() => setExportOpen(true)}
+              title="Захиалгын тайлан татах"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <HelpButton onClick={() => setHelpOpen(true)} />
             <PushToggle role="operator" userId={operatorId} />
             <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -234,6 +255,12 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
                           )}
                         </div>
                       </div>
+                      {serviceById(order.serviceId) && (
+                        <div className="flex gap-2 items-center text-xs">
+                          <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
+                          <span className="text-primary font-medium">{serviceById(order.serviceId)!.label}</span>
+                        </div>
+                      )}
                       {order.packageNote && order.packageNote !== "Тэмдэглэлгүй" && (
                         <div className="flex gap-2 items-center text-xs text-muted-foreground">
                           <Package className="w-3.5 h-3.5 shrink-0" />
@@ -349,6 +376,17 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
           })}
         </div>
       </div>
+
+      {exportOpen && <ExportModal orders={orders} onClose={() => setExportOpen(false)} />}
+
+      {helpOpen && (
+        <HelpModal
+          title="Хэрхэн ашиглах вэ?"
+          subtitle="Захиалга удирдах алхмууд"
+          steps={OPERATOR_HELP_STEPS}
+          onClose={() => setHelpOpen(false)}
+        />
+      )}
     </div>
   );
 }
