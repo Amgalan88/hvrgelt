@@ -44,28 +44,33 @@
 }
 
 .light-mode {
-  --background: #f4f3ee;
-  --foreground: #1c1a17;
-  --card: #faf9f6;
-  --card-foreground: #1c1a17;
-  --popover: #faf9f6;
-  --popover-foreground: #1c1a17;
-  --primary: #e8501b;
+  --background: #f8f4ee;
+  --foreground: #1a1614;
+  --card: #ffffff;
+  --card-foreground: #1a1614;
+  --popover: #ffffff;
+  --popover-foreground: #1a1614;
+  --primary: #ff5a1f;
   --primary-foreground: #ffffff;
-  --secondary: #eae8e2;
-  --secondary-foreground: #1c1a17;
-  --muted: #eae8e2;
-  --muted-foreground: #7a7568;
-  --accent: #e8501b;
+  --secondary: #f3e9dd;
+  --secondary-foreground: #1a1614;
+  --muted: #f3e9dd;
+  --muted-foreground: #7d7364;
+  --accent: #ff5a1f;
   --accent-foreground: #ffffff;
-  --destructive: #c41230;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.07);
+  --border: rgba(26, 22, 20, 0.11);
   --input: transparent;
-  --input-background: #eae8e2;
-  --switch-background: #c5c1b8;
-  --ring: #e8501b;
+  --input-background: #f3e9dd;
+  --switch-background: #ddd0bd;
+  --ring: #ff5a1f;
   --map-filter: none;
+}
+
+/* Цагаан карт дэвсгэрээс тод ялгарч тодрол өгнө — day mode дээр flat/уйтгартай харагдахгүй байхын тулд */
+.light-mode .bg-card {
+  box-shadow: 0 1px 2px rgba(26, 22, 20, 0.05), 0 6px 16px rgba(26, 22, 20, 0.06);
 }
 
 .dark {
