@@ -88,10 +88,12 @@ function rowToOrder(r: any): Order {
     fromDetail: r.from_detail,
     toDetail: r.to_detail,
     packageNote: r.package_note,
+    serviceId: r.service_id ?? undefined,
     price: r.price,
     distance: Number(r.distance),
     status: r.status as OrderStatus,
     createdAt: r.created_at,
+    insertedAt: r.inserted_at ?? undefined,
     courierId: r.courier_id ?? undefined,
     courierName: r.courier_name ?? undefined,
     courierPhone: r.courier_phone ?? undefined,
@@ -325,28 +327,33 @@ export function useStore() {
   // ── Orders ──────────────────────────────────────────────────────────
   const addOrder = useCallback(
     async (order: Omit<Order, "id" | "createdAt" | "status">): Promise<string> => {
-      const { data, error } = await supabase
+      const row = {
+        from_address: order.fromAddress,
+        to_address: order.toAddress,
+        from_detail: order.fromDetail,
+        to_detail: order.toDetail,
+        package_note: order.packageNote,
+        price: order.price,
+        distance: order.distance,
+        status: "шинэ",
+        created_at: nowTime(),
+        courier_id: order.courierId ?? null,
+        courier_name: order.courierName ?? null,
+        courier_phone: order.courierPhone ?? null,
+        eta: order.eta ?? null,
+        customer_name: order.customerName,
+        customer_phone: order.customerPhone,
+        customer_id: order.customerId,
+      };
+      let { data, error } = await supabase
         .from("orders")
-        .insert({
-          from_address: order.fromAddress,
-          to_address: order.toAddress,
-          from_detail: order.fromDetail,
-          to_detail: order.toDetail,
-          package_note: order.packageNote,
-          price: order.price,
-          distance: order.distance,
-          status: "шинэ",
-          created_at: nowTime(),
-          courier_id: order.courierId ?? null,
-          courier_name: order.courierName ?? null,
-          courier_phone: order.courierPhone ?? null,
-          eta: order.eta ?? null,
-          customer_name: order.customerName,
-          customer_phone: order.customerPhone,
-          customer_id: order.customerId,
-        })
+        .insert({ ...row, service_id: order.serviceId ?? null })
         .select("id")
         .single();
+      // service_id багана байхгүй (migration 11 ажиллуулаагүй) DB дээр ч захиалга үүсэх ёстой
+      if (error && /service_id/.test(error.message)) {
+        ({ data, error } = await supabase.from("orders").insert(row).select("id").single());
+      }
       if (error) throw error;
       await refreshOrders();
       return data!.id;

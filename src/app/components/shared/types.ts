@@ -15,10 +15,12 @@ export interface Order {
   fromDetail: string;
   toDetail: string;
   packageNote: string;
+  serviceId?: string; // services.ts дахь үйлчилгээний id
   price: number;
   distance: number;
   status: OrderStatus;
-  createdAt: string;
+  createdAt: string;      // зөвхөн цаг — HH:MM
+  insertedAt?: string;    // DB-ийн бүртгэсэн бүтэн огноо (timestamptz)
   courierId?: string;
   courierName?: string;
   courierPhone?: string;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MapPin, Package, ChevronRight, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
+import { serviceById } from "./services";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
   шинэ:          { label: "Хүлээгдэж байна",      color: "text-amber-400",  icon: Clock },
@@ -135,6 +136,14 @@ function OrderCard({ order, onTrack, onHide }: { order: Order; onTrack: (id: str
             <p className="text-xs text-muted-foreground">{order.distance} км</p>
           </div>
         </div>
+
+        {/* Service type */}
+        {serviceById(order.serviceId) && (
+          <div className="flex gap-1.5 items-center mb-2 text-xs text-primary font-medium">
+            <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
+            {serviceById(order.serviceId)!.label}
+          </div>
+        )}
 
         {/* Note */}
         {order.packageNote && order.packageNote !== "Тэмдэглэлгүй" && (

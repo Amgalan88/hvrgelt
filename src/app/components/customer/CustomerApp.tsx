@@ -7,8 +7,19 @@ import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
+import { SERVICES, serviceById } from "./services";
 import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
+import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
+
+const CUSTOMER_HELP_STEPS = [
+  "Утасны дугаараа оруулж нэг л удаа бүртгүүлнэ.",
+  "Хэрэгтэй үйлчилгээгээ сонгоно — бараа хүргэлт, захаас бараа авах, портер, крантай машин, хүүхэд хүргэлт.",
+  "\"Хаашаа хүргэх вэ?\" дээр авах болон хүргэх хаягаа бичнэ.",
+  "Захиалга илгээгээд хүлээнэ — оператор үнийг тогтооно.",
+  "Апп дээрээ ирсэн үнийг баталгаажуулна.",
+  "Хүргэгч томилогдож, ачааг хүргэнэ — статусыг Захиалга tab дээрээс шууд хараарай.",
+];
 
 type AppTab = "order" | "places" | "history" | "settings";
 type OrderStep = "form" | "confirm" | "tracking";
@@ -80,6 +91,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
 
 export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOrder, onConfirmOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
+  const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
   const [orderStep, setOrderStep] = useState<OrderStep>(myOrderId ? "tracking" : "form");
@@ -88,6 +100,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   const [toAddr, setToAddr] = useState("");
   const [toDetail, setToDetail] = useState("");
   const [note, setNote] = useState("");
+  const [serviceId, setServiceId] = useState<string>(SERVICES[0].id);
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
 
@@ -107,6 +120,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   const [confirmQO, setConfirmQO] = useState<QuickOrder | null>(null);
   const [placing, setPlacing] = useState(false);
 
+  const service = serviceById(serviceId);
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
   const activeCount = orders.filter((o) => (o.customerId === userId || o.customerId.startsWith("cu-new")) && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
@@ -124,6 +138,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
         fromAddress: fromAddr, toAddress: toAddr,
         fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
         packageNote: note || "Тэмдэглэлгүй",
+        serviceId,
         price: 0, distance: 0, // үнийг оператор тогтооно
         customerName: userName, customerPhone: userPhone, customerId: userId,
       });
@@ -144,6 +159,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
         fromDetail: qo.fromDetail || qo.fromAddress,
         toDetail: qo.toDetail || qo.toAddress,
         packageNote: qo.label,
+        serviceId: SERVICES[0].id, // хурдан захиалга = бараа хүргэлт
         price: 0, distance: 0, // үнийг оператор тогтооно
         customerName: userName, customerPhone: userPhone, customerId: userId,
       });
@@ -224,6 +240,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <Logo size="sm" />
         <div className="flex items-center gap-2">
+          <HelpButton onClick={() => setHelpOpen(true)} />
           {tab === "order" && myOrder && orderStep === "tracking" && (
             <button onClick={handleNewOrder} className="text-xs border border-border px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               + Шинэ
@@ -257,6 +274,35 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                     Хаашаа<br />хүргэх вэ?
                   </h1>
                   <p className="text-muted-foreground text-sm mt-1">30 секундэд захиалаарай</p>
+                </div>
+
+                {/* Services — бидний санал болгож буй үндсэн үйлчилгээнүүд */}
+                <div className="space-y-2.5">
+                  <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Үйлчилгээ сонгох</p>
+                  <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {SERVICES.map((sv, i) => {
+                      const active = sv.id === serviceId;
+                      return (
+                        <motion.button
+                          key={sv.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04, type: "spring", damping: 20, stiffness: 300 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setServiceId(sv.id)}
+                          className={`shrink-0 w-[132px] snap-start text-left rounded-2xl border p-3 transition-colors ${
+                            active
+                              ? "bg-primary/10 border-primary"
+                              : "bg-card border-border hover:border-primary/40"
+                          }`}
+                        >
+                          <span className="text-2xl leading-none">{sv.emoji}</span>
+                          <p className="text-[13px] font-semibold mt-2 leading-tight">{sv.label}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{sv.desc}</p>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Quick orders — compact icon tiles */}
@@ -392,7 +438,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                   <input
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Тэмдэглэл — нугалж болохгүй, эмзэг эд зүйл..."
+                    placeholder={service?.notePlaceholder ?? "Тэмдэглэл — нугалж болохгүй, эмзэг эд зүйл..."}
                     className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   />
                 </div>
@@ -421,6 +467,15 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
 
                 {/* Route */}
                 <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                  {service && (
+                    <div className="flex items-center gap-2.5 border-b border-border pb-3">
+                      <span className="text-xl leading-none">{service.emoji}</span>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Үйлчилгээ</p>
+                        <p className="text-sm font-medium">{service.label}</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-3 items-stretch">
                     <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
                       <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
@@ -834,6 +889,15 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
           ))}
         </div>
       </nav>
+
+      {helpOpen && (
+        <HelpModal
+          title="Хэрхэн ашиглах вэ?"
+          subtitle="Захиалга өгөх алхмууд"
+          steps={CUSTOMER_HELP_STEPS}
+          onClose={() => setHelpOpen(false)}
+        />
+      )}
     </div>
   );
 }

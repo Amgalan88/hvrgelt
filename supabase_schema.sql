@@ -57,6 +57,7 @@ create table if not exists orders (
   from_detail    text not null,
   to_detail      text not null,
   package_note   text not null default '',
+  service_id     text,
   price          integer not null default 0,
   distance       numeric not null default 0,
   status         text not null default 'шинэ',

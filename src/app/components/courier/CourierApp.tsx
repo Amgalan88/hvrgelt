@@ -4,6 +4,15 @@ import type { Order, CourierUser } from "../shared/types";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
+import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
+import { serviceById } from "../customer/services";
+
+const COURIER_HELP_STEPS = [
+  "Шинэ захиалга томилогдоход мэдэгдэл авна (хонх идэвхжүүлсэн бол).",
+  "Захиалгаа нээгээд авах болон хүргэх хаягийг харна.",
+  "Ачааг авахдаа \"Авлаа\" товч дарна.",
+  "Хүргэсний дараа \"Хүргэлээ\" товч дарна — дараагийн захиалга авахад бэлэн болно.",
+];
 
 interface CourierAppProps {
   orders: Order[];
@@ -22,6 +31,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
   const { theme, toggleTheme } = useUser();
+  const [helpOpen, setHelpOpen] = useFirstVisitHelp("courier");
 
   const courier = courierInfo;
 
@@ -51,6 +61,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <HelpButton onClick={() => setHelpOpen(true)} />
           <PushToggle role="courier" userId={courierId} />
           <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -138,6 +149,14 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
                           </div>
                         </div>
                       </div>
+
+                      {/* Service type */}
+                      {serviceById(order.serviceId) && (
+                        <div className="flex gap-2 items-center text-xs">
+                          <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
+                          <span className="text-primary font-medium">{serviceById(order.serviceId)!.label}</span>
+                        </div>
+                      )}
 
                       {/* Package note */}
                       {order.packageNote && order.packageNote !== "Тэмдэглэлгүй" && (
@@ -281,6 +300,15 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
             </div>
           </div>
         </div>
+      )}
+
+      {helpOpen && (
+        <HelpModal
+          title="Хэрхэн ашиглах вэ?"
+          subtitle="Хүргэлт хийх алхмууд"
+          steps={COURIER_HELP_STEPS}
+          onClose={() => setHelpOpen(false)}
+        />
       )}
     </div>
   );
