@@ -8,6 +8,7 @@ import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
 import { SERVICES, serviceById } from "./services";
+import { CourierProfileModal } from "./CourierProfileModal";
 import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
@@ -101,6 +102,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   const [toDetail, setToDetail] = useState("");
   const [note, setNote] = useState("");
   const [serviceId, setServiceId] = useState<string>(SERVICES[0].id);
+  const [courierProfileOpen, setCourierProfileOpen] = useState(false);
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
 
@@ -575,21 +577,34 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                 {/* Courier */}
                 {myOrder.courierName && myOrder.status !== "шинэ" && (
                   <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                    <button
+                      onClick={() => setCourierProfileOpen(true)}
+                      className="flex items-center gap-3 text-left group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold group-hover:border-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif" }}>
                         {myOrder.courierName[0]}
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{myOrder.courierName}</p>
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{myOrder.courierName}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Таны хүргэгч
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Мэдээлэл харах
+                          <ArrowRight className="w-3 h-3" />
                         </div>
                       </div>
-                    </div>
+                    </button>
                     <a href={`tel:${myOrder.courierPhone}`} className="flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-xl text-sm hover:border-primary/50 hover:text-primary transition-colors">
                       <Phone className="w-3.5 h-3.5" /> Залгах
                     </a>
                   </div>
+                )}
+
+                {courierProfileOpen && myOrder.courierName && (
+                  <CourierProfileModal
+                    courierId={myOrder.courierId ?? myOrder.courierName}
+                    name={myOrder.courierName}
+                    phone={myOrder.courierPhone ?? ""}
+                    onClose={() => setCourierProfileOpen(false)}
+                  />
                 )}
 
                 {/* Cancel before assignment */}
