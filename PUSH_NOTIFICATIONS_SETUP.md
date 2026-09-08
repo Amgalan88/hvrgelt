@@ -44,7 +44,7 @@ supabase link --project-ref <таны-project-ref>
 ```
 supabase secrets set VAPID_PUBLIC_KEY=BEEW8WbGPam7qgeP-aMEkRvPGxdTsgJk6IA13rW_r2tPnA9InCpHvETTZAlfE8RSKzVKnWr3dn-5zPPHpakPlDY
 supabase secrets set VAPID_PRIVATE_KEY=lte6MUKdeVfD_ZzbXFUWa9BAtAN7TBi_huiKsVikE_k
-supabase secrets set VAPID_SUBJECT=mailto:85205258@hvrgelt.mn
+supabase secrets set VAPID_SUBJECT=mailto:88371961@hvrgelt.mn
 supabase secrets set WEBHOOK_SECRET=5f3838a199359058cccfd656b3101599fb7caf31b3c50a03
 ```
 

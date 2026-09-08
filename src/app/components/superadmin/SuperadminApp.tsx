@@ -632,7 +632,7 @@ export function SuperadminApp({
                 value={bankDraft}
                 onChange={(e) => { setBankDraft(e.target.value); setBankSaved(false); }}
                 rows={5}
-                placeholder={"Банк: Хаан банк\nДансны дугаар: 5001234567\nДансны нэр: Б. Болд\nУтас: 8520-5258"}
+                placeholder={"Банк: Хаан банк\nДансны дугаар: 5001234567\nДансны нэр: Б. Болд\nУтас: 8837-1961"}
                 className="w-full bg-input-background border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-colors resize-none font-mono"
               />
               <button
