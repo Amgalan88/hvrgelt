@@ -21,7 +21,8 @@ create index if not exists order_ratings_courier_idx on order_ratings (courier_i
 create or replace function recalc_courier_rating() returns trigger language plpgsql as $$
 declare cid text;
 begin
-  cid := coalesce(new.courier_id, old.courier_id);
+  -- DELETE үед NEW байхгүй тул TG_OP-оор салгана
+  if tg_op = 'DELETE' then cid := old.courier_id; else cid := new.courier_id; end if;
   if cid is null then return null; end if;
   update couriers c
      set rating = coalesce((select round(avg(score)::numeric, 2) from order_ratings where courier_id = cid), 5.0)
