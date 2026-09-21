@@ -12,6 +12,7 @@ import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
 import { Truck, LogOut, ArrowRight, Package, Clock, Shield, ChevronLeft, Phone, FileText, Lock } from "lucide-react";
 import { Logo } from "./components/shared/Logo";
+import { MockPage } from "./components/MockPage";
 import { motion, AnimatePresence } from "motion/react";
 
 interface Session {
@@ -418,10 +419,14 @@ function Inner() {
   );
 }
 
+// /mock — хөгжүүлэлтийн туршилтын хуудас (MockPage.tsx). Supabase-гүйгээр
+// ажиллах тул store ачаалахгүй.
+const isMockRoute = typeof window !== "undefined" && /^\/mock\/?$/.test(window.location.pathname);
+
 export default function App() {
   return (
     <UserProvider>
-      <Inner />
+      {isMockRoute ? <MockPage /> : <Inner />}
     </UserProvider>
   );
 }

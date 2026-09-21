@@ -105,3 +105,13 @@ export function courierProfile(courierId: string, name: string, phone: string): 
     experience: m.exper,
   };
 }
+
+// /mock хуудсанд харуулах жагсаалт — mock-1..5 нь дээрх 5 багц тус бүрт
+// таарна (hash-аар шалгасан), тиймээс бүх хувилбарыг нэг дор харна.
+export const DEMO_COURIERS: { id: string; name: string; phone: string }[] = [
+  { id: "mock-1", name: "Б. Дорж",     phone: "99112233" },
+  { id: "mock-2", name: "Г. Сараа",    phone: "88014455" },
+  { id: "mock-3", name: "Д. Ганаа",    phone: "95371961" },
+  { id: "mock-4", name: "Ч. Тэмүүлэн", phone: "96371961" },
+  { id: "mock-5", name: "Н. Энхжин",   phone: "88371961" },
+];
