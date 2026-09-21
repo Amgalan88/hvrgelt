@@ -292,6 +292,80 @@ function PartnerModal({ initial, onSave, onClose }: {
   );
 }
 
+/**
+ * Партнёрын нэвтрэх эрх — газар өөрөө бараагаа оруулахын тулд утас +
+ * нууц үг шаардлагатай. Эхний нэвтрэлт дээр PIN/Pattern-аа тохируулна.
+ */
+function PartnerAccess({
+  partner,
+  onSave,
+}: {
+  partner: Partner;
+  onSave: (id: string, data: { phone?: string; authKey?: string }) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState(partner.phone ?? "");
+  const [pass, setPass] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function save() {
+    if (saving || phone.trim().length < 8) return;
+    setSaving(true);
+    try {
+      await onSave(partner.id, { phone: phone.trim(), authKey: pass.trim() || undefined });
+      setDone(true);
+      setTimeout(() => setDone(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-border bg-secondary/30">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          <KeyRound className="w-3.5 h-3.5" />
+          Нэвтрэх эрх {partner.phone ? `· ${partner.phone}` : "· тохируулаагүй"}
+        </span>
+        <span>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Утасны дугаар"
+              type="tel"
+              className="flex-1 bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary/50"
+            />
+            <input
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              placeholder="Нууц үг"
+              className="flex-1 bg-input-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary/50"
+            />
+          </div>
+          <button
+            onClick={save}
+            disabled={saving || phone.trim().length < 8}
+            className="w-full bg-primary text-white py-2 rounded-lg text-xs disabled:opacity-40 hover:bg-primary/90 transition-colors"
+          >
+            {done ? "Хадгалагдлаа ✓" : "Хадгалах"}
+          </button>
+          <p className="text-[10px] text-muted-foreground">
+            Энэ дугаараар нэвтэрч газар өөрийн барааны жагсаалт, төлбөрийн QR-аа удирдана.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main superadmin app ───────────────────────────────────────────────
 export function SuperadminApp({
   operatorAccounts, courierAccounts, customerAccounts, partners,
@@ -668,6 +742,7 @@ export function SuperadminApp({
                     </button>
                   </div>
                 </div>
+                <PartnerAccess partner={p} onSave={onUpdatePartnerAccess} />
               </div>
             ));
             })()}
