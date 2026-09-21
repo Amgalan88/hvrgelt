@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus } from "lucide-react";
-import type { Order, OrderStatus } from "../shared/types";
+import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
+import type { PaymentIntent } from "../shared/store";
 import { useUser, type QuickOrder } from "../shared/UserContext";
 import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
-import { SERVICES, serviceById } from "./services";
+import { SERVICES, serviceById, subServiceById } from "./services";
 import { CourierProfileModal } from "./CourierProfileModal";
+import { CargoDetails, type CargoInfo } from "./CargoDetails";
+import { PaymentPanel } from "./PaymentPanel";
+import { SearchingCourier } from "./SearchingCourier";
+import { DeliveredCelebration } from "./DeliveredCelebration";
+import { PartnerShop } from "./PartnerShop";
 import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
@@ -26,11 +32,13 @@ type AppTab = "order" | "places" | "history" | "settings";
 type OrderStep = "form" | "confirm" | "tracking";
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
-  { key: "шинэ",        label: "Захиалга хүлээгдэж байна", sub: "Оператор хүргэгч томилж байна..." },
-  { key: "үнэ батлах",  label: "Үнэ батлахыг хүлээж байна", sub: "Та доорх товчоор үнийг батлана уу" },
-  { key: "томилогдсон", label: "Хүргэгч томилогдлоо",      sub: "Хүргэгч таны ачааг авахаар явна" },
-  { key: "авсан",       label: "Ачааг авлаа",              sub: "Хүргэгч таны захиалгыг хүргэж байна" },
-  { key: "хүргэгдсэн", label: "Амжилттай хүргэгдлээ! 🎉", sub: "" },
+  { key: "шинэ",                 label: "Захиалга хүлээгдэж байна",  sub: "Оператор тантай холбогдож үнийг тогтооно..." },
+  { key: "үнэ батлах",           label: "Үнэ батлахыг хүлээж байна", sub: "Та доорх товчоор үнийг батлана уу" },
+  { key: "төлбөр хүлээж байна",  label: "Төлбөр хүлээгдэж байна",    sub: "QR-аар төлбөрөө төлнө үү" },
+  { key: "жолооч хайж байна",    label: "Жолооч хайж байна",         sub: "Танд жолооч хуваарилаад мэдээлэл илгээнэ" },
+  { key: "томилогдсон",          label: "Хүргэгч томилогдлоо",       sub: "Хүргэгч таны ачааг авахаар явна" },
+  { key: "авсан",                label: "Ачааг авлаа",               sub: "Хүргэгч таны захиалгыг хүргэж байна" },
+  { key: "хүргэгдсэн",          label: "Амжилттай хүргэгдлээ! 🎉",  sub: "" },
 ];
 
 function getStatusIdx(status: OrderStatus) {
@@ -48,10 +56,16 @@ const QUICK_EMOJIS = ["📦", "🧳", "🛒", "☕", "🏪", "📄", "🎁", "�
 interface CustomerAppProps {
   orders: Order[];
   partners: Partner[];
+  products: PartnerProduct[];
   bankInfo: string;
+  courierDocs: (courierId?: string) => CourierDocs | undefined;
   onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
   onCancelOrder: (orderId: string) => void;
   onConfirmOrder: (orderId: string) => void;
+  onCreatePayment: (orderId: string, amount: number) => Promise<PaymentIntent>;
+  onMarkPaid: (orderId: string, method: string) => Promise<void>;
+  onRate: (orderId: string, score: number, comment?: string) => Promise<void>;
+  onFeedback: (data: { phone: string; message: string; orderId?: string }) => Promise<void>;
   myOrderId: string | null;
   setMyOrderId: (id: string | null) => void;
   userName: string;
@@ -90,7 +104,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
   );
 }
 
-export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOrder, onConfirmOrder, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onMarkPaid, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
@@ -102,6 +116,11 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   const [toDetail, setToDetail] = useState("");
   const [note, setNote] = useState("");
   const [serviceId, setServiceId] = useState<string>(SERVICES[0].id);
+  const [subServiceId, setSubServiceId] = useState<string | null>(null);
+  const [cargo, setCargo] = useState<CargoInfo>({ fragile: false, urgent: false });
+  const [basket, setBasket] = useState<BasketItem[]>([]);
+  const [basketPartnerId, setBasketPartnerId] = useState<string | null>(null);
+  const [shopPartner, setShopPartner] = useState<Partner | null>(null);
   const [courierProfileOpen, setCourierProfileOpen] = useState(false);
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
@@ -122,7 +141,18 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   const [confirmQO, setConfirmQO] = useState<QuickOrder | null>(null);
   const [placing, setPlacing] = useState(false);
 
+  const basketTotal = basket.reduce((s, i) => s + i.price * i.qty, 0);
+  const basketPartner = partners.find((x) => x.id === basketPartnerId);
+
   const service = serviceById(serviceId);
+  const subService = subServiceById(serviceId, subServiceId ?? undefined);
+
+  function pickService(id: string) {
+    setServiceId(id);
+    setSubServiceId(null);
+    const sv = serviceById(id);
+    if (!sv?.needsCargo) setCargo({ fragile: false, urgent: false });
+  }
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
   const activeCount = orders.filter((o) => (o.customerId === userId || o.customerId.startsWith("cu-new")) && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
@@ -141,6 +171,14 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
         fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
         packageNote: note || "Тэмдэглэлгүй",
         serviceId,
+        subServiceId: subServiceId ?? undefined,
+        cargoPhotoUrl: cargo.photoUrl,
+        weightKg: cargo.weightKg,
+        fragile: cargo.fragile,
+        urgent: cargo.urgent,
+        basket,
+        basketTotal,
+        partnerId: basketPartnerId ?? undefined,
         price: 0, distance: 0, // үнийг оператор тогтооно
         customerName: userName, customerPhone: userPhone, customerId: userId,
       });
@@ -213,6 +251,34 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
   }
 
   // Start an order from a partner place (pickup pre-filled)
+  function openShop(p: Partner) {
+    setShopPartner(p);
+  }
+
+  function confirmBasket(items: BasketItem[]) {
+    if (!shopPartner) return;
+    setBasket(items);
+    setBasketPartnerId(shopPartner.id);
+    // Сагслахад авах хаяг нь тухайн газар болно
+    const fullAddr = [shopPartner.name, shopPartner.address, shopPartner.detail].filter(Boolean).join(", ");
+    setFromAddr(fullAddr);
+    setFromDetail("");
+    setServiceId("goods");
+    // Партнёрын ангилалыг үйлчилгээний дэд төрөл рүү буулгана
+    const SUB_BY_CATEGORY: Record<string, string> = {
+      "Карго": "cargo",
+      "Тээш": "luggage",
+      "Зах": "grocery",
+      "Дэлгүүр": "shop",
+      "Кофе шоп": "grocery",
+      "Аптек": "shop",
+    };
+    setSubServiceId(SUB_BY_CATEGORY[shopPartner.category] ?? "shop");
+    setShopPartner(null);
+    setOrderStep("form");
+    setAppTab("order");
+  }
+
   function orderFromPartner(p: Partner) {
     const fullAddr = [p.name, p.address, p.detail].filter(Boolean).join(", ");
     setFromAddr(fullAddr);
@@ -225,6 +291,8 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
 
   function handleNewOrder() {
     setMyOrderId(null);
+    setBasket([]); setBasketPartnerId(null);
+    setCargo({ fragile: false, urgent: false });
     setFromAddr(""); setFromDetail(""); setToAddr(""); setToDetail(""); setNote("");
     setEstimated(null);
     setOrderStep("form");
@@ -281,7 +349,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                 {/* Services — бидний санал болгож буй үндсэн үйлчилгээнүүд */}
                 <div className="space-y-2.5">
                   <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Үйлчилгээ сонгох</p>
-                  <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="grid grid-cols-2 gap-2">
                     {SERVICES.map((sv, i) => {
                       const active = sv.id === serviceId;
                       return (
@@ -289,23 +357,49 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                           key={sv.id}
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.04, type: "spring", damping: 20, stiffness: 300 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setServiceId(sv.id)}
-                          className={`shrink-0 w-[132px] snap-start text-left rounded-2xl border p-3 transition-colors ${
-                            active
-                              ? "bg-primary/10 border-primary"
-                              : "bg-card border-border hover:border-primary/40"
+                          transition={{ delay: i * 0.03, type: "spring", damping: 20, stiffness: 300 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => pickService(sv.id)}
+                          className={`flex items-start gap-2 rounded-2xl border p-2.5 text-left transition-colors ${
+                            active ? "bg-primary/10 border-primary" : "bg-card border-border hover:border-primary/40"
                           }`}
                         >
-                          <span className="text-2xl leading-none">{sv.emoji}</span>
-                          <p className="text-[13px] font-semibold mt-2 leading-tight">{sv.label}</p>
-                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{sv.desc}</p>
+                          <span className="text-xl leading-none shrink-0">{sv.emoji}</span>
+                          <span className="min-w-0">
+                            <span className="block text-[12px] font-semibold leading-tight">{sv.label}</span>
+                            <span className="block text-[10px] text-muted-foreground mt-0.5 leading-snug">{sv.desc}</span>
+                          </span>
                         </motion.button>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Дэд төрөл — үйлчилгээнээс хамаарна */}
+                {service && service.subs.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Төрлөө нарийвчилна уу</p>
+                    <div className="flex flex-wrap gap-2">
+                      {service.subs.map((sub) => {
+                        const on = sub.id === subServiceId;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => setSubServiceId(on ? null : sub.id)}
+                            title={sub.desc}
+                            className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
+                              on
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                            }`}
+                          >
+                            {sub.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quick orders — compact icon tiles */}
                 <div className="space-y-2.5">
@@ -434,6 +528,41 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                   </div>
                 )}
 
+                {/* Сагс — партнёрын бараа */}
+                {basket.length > 0 && (
+                  <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                        🛒 {basketPartner?.name ?? "Сагс"}
+                      </p>
+                      <button
+                        onClick={() => { setBasket([]); setBasketPartnerId(null); }}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        Цэвэрлэх
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {basket.map((i) => (
+                        <div key={i.productId} className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground truncate">{i.name} × {i.qty}</span>
+                          <span className="font-mono shrink-0 ml-2">₮{(i.price * i.qty).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-2">
+                      <span className="text-xs text-muted-foreground">Барааны дүн</span>
+                      <span className="text-sm font-bold text-primary font-mono">₮{basketTotal.toLocaleString()}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Барааны төлбөрийг газарт нь төлнө. Хүргэлтийн үнийг оператор тогтооно.
+                    </p>
+                  </div>
+                )}
+
+                {/* Ачааны мэдээлэл — зураг, жин, хагарах, яаралтай */}
+                {service?.needsCargo && <CargoDetails value={cargo} onChange={setCargo} />}
+
                 {/* Note */}
                 <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
                   <Package className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -472,9 +601,10 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                   {service && (
                     <div className="flex items-center gap-2.5 border-b border-border pb-3">
                       <span className="text-xl leading-none">{service.emoji}</span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-muted-foreground">Үйлчилгээ</p>
                         <p className="text-sm font-medium">{service.label}</p>
+                        {subService && <p className="text-xs text-primary mt-0.5">{subService.label}</p>}
                       </div>
                     </div>
                   )}
@@ -497,6 +627,24 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                       </div>
                     </div>
                   </div>
+                  {(cargo.photoUrl || cargo.weightKg || cargo.fragile || cargo.urgent) && (
+                    <div className="border-t border-border pt-3 flex gap-3 items-center">
+                      {cargo.photoUrl && (
+                        <img src={cargo.photoUrl} alt="Ачаа" className="w-14 h-14 rounded-xl object-cover border border-border shrink-0" />
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {cargo.weightKg != null && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг</span>
+                        )}
+                        {cargo.fragile && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хагарах аюултай</span>
+                        )}
+                        {cargo.urgent && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-500">Онцгой яаралтай</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {note && (
                     <div className="flex gap-2 items-center border-t border-border pt-2 text-xs text-muted-foreground">
                       <Package className="w-3.5 h-3.5 shrink-0" /> {note}
@@ -575,7 +723,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                 </div>
 
                 {/* Courier */}
-                {myOrder.courierName && myOrder.status !== "шинэ" && (
+                {myOrder.courierName && ["томилогдсон", "авсан", "хүргэгдсэн"].includes(myOrder.status) && (
                   <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
                     <button
                       onClick={() => setCourierProfileOpen(true)}
@@ -603,6 +751,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                     courierId={myOrder.courierId ?? myOrder.courierName}
                     name={myOrder.courierName}
                     phone={myOrder.courierPhone ?? ""}
+                    docs={courierDocs(myOrder.courierId)}
                     onClose={() => setCourierProfileOpen(false)}
                   />
                 )}
@@ -612,7 +761,7 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                   <div className="space-y-2">
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                      <p className="text-xs text-amber-300">Оператор хүргэгч томилж байна...</p>
+                      <p className="text-xs text-amber-300">Оператор тантай холбогдож үнийг тогтооно...</p>
                     </div>
                     <button
                       onClick={() => { onCancelOrder(myOrder.id); setMyOrderId(null); setOrderStep("form"); }}
@@ -647,24 +796,54 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                         className="flex-1 bg-primary text-white py-3 rounded-2xl text-sm hover:bg-primary/90 transition-colors"
                         style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
                       >
-                        Батлах ✓
+                        Зөвшөөрч төлөх
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Bank transfer info banner (shown after confirmation) */}
-                {myOrder.status === "томилогдсон" && bankInfo && (
-                  <div className="bg-green-500/10 border border-green-500/25 rounded-2xl p-4 space-y-1.5">
-                    <p className="text-xs font-semibold text-green-400">💳 Төлбөр шилжүүлэх мэдээлэл</p>
-                    <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{bankInfo}</p>
-                  </div>
+                {/* Барааны төлбөрийн QR — тухайн газарт төлнө */}
+                {(myOrder.basket?.length ?? 0) > 0 && ["томилогдсон", "авсан"].includes(myOrder.status) && (() => {
+                  const shop = partners.find((x) => x.id === myOrder.partnerId);
+                  return (
+                    <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+                      <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                        🛒 Барааны төлбөр — ₮{(myOrder.basketTotal ?? 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {shop?.name ?? "Тухайн газар"}-т доорх QR-аар төлнө үү. Хүргэлтийн төлбөр аль хэдийн төлөгдсөн.
+                      </p>
+                      {shop?.paymentQrUrl ? (
+                        <img src={shop.paymentQrUrl} alt="Газрын төлбөрийн QR" className="w-40 h-40 mx-auto rounded-xl bg-white p-2 border border-border" />
+                      ) : (
+                        <p className="text-xs text-amber-500">Энэ газар QR-аа байршуулаагүй байна — бэлнээр төлнө.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Төлбөр */}
+                {myOrder.status === "төлбөр хүлээж байна" && (
+                  <PaymentPanel
+                    order={myOrder}
+                    bankInfo={bankInfo}
+                    createPayment={onCreatePayment}
+                    onPaid={(method) => onMarkPaid(myOrder.id, method)}
+                  />
                 )}
 
+                {/* Жолооч хайж байна */}
+                {myOrder.status === "жолооч хайж байна" && <SearchingCourier />}
+
+                {/* Хүргэгдлээ — баяр хүргэе, үнэлгээ, санал */}
                 {myOrder.status === "хүргэгдсэн" && (
-                  <button onClick={handleNewOrder} className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>
-                    Дахин захиалах
-                  </button>
+                  <DeliveredCelebration
+                    order={myOrder}
+                    userPhone={userPhone}
+                    onRate={onRate}
+                    onFeedback={onFeedback}
+                    onDone={handleNewOrder}
+                  />
                 )}
               </div>
             )}
@@ -755,13 +934,23 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
                         <p className="text-sm font-semibold">{p.name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{p.address}{p.detail ? ` · ${p.detail}` : ""}</p>
                       </div>
-                      <button
-                        onClick={() => orderFromPartner(p)}
-                        className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
-                        style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
-                      >
-                        Захиалах <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
+                      {products.some((pr) => pr.partnerId === p.id && pr.inStock) ? (
+                        <button
+                          onClick={() => openShop(p)}
+                          className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
+                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                        >
+                          Бараа үзэх <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => orderFromPartner(p)}
+                          className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
+                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                        >
+                          Захиалах <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ))
@@ -794,6 +983,17 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
         </motion.div>
        </AnimatePresence>
       </div>
+
+      {/* Партнёр дэлгүүрийн бараа */}
+      {shopPartner && (
+        <PartnerShop
+          partner={shopPartner}
+          products={products.filter((pr) => pr.partnerId === shopPartner.id)}
+          initial={basketPartnerId === shopPartner.id ? basket : []}
+          onClose={() => setShopPartner(null)}
+          onConfirm={confirmBasket}
+        />
+      )}
 
       {/* Quick order add/edit modal */}
       <AnimatePresence>
@@ -879,10 +1079,10 @@ export function CustomerApp({ orders, partners, bankInfo, onAddOrder, onCancelOr
           </button>
 
           {([
-            { key: "order" as AppTab, label: "Захиалга", icon: Truck },
-            { key: "places" as AppTab, label: "Газрууд", icon: Store },
+            { key: "order" as AppTab, label: "Захиалга", icon: Truck, badge: 0 },
+            { key: "places" as AppTab, label: "Газрууд", icon: Store, badge: 0 },
             { key: "history" as AppTab, label: "Түүх", icon: Clock, badge: activeCount },
-            { key: "settings" as AppTab, label: "Тохиргоо", icon: ({ className }: { className?: string }) => (
+            { key: "settings" as AppTab, label: "Тохиргоо", badge: 0, icon: ({ className }: { className?: string }) => (
               <div className={`w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold ${className}`} style={{ fontSize: "0.6rem" }}>
                 {userName[0]}
               </div>

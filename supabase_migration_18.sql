@@ -1,0 +1,43 @@
+-- ============================================================
+--  hvrgelt — Migration 18: Утасны дугаарын нууцлал (СОНГОМОЛ)
+--
+--  Бизнесийн шаардлага: жолооч захиалгыг хүлээж авахаас өмнө
+--  үйлчлүүлэгчийн утасны дугаарыг харж болохгүй — эс бөгөөс
+--  хоорондоо шууд үнэ тохирч, системээс гадуур ажиллах эрсдэлтэй.
+--
+--  Аппын түвшинд энэ хязгаарлалт аль хэдийн хийгдсэн: жолоочийн
+--  апп захиалгыг авахаас өмнө дугаарыг харуулахгүй (CourierApp).
+--
+--  ⚠️ ГЭХДЭЭ одоогийн бүх хүснэгт "demo_all_*" RLS бодлоготой,
+--  anon түлхүүрээр бүх мөр уншигдана. Тиймээс дээрх хязгаарлалт
+--  нь UI түвшний хяналт бөгөөд техникийн баталгаа БИШ.
+--
+--  Жинхэнэ баталгаа болгохын тулд:
+--    1. Supabase Auth руу шилжиж хэрэглэгч бүрийг auth.uid()-аар
+--       таних (одоо утас + PIN-ийг өөрсдөө шалгаж байгаа),
+--    2. Дараа нь доорх багана түвшний хязгаарлалтыг идэвхжүүлэх.
+--
+--  Доорх скриптийг Supabase Auth нэвтрүүлсний ДАРАА ажиллуулна.
+--  Одоо ажиллуулбал апп захиалгыг уншиж чадахгүй болно!
+-- ============================================================
+
+-- -- 1) Жолоочид зориулсан, утасны дугааргүй харагдац
+-- create or replace view orders_for_courier as
+--   select id, from_address, to_address, from_detail, to_detail,
+--          package_note, service_id, sub_service_id, cargo_photo_url,
+--          weight_kg, fragile, urgent, price, status, created_at,
+--          courier_id, eta, customer_name, assigned_at, picked_up_at
+--     from orders;
+--
+-- -- 2) Захиалгыг авсан жолоочид л дугаарыг буцаах функц
+-- create or replace function order_customer_phone(p_order_id text, p_courier_id text)
+--   returns text language sql security definer as $$
+--     select customer_phone from orders
+--      where id = p_order_id
+--        and courier_id = p_courier_id
+--        and status in ('томилогдсон', 'авсан', 'хүргэгдсэн');
+--   $$;
+--
+-- -- 3) anon-оос утасны багануудыг хаах
+-- revoke select (customer_phone) on orders from anon;
+-- grant select on orders_for_courier to anon;

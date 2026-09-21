@@ -3,11 +3,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { IdCard, Car, Hash, Phone, Star, X, BadgeCheck } from "lucide-react";
 import { courierProfile } from "./courierProfiles";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import type { CourierDocs } from "../shared/types";
 
 interface CourierProfileModalProps {
   courierId: string;
   name: string;
   phone: string;
+  /** DB-д хадгалсан жинхэнэ баримт. Дутуу талбарыг mock-оор нөхнө. */
+  docs?: CourierDocs;
   onClose: () => void;
 }
 
@@ -23,8 +26,19 @@ const ORBIT: { key: PanelKey; label: string; icon: typeof IdCard }[] = [
 
 const RING = 108; // товчнуудын тойргийн радиус (px)
 
-export function CourierProfileModal({ courierId, name, phone, onClose }: CourierProfileModalProps) {
-  const p = courierProfile(courierId, name, phone);
+export function CourierProfileModal({ courierId, name, phone, docs, onClose }: CourierProfileModalProps) {
+  const mock = courierProfile(courierId, name, phone);
+  // Жолооч баримтаа оруулсан бол жинхэнэ өгөгдөл, үгүй бол mock
+  const p = {
+    ...mock,
+    photo: docs?.photoUrl || mock.photo,
+    licenseImg: docs?.licensePhotoUrl || mock.licenseImg,
+    carImg: docs?.carPhotoUrl || mock.carImg,
+    plate: docs?.plate || mock.plate,
+    licenseClass: docs?.licenseClass || mock.licenseClass,
+    licenseExpiry: docs?.licenseExpiry || mock.licenseExpiry,
+  };
+  const isMock = !docs?.photoUrl && !docs?.licensePhotoUrl && !docs?.carPhotoUrl;
   const [panel, setPanel] = useState<PanelKey>("license");
 
   return (
@@ -57,9 +71,11 @@ export function CourierProfileModal({ courierId, name, phone, onClose }: Courier
               <div className="w-[124px] h-[124px] rounded-full overflow-hidden border-[3px] border-primary shadow-lg bg-secondary">
                 <ImageWithFallback src={p.photo} alt={name} className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap">
-                <BadgeCheck className="w-3 h-3" /> Баталгаажсан
-              </div>
+              {docs?.verified !== false && (
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap">
+                  <BadgeCheck className="w-3 h-3" /> Баталгаажсан
+                </div>
+              )}
             </div>
 
             {ORBIT.map((o, i) => {
@@ -169,9 +185,11 @@ export function CourierProfileModal({ courierId, name, phone, onClose }: Courier
             </motion.div>
           </AnimatePresence>
 
-          <p className="text-[10px] text-center text-amber-500/80">
-            Энэ мэдээлэл одоогоор туршилтын (mock) өгөгдөл юм.
-          </p>
+          {isMock && (
+            <p className="text-[10px] text-center text-amber-500/80">
+              Жолооч баримт бичгээ хараахан оруулаагүй — туршилтын өгөгдөл харуулж байна.
+            </p>
+          )}
         </div>
       </div>
     </div>

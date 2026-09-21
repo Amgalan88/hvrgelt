@@ -68,6 +68,62 @@ npm run dev
 
 ---
 
+## Migration-ууд (дарааллаар нь ажиллуулна)
+
+`supabase_schema.sql`-ыг ажиллуулсны дараа доорх файлуудыг SQL Editor дээр
+дугаарын дарааллаар нь RUN дарна:
+
+| Файл | Юу нэмдэг вэ |
+|---|---|
+| `supabase_migration_11.sql` | Захиалгын үйлчилгээний төрөл (`service_id`) |
+| `supabase_migration_12.sql` | Жолоочийн баримт бичиг (зураг, үнэмлэх, машин, дугаар, баталгаажуулалт) |
+| `supabase_migration_13.sql` | Дэд төрөл + ачааны мэдээлэл (зураг, кг, хагарах, яаралтай) |
+| `supabase_migration_14.sql` | Онлайн төлбөр (`payments` хүснэгт, захиалгын төлбөрийн төлөв) |
+| `supabase_migration_15.sql` | Хүргэлтийн дараах 1–5 оддын үнэлгээ |
+| `supabase_migration_16.sql` | Санал хүсэлт |
+| `supabase_migration_17.sql` | Партнёрын бараа, сагс, газрын төлбөрийн QR |
+| `supabase_migration_18.sql` | Утасны дугаарын нууцлал (тайлбар — одоохондоо ажиллуулахгүй) |
+
+Апп нь эдгээр багана байхгүй үед ч ажиллахаар бичигдсэн — гэхдээ
+шинэ боломжууд (үйлчилгээний сонголт, төлбөр, үнэлгээ) ажиллахгүй.
+
+---
+
+## Онлайн төлбөр холбох (QPay / Bonum)
+
+Төлбөрийн түлхүүр **client талд орохгүй** — Edge Function дотор л байна.
+
+```bash
+supabase functions deploy create-payment --no-verify-jwt
+supabase functions deploy payment-webhook --no-verify-jwt
+
+# QPay
+supabase secrets set PAYMENT_PROVIDER=qpay   QPAY_USERNAME=... QPAY_PASSWORD=... QPAY_INVOICE_CODE=...   PUBLIC_CALLBACK_URL=https://<project>.functions.supabase.co/payment-webhook
+```
+
+Дараа нь `.env`-д `VITE_PAYMENT_PROVIDER=qpay` гэж бичнэ.
+
+**Bonum** ашиглах бол merchant эрхээ авсны дараа
+`supabase/functions/create-payment/index.ts` доторх `createBonumInvoice()`-ыг
+өөрийн доктой тулгаж эндпойнт/талбарын нэрийг тааруулна.
+
+Хоосон орхивол апп **гарын авлагын горимд** ажиллана: үйлчлүүлэгчид
+дансны мэдээлэл харуулж, оператор төлбөрийг гараар баталгаажуулна.
+
+---
+
+## Санал хүсэлтийн и-мэйл
+
+```bash
+supabase functions deploy send-feedback-email --no-verify-jwt
+supabase secrets set FEEDBACK_EMAIL_TO=<хүлээн авах и-мэйл> RESEND_API_KEY=...
+```
+
+Тохируулаагүй ч санал `feedback` хүснэгтэд хадгалагдаж, супер админы
+"Санал" таб дээр харагдана.
+
+---
+
 ## ⚠️ Аюулгүй байдлын анхааруулга (чухал)
 
 Одоогийн тохиргоо нь **демо/тест** зориулалттай:

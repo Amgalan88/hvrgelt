@@ -29,6 +29,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const STATUS_MESSAGES: Record<string, { title: string; body: string } | undefined> = {
   "үнэ батлах": { title: "Хүргэлтийн үнэ тогтлоо", body: "Апп дээрээ орж баталгаажуулна уу." },
+  "төлбөр хүлээж байна": { title: "Төлбөр хүлээгдэж байна", body: "QR-аар төлбөрөө төлснөөр жолооч хуваарилагдана." },
+  "жолооч хайж байна": { title: "Төлбөр амжилттай ✅", body: "Танд жолооч хуваарилаад мэдээллийг нь илгээнэ." },
   "томилогдсон": { title: "Хүргэгч томилогдлоо", body: "Таны захиалгыг хүргэгч удахгүй авах болно." },
   "авсан": { title: "Ачаа авлаа", body: "Хүргэгч ачааг авлаа. Удахгүй хүргэнэ." },
   "хүргэгдсэн": { title: "Хүргэгдлээ ✅", body: "Таны захиалга амжилттай хүргэгдлээ. Баярлалаа!" },
@@ -86,7 +88,16 @@ Deno.serve(async (req) => {
       .eq("role", "courier")
       .eq("user_id", record.courier_id);
     if (crSubs?.length) {
-      await sendToAll(crSubs, JSON.stringify({ title: "Танд шинэ ачаа томилогдлоо", body: route, orderId: record.id, url: "/" }));
+      await sendToAll(
+        crSubs,
+        JSON.stringify({
+          title: record.urgent ? "⚡ ЯАРАЛТАЙ ачаа томилогдлоо" : "Танд шинэ ачаа томилогдлоо",
+          body: route,
+          orderId: record.id,
+          url: "/",
+          urgent: true, // sw.js дээр чичиргээ + requireInteraction
+        }),
+      );
     }
   }
 

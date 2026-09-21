@@ -12,6 +12,8 @@ export interface Partner {
   detail: string;  // гудамж, байр
   area: string;    // хот/бүс
   image?: string;  // Cloudinary URL
+  phone?: string;         // партнёр өөрөө нэвтрэх дугаар
+  paymentQrUrl?: string;  // газартаа төлөх QR (migration 17)
 }
 
 export const PARTNER_CATEGORIES: { key: PartnerCategory; emoji: string }[] = [

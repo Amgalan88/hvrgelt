@@ -1,11 +1,14 @@
-import { useState } from "react";
-import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon } from "lucide-react";
-import type { Order, CourierUser } from "../shared/types";
+import { useState, useEffect, useRef } from "react";
+import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon, IdCard, Lock, ShieldAlert } from "lucide-react";
+import type { Order, CourierUser, CourierDocs } from "../shared/types";
+import type { CourierAccount } from "../shared/store";
+import { CourierDocsForm } from "./CourierDocsForm";
+import { alertNewOrder } from "../../lib/alert";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
-import { serviceById } from "../customer/services";
+import { serviceById, serviceLabel } from "../customer/services";
 
 const COURIER_HELP_STEPS = [
   "Шинэ захиалга томилогдоход мэдэгдэл авна (хонх идэвхжүүлсэн бол).",
@@ -19,6 +22,8 @@ interface CourierAppProps {
   courierId: string;
   courierName: string;
   courierInfo?: CourierUser;
+  account?: CourierAccount;
+  onSaveDocs: (docs: CourierDocs) => Promise<void>;
   onPickup: (orderId: string) => void;
   onDeliver: (orderId: string) => void;
   onLogout: () => void;
@@ -26,8 +31,8 @@ interface CourierAppProps {
 
 const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
-export function CourierApp({ orders, courierId, courierName, courierInfo, onPickup, onDeliver, onLogout }: CourierAppProps) {
-  const [tab, setTab] = useState<"active" | "done">("active");
+export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout }: CourierAppProps) {
+  const [tab, setTab] = useState<"active" | "done" | "docs">("active");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
   const { theme, toggleTheme } = useUser();
@@ -40,6 +45,47 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
   const doneOrders = myOrders.filter((o) => o.status === "хүргэгдсэн");
 
   const todayEarnings = doneOrders.reduce((sum, o) => sum + Math.round(o.price * 0.8), 0);
+
+  const docs: CourierDocs = {
+    photoUrl: account?.photoUrl,
+    licensePhotoUrl: account?.licensePhotoUrl,
+    licenseNo: account?.licenseNo,
+    licenseClass: account?.licenseClass,
+    licenseExpiry: account?.licenseExpiry,
+    carPhotoUrl: account?.carPhotoUrl,
+    plate: account?.plate,
+    verified: account?.verified ?? false,
+  };
+  const docsMissing = !docs.photoUrl || !docs.licensePhotoUrl || !docs.carPhotoUrl || !docs.plate;
+
+  // ── Захиалгыг хүлээн авах ──
+  // Үйлчлүүлэгчийн утасны дугаар зөвхөн захиалгыг хүлээн авсны дараа
+  // харагдана — ингэснээр системээс гадуур шууд тохирох эрсдэл буурна.
+  const ACCEPTED_KEY = "hvrgelt_courier_accepted";
+  const [accepted, setAccepted] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(ACCEPTED_KEY) || "[]")); }
+    catch { return new Set(); }
+  });
+
+  function acceptOrder(orderId: string) {
+    const next = new Set(accepted);
+    next.add(orderId);
+    setAccepted(next);
+    localStorage.setItem(ACCEPTED_KEY, JSON.stringify([...next]));
+  }
+
+  // ── Шинэ захиалга ирэхэд дуут дохио + чичиргээ ──
+  const knownIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(activeOrders.map((o) => o.id));
+    if (knownIds.current === null) {
+      knownIds.current = ids; // эхний ачаалалт — дохио өгөхгүй
+      return;
+    }
+    const fresh = [...ids].some((id) => !knownIds.current!.has(id));
+    knownIds.current = ids;
+    if (fresh) alertNewOrder();
+  }, [activeOrders]);
 
   function handleConfirm() {
     if (!confirmId || !confirmAction) return;
@@ -86,6 +132,26 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
             </div>
           ))}
         </div>
+
+        {/* Баримт дутуу бол сануулга */}
+        {tab !== "docs" && docsMissing && (
+          <button
+            onClick={() => setTab("docs")}
+            className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-center gap-3 text-left hover:border-amber-500/60 transition-colors"
+          >
+            <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-500">Баримт бичгээ оруулна уу</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Баталгаажих хүртэл захиалга хуваарилагдахгүй</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-amber-500 shrink-0" />
+          </button>
+        )}
+
+        {/* Баримт бичиг */}
+        {tab === "docs" && (
+          <CourierDocsForm docs={docs} phone={courierInfo?.phone ?? ""} onSave={onSaveDocs} />
+        )}
 
         {/* Active orders — PRIMARY FOCUS */}
         {tab === "active" && (
@@ -154,7 +220,29 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
                       {serviceById(order.serviceId) && (
                         <div className="flex gap-2 items-center text-xs">
                           <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
-                          <span className="text-primary font-medium">{serviceById(order.serviceId)!.label}</span>
+                          <span className="text-primary font-medium">{serviceLabel(order.serviceId, order.subServiceId)}</span>
+                        </div>
+                      )}
+
+                      {/* Ачааны зураг, жин, тэмдэглэгээ */}
+                      {(order.cargoPhotoUrl || order.weightKg != null || order.fragile || order.urgent) && (
+                        <div className="flex gap-3 items-center">
+                          {order.cargoPhotoUrl && (
+                            <a href={order.cargoPhotoUrl} target="_blank" rel="noreferrer" className="shrink-0">
+                              <img src={order.cargoPhotoUrl} alt="Ачаа" className="w-16 h-16 rounded-xl object-cover border border-border" />
+                            </a>
+                          )}
+                          <div className="flex flex-wrap gap-1.5">
+                            {order.weightKg != null && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг</span>
+                            )}
+                            {order.fragile && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хагарах аюултай</span>
+                            )}
+                            {order.urgent && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Онцгой яаралтай</span>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -166,16 +254,33 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
                         </div>
                       )}
 
-                      {/* Customer contact */}
+                      {/* Customer contact — дугаар зөвхөн хүлээн авсны дараа */}
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs text-muted-foreground">Захиалагч</p>
                           <p className="text-sm font-medium">{order.customerName}</p>
+                          {accepted.has(order.id) && (
+                            <p className="text-xs text-muted-foreground font-mono">{order.customerPhone}</p>
+                          )}
                         </div>
-                        <a href={`tel:${order.customerPhone}`} className="flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-lg text-sm hover:text-primary hover:border-primary/50 transition-colors">
-                          <Phone className="w-3.5 h-3.5" /> Залгах
-                        </a>
+                        {accepted.has(order.id) ? (
+                          <a href={`tel:${order.customerPhone}`} className="flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-lg text-sm hover:text-primary hover:border-primary/50 transition-colors">
+                            <Phone className="w-3.5 h-3.5" /> Залгах
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => acceptOrder(order.id)}
+                            className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm hover:bg-primary/90 transition-colors"
+                          >
+                            <Lock className="w-3.5 h-3.5" /> Хүлээн авах
+                          </button>
+                        )}
                       </div>
+                      {!accepted.has(order.id) && (
+                        <p className="text-[11px] text-muted-foreground -mt-2">
+                          Захиалгыг хүлээн авсны дараа утасны дугаар нээгдэнэ.
+                        </p>
+                      )}
 
                       {/* Price */}
                       <div className="flex items-center justify-between bg-secondary/50 rounded-xl px-3 py-2">
@@ -252,12 +357,21 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, onPick
         )}
       </div>
 
+      {/* Дотоод журмын сануулга */}
+      <div className="max-w-sm mx-auto w-full px-4 pb-24">
+        <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+          Захиалгыг апп-аар дамжуулан гүйцэтгэнэ. Хувийн дугаараар шууд тохирох нь
+          даатгал, үнэлгээ, урамшууллаас хасагдах үндэслэл болно.
+        </p>
+      </div>
+
       {/* Bottom tab */}
       <div className="fixed bottom-0 inset-x-0 bg-card/95 backdrop-blur-md border-t border-border">
         <div className="max-w-sm mx-auto flex">
           {([
             { key: "active", label: "Захиалгууд", icon: Package, badge: activeOrders.length },
             { key: "done", label: "Дууссан", icon: CheckCircle, badge: 0 },
+            { key: "docs", label: "Баримт", icon: IdCard, badge: docsMissing ? 1 : 0 },
           ] as const).map(({ key, label, icon: Icon, badge }) => (
             <button
               key={key}

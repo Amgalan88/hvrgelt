@@ -24,6 +24,10 @@ self.addEventListener("push", (event) => {
       badge: "/favicon.svg",
       data: { orderId: data.orderId ?? null, url: data.url ?? "/" },
       tag: data.orderId ? `order-${data.orderId}` : undefined,
+      // Жолоочид ачаа томилогдоход чичиргээ + мэдэгдэл автоматаар арилахгүй
+      vibrate: data.urgent ? [300, 120, 300, 120, 500] : [200, 100, 200],
+      requireInteraction: !!data.urgent,
+      renotify: !!data.orderId,
     })
   );
 });

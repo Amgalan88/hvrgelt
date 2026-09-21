@@ -1,12 +1,21 @@
 import { useState, useRef } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare } from "lucide-react";
 import { Logo } from "../shared/Logo";
 import type { OperatorAccount, CourierAccount, CustomerAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
 import { uploadToCloudinary, cloudinaryConfigured } from "../../lib/cloudinary";
 
-type Tab = "operators" | "couriers" | "customers" | "partners" | "settings";
+export interface FeedbackItem {
+  id: string;
+  orderId?: string;
+  phone: string;
+  message: string;
+  createdAt: string;
+  handled: boolean;
+}
+
+type Tab = "operators" | "couriers" | "customers" | "partners" | "feedback" | "settings";
 
 interface SuperadminAppProps {
   operatorAccounts: OperatorAccount[];
@@ -21,6 +30,10 @@ interface SuperadminAppProps {
   onDeleteCourier: (id: string) => void;
   onResetCustomerAuth: (id: string) => void;
   onAddPartner: (data: Omit<Partner, "id">) => void;
+  onVerifyCourier: (id: string, verified: boolean) => void | Promise<void>;
+  onUpdatePartnerAccess: (id: string, data: { phone?: string; authKey?: string; paymentQrUrl?: string }) => Promise<void>;
+  feedback: FeedbackItem[];
+  onHandleFeedback: (id: string, handled: boolean) => void | Promise<void>;
   onUpdatePartner: (id: string, data: Partial<Omit<Partner, "id">>) => void;
   onDeletePartner: (id: string) => void;
   bankInfo: string;
@@ -286,6 +299,7 @@ export function SuperadminApp({
   onAddCourier, onUpdateCourier, onDeleteCourier,
   onResetCustomerAuth,
   onAddPartner, onUpdatePartner, onDeletePartner,
+  onVerifyCourier, onUpdatePartnerAccess, feedback, onHandleFeedback,
   bankInfo, onUpdateBankInfo,
   onLogout,
 }: SuperadminAppProps) {
@@ -349,11 +363,15 @@ export function SuperadminApp({
             { key: "couriers" as Tab, label: "Хүргэгчид", icon: Truck },
             { key: "customers" as Tab, label: "Хэрэглэгчид", icon: Smartphone },
             { key: "partners" as Tab, label: "Газрууд", icon: MapPin },
+            { key: "feedback" as Tab, label: "Санал", icon: MessageSquare },
             { key: "settings" as Tab, label: "Тохиргоо", icon: Settings },
           ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm transition-colors ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs transition-colors relative ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
               <Icon className="w-4 h-4" /> {label}
+              {key === "feedback" && feedback.some((f) => !f.handled) && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+              )}
             </button>
           ))}
         </div>
@@ -438,6 +456,9 @@ export function SuperadminApp({
                       <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cr.active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-secondary text-muted-foreground border-border"}`}>
                         {cr.active ? "идэвхтэй" : "идэвхгүй"}
                       </span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cr.verified ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30"}`}>
+                        {cr.verified ? "баталгаажсан" : "шалгаагүй"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                       <span className="font-mono">@{cr.username}</span>
@@ -462,9 +483,43 @@ export function SuperadminApp({
                     </button>
                   </div>
                 </div>
-                <div className="flex gap-4 px-4 py-2 bg-secondary/30 border-t border-border text-xs text-muted-foreground font-mono">
-                  <span>user: <span className="text-foreground">{cr.username}</span></span>
-                  <span>pass: <span className="text-foreground">{cr.password}</span></span>
+                {/* Баримт бичиг — шалгаад баталгаажуулна */}
+                <div className="px-4 py-3 bg-secondary/30 border-t border-border space-y-2">
+                  <div className="flex gap-2">
+                    {[
+                      { url: cr.photoUrl, label: "Цээж зураг" },
+                      { url: cr.licensePhotoUrl, label: "Үнэмлэх" },
+                      { url: cr.carPhotoUrl, label: "Машин" },
+                    ].map((d) => (
+                      <div key={d.label} className="flex-1">
+                        {d.url ? (
+                          <a href={d.url} target="_blank" rel="noreferrer">
+                            <img src={d.url} alt={d.label} className="w-full h-16 object-cover rounded-lg border border-border" />
+                          </a>
+                        ) : (
+                          <div className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center">
+                            <span className="text-[10px] text-muted-foreground">дутуу</span>
+                          </div>
+                        )}
+                        <p className="text-[10px] text-muted-foreground text-center mt-1">{d.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-mono">
+                      {cr.plate ? `${cr.plate} · ` : ""}{cr.licenseClass ? `${cr.licenseClass} ангилал` : "ангилал ?"}
+                    </span>
+                    <button
+                      onClick={() => onVerifyCourier(cr.id, !cr.verified)}
+                      className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                        cr.verified
+                          ? "border border-border text-muted-foreground hover:text-foreground"
+                          : "bg-blue-500 text-white hover:bg-blue-600"
+                      }`}
+                    >
+                      {cr.verified ? "Баталгаажуулалт цуцлах" : "Баталгаажуулах"}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -620,6 +675,44 @@ export function SuperadminApp({
         )}
 
         {/* ── SETTINGS ── */}
+        {/* ── FEEDBACK ── */}
+        {tab === "feedback" && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {feedback.length} санал · {feedback.filter((f) => !f.handled).length} шийдвэрлээгүй
+            </p>
+            {feedback.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Санал ирээгүй байна</p>
+              </div>
+            ) : (
+              feedback.map((f) => (
+                <div key={f.id} className={`bg-card border rounded-xl p-4 space-y-2 ${f.handled ? "border-border opacity-60" : "border-primary/30"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <a href={`tel:${f.phone}`} className="text-sm font-mono text-primary hover:underline">{f.phone}</a>
+                      {f.orderId && <span className="text-xs text-muted-foreground font-mono truncate">#{f.orderId}</span>}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{f.createdAt.slice(0, 10)}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{f.message}</p>
+                  <button
+                    onClick={() => onHandleFeedback(f.id, !f.handled)}
+                    className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                      f.handled
+                        ? "border border-border text-muted-foreground hover:text-foreground"
+                        : "bg-green-500/15 border border-green-500/30 text-green-500 hover:bg-green-500/25"
+                    }`}
+                  >
+                    {f.handled ? "Дахин нээх" : "Шийдвэрлэсэн"}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {tab === "settings" && (
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-2xl p-4 space-y-3">

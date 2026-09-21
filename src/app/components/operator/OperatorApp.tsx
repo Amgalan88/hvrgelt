@@ -6,7 +6,7 @@ import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
-import { serviceById } from "../customer/services";
+import { serviceById, serviceLabel } from "../customer/services";
 import { ExportModal } from "./ExportModal";
 
 const OPERATOR_HELP_STEPS = [
@@ -22,14 +22,19 @@ interface OperatorAppProps {
   couriers: CourierUser[];
   operatorId: string;
   operatorName: string;
-  onAssign: (orderId: string, courierId: string, price: number) => void | Promise<void>;
+  onSetPrice: (orderId: string, price: number) => void | Promise<void>;
+  onAssign: (orderId: string, courierId: string, price?: number) => void | Promise<void>;
+  onMarkPaid: (orderId: string, method: string) => void | Promise<void>;
+  onCancelOrder: (orderId: string) => void | Promise<void>;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onLogout: () => void;
 }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  шинэ:          "Шинэ",
-  "үнэ батлах":  "Үнэ батлах хүлээж",
+  шинэ:                   "Шинэ · үнэ тогтоох",
+  "үнэ батлах":           "Үнэ батлах хүлээж",
+  "төлбөр хүлээж байна":  "Төлбөр хүлээж",
+  "жолооч хайж байна":    "Жолооч хуваарилах",
   томилогдсон:   "Томилогдсон",
   авсан:         "Ачаа авсан",
   хүргэгдсэн:   "Хүргэгдсэн",
@@ -37,8 +42,10 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
-  шинэ:          "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  "үнэ батлах":  "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  шинэ:                   "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  "үнэ батлах":           "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  "төлбөр хүлээж байна":  "bg-violet-500/20 text-violet-400 border-violet-500/30",
+  "жолооч хайж байна":    "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   томилогдсон:   "bg-blue-500/20 text-blue-400 border-blue-500/30",
   авсан:         "bg-primary/20 text-primary border-primary/30",
   хүргэгдсэн:   "bg-green-500/20 text-green-400 border-green-500/30",
@@ -49,7 +56,7 @@ const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", ав
 
 type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан";
 
-export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssign, onUpdateStatus, onLogout }: OperatorAppProps) {
+export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetPrice, onAssign, onMarkPaid, onCancelOrder, onUpdateStatus, onLogout }: OperatorAppProps) {
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("5000");
@@ -72,11 +79,12 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
   }
 
   const newCount = orders.filter((o) => o.status === "шинэ").length;
-  const activeCount = orders.filter((o) => ["томилогдсон", "авсан", "үнэ батлах"].includes(o.status)).length;
+  const waitingCourierCount = orders.filter((o) => o.status === "жолооч хайж байна").length;
+  const activeCount = orders.filter((o) => ["томилогдсон", "авсан", "үнэ батлах", "төлбөр хүлээж байна", "жолооч хайж байна"].includes(o.status)).length;
   const doneCount = orders.filter((o) => o.status === "хүргэгдсэн").length;
 
   const filtered = orders.filter((o) => {
-    if (filter === "шинэ") return o.status === "шинэ" || o.status === "үнэ батлах";
+    if (filter === "шинэ") return ["шинэ", "үнэ батлах", "төлбөр хүлээж байна", "жолооч хайж байна"].includes(o.status);
     if (filter === "идэвхтэй") return ["томилогдсон", "авсан"].includes(o.status);
     if (filter === "дууссан") return o.status === "хүргэгдсэн" || (o.status === "цуцлагдсан" && !hiddenCancelled.has(o.id));
     return true;
@@ -124,9 +132,9 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: "Шинэ", value: newCount, color: "text-amber-400", ring: "border-amber-500/30 bg-amber-500/10" },
+            { label: "Жолооч?", value: waitingCourierCount, color: "text-cyan-400", ring: "border-cyan-500/30 bg-cyan-500/10" },
             { label: "Идэвхтэй", value: activeCount, color: "text-primary", ring: "border-primary/30 bg-primary/10" },
             { label: "Хүргэгдсэн", value: doneCount, color: "text-green-400", ring: "border-green-500/30 bg-green-500/10" },
-            { label: "Хүргэгч", value: couriers.length, color: "text-blue-400", ring: "border-blue-500/30 bg-blue-500/10" },
           ].map((s) => (
             <div key={s.label} className={`${s.ring} border rounded-xl p-2.5 text-center`}>
               <p className={`text-xl font-bold font-mono ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
@@ -180,7 +188,9 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
             : filtered
           ).map((order, idx, arr) => {
             const expanded = expandedId === order.id;
-            const canAssign = order.status === "шинэ";
+            const needsPrice = order.status === "шинэ";
+            const waitingPayment = order.status === "төлбөр хүлээж байна";
+            const needsCourier = order.status === "жолооч хайж байна";
             const prevStatus = idx > 0 ? arr[idx - 1].status : null;
             const showDeliveredHeader = filter === "дууссан" && order.status === "хүргэгдсэн" && prevStatus !== "хүргэгдсэн";
             const showCancelledHeader = filter === "дууссан" && order.status === "цуцлагдсан" && prevStatus !== "цуцлагдсан";
@@ -256,9 +266,29 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
                         </div>
                       </div>
                       {serviceById(order.serviceId) && (
-                        <div className="flex gap-2 items-center text-xs">
+                        <div className="flex gap-2 items-center text-xs flex-wrap">
                           <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
-                          <span className="text-primary font-medium">{serviceById(order.serviceId)!.label}</span>
+                          <span className="text-primary font-medium">{serviceLabel(order.serviceId, order.subServiceId)}</span>
+                        </div>
+                      )}
+                      {(order.cargoPhotoUrl || order.weightKg != null || order.fragile || order.urgent) && (
+                        <div className="flex gap-2.5 items-center">
+                          {order.cargoPhotoUrl && (
+                            <a href={order.cargoPhotoUrl} target="_blank" rel="noreferrer" className="shrink-0">
+                              <img src={order.cargoPhotoUrl} alt="Ачаа" className="w-14 h-14 rounded-lg object-cover border border-border" />
+                            </a>
+                          )}
+                          <div className="flex flex-wrap gap-1.5">
+                            {order.weightKg != null && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг</span>
+                            )}
+                            {order.fragile && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хагарах аюултай</span>
+                            )}
+                            {order.urgent && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Онцгой яаралтай</span>
+                            )}
+                          </div>
                         </div>
                       )}
                       {order.packageNote && order.packageNote !== "Тэмдэглэлгүй" && (
@@ -309,10 +339,11 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
                     )}
 
                     {/* Actions */}
-                    {canAssign && (
+                    {needsPrice && (
                       <div>
-                        {/* Price input — operator sets the delivery price */}
-                        <p className="text-xs text-muted-foreground mb-1.5">Хүргэлтийн үнэ (доод тал нь 5,000₮)</p>
+                        <p className="text-xs text-muted-foreground mb-1.5">
+                          Үйлчлүүлэгчтэй холбогдож ярилцсаны дараа хүргэлтийн үнийг оруулна (доод тал нь 5,000₮)
+                        </p>
                         <div className="flex items-center gap-1.5 bg-secondary border border-border rounded-xl px-3 py-2.5 mb-3">
                           <span className="text-sm text-muted-foreground">₮</span>
                           <input
@@ -324,39 +355,106 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onAssi
                             className="flex-1 bg-transparent text-sm font-mono focus:outline-none"
                           />
                         </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onCancelOrder(order.id)}
+                            className="px-4 border border-destructive/50 text-destructive rounded-xl text-sm hover:bg-destructive/10 transition-colors"
+                          >
+                            Цуцлах
+                          </button>
+                          <button
+                            disabled={assigningId === order.id}
+                            onClick={async () => {
+                              setAssigningId(order.id);
+                              try {
+                                await onSetPrice(order.id, Math.max(5000, parseInt(priceInput, 10) || 5000));
+                                setExpandedId(null);
+                              } finally {
+                                setAssigningId(null);
+                              }
+                            }}
+                            className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                          >
+                            {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <>Үнэ илгээх <CheckCircle className="w-4 h-4" /></>}
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
+                    {order.status === "үнэ батлах" && (
+                      <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/25 text-orange-400 py-2.5 px-3 rounded-xl text-xs">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        Үйлчлүүлэгч ₮{order.price.toLocaleString()} үнийг батлахыг хүлээж байна
+                      </div>
+                    )}
+
+                    {waitingPayment && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/25 text-violet-300 py-2.5 px-3 rounded-xl text-xs">
+                          <Clock className="w-4 h-4 shrink-0" />
+                          ₮{order.price.toLocaleString()} төлбөр хүлээгдэж байна
+                        </div>
+                        <button
+                          disabled={assigningId === order.id}
+                          onClick={async () => {
+                            setAssigningId(order.id);
+                            try {
+                              await onMarkPaid(order.id, "гар аргаар");
+                            } finally {
+                              setAssigningId(null);
+                            }
+                          }}
+                          className="w-full bg-violet-500 text-white py-2.5 rounded-xl text-sm hover:bg-violet-500/90 transition-colors disabled:opacity-60"
+                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                        >
+                          Төлбөр орсныг баталгаажуулах
+                        </button>
+                      </div>
+                    )}
+
+                    {needsCourier && (
+                      <div>
+                        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/25 text-green-400 py-2 px-3 rounded-xl text-xs mb-3">
+                          <CheckCircle className="w-4 h-4 shrink-0" />
+                          Төлбөр төлөгдсөн {order.paidAt ? `· ${order.paidAt}` : ""}
+                        </div>
                         <p className="text-xs text-muted-foreground mb-2">Хүргэгч томилох</p>
-                        {couriers.length === 0 ? (
-                          <p className="text-xs text-center text-muted-foreground py-2 border border-border rounded-xl">Хүргэгч байхгүй байна</p>
+                        {couriers.filter((c) => c.verified !== false).length === 0 ? (
+                          <p className="text-xs text-center text-muted-foreground py-2 border border-border rounded-xl">
+                            Баталгаажсан хүргэгч байхгүй байна
+                          </p>
                         ) : (
                           <div className="space-y-1.5">
-                            {couriers.map((c) => (
-                              <button
-                                key={c.id}
-                                disabled={assigningId === order.id}
-                                onClick={async () => {
-                                  setAssigningId(order.id);
-                                  try {
-                                    await onAssign(order.id, c.id, Math.max(5000, parseInt(priceInput, 10) || 5000));
-                                    setExpandedId(null);
-                                  } finally {
-                                    setAssigningId(null);
-                                  }
-                                }}
-                                className="w-full flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">{VEHICLE_ICON[c.vehicle]}</span>
-                                  <div className="text-left">
-                                    <p className="text-sm font-medium">{c.name}</p>
-                                    <p className="text-xs opacity-70">★{c.rating} · {c.vehicle} · {c.phone}</p>
+                            {couriers
+                              .filter((c) => c.verified !== false)
+                              .map((c) => (
+                                <button
+                                  key={c.id}
+                                  disabled={assigningId === order.id}
+                                  onClick={async () => {
+                                    setAssigningId(order.id);
+                                    try {
+                                      await onAssign(order.id, c.id);
+                                      setExpandedId(null);
+                                    } finally {
+                                      setAssigningId(null);
+                                    }
+                                  }}
+                                  className="w-full flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{VEHICLE_ICON[c.vehicle]}</span>
+                                    <div className="text-left">
+                                      <p className="text-sm font-medium">{c.name}</p>
+                                      <p className="text-xs opacity-70">★{c.rating} · {c.vehicle} · {c.available ? "сул" : "завгүй"}</p>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                                </div>
-                              </button>
-                            ))}
+                                  <div className="flex items-center gap-1.5">
+                                    {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                  </div>
+                                </button>
+                              ))}
                           </div>
                         )}
                       </div>

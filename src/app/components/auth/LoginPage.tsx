@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User } from "lucide-react";
 import { Logo as AppLogo } from "../shared/Logo";
 import { Spinner } from "../shared/Spinner";
 import type { UserRole } from "../shared/types";
@@ -16,10 +16,27 @@ interface LoginPageProps {
   addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
   updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
   updateCustomerAuth: (id: string, authMethod: "pin" | "pattern", authKey: string) => void;
+  registerCourier: (data: {
+    name: string;
+    phone: string;
+    vehicle: "мотоцикл" | "автомашин" | "дугуй" | "мопед";
+    authMethod: "pin" | "pattern";
+    authKey: string;
+  }) => Promise<string>;
   skipLanding?: boolean;
 }
 
-type Screen = "landing" | "phone" | "auth" | "first-setup" | "register";
+/** Нэвтрэх/бүртгүүлэх урсгалыг 2 салгана */
+type LoginMode = "customer" | "courier";
+
+const VEHICLES: { key: "мотоцикл" | "автомашин" | "дугуй" | "мопед"; emoji: string }[] = [
+  { key: "мотоцикл",  emoji: "🏍️" },
+  { key: "автомашин", emoji: "🚗" },
+  { key: "мопед",     emoji: "🛵" },
+  { key: "дугуй",     emoji: "🚲" },
+];
+
+type Screen = "landing" | "role" | "phone" | "auth" | "first-setup" | "register";
 type RegStep = "info" | "choose" | "pin" | "pattern";
 type AuthStep = "pin" | "pattern" | "password";
 type SetupStep = "choose" | "pin" | "pattern";
@@ -30,9 +47,10 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, skipLanding }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, skipLanding }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
-  const [screen, setScreen] = useState<Screen>(skipLanding ? "phone" : "landing");
+  const [screen, setScreen] = useState<Screen>(skipLanding ? "role" : "landing");
+  const [mode, setMode] = useState<LoginMode>("customer");
 
   // Phone input
   const savedPhone = localStorage.getItem(SAVED_PHONE_KEY) ?? "";
@@ -62,6 +80,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // Register
   const [rName, setRName]           = useState("");
   const [rPhone, setRPhone]         = useState("");
+  const [rVehicle, setRVehicle]     = useState<"мотоцикл" | "автомашин" | "дугуй" | "мопед">("мотоцикл");
   const [regStep, setRegStep]       = useState<RegStep>("info");
   const [pinFirst, setPinFirst]     = useState("");
   const [patternFirst, setPatternFirst] = useState("");
@@ -198,6 +217,12 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (!pinFirst) { setPinFirst(pin); return; }
     if (pin === pinFirst) {
       try {
+        if (mode === "courier") {
+          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle, authMethod: "pin", authKey: pin });
+          localStorage.setItem(SAVED_PHONE_KEY, rPhone);
+          onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
+          return;
+        }
         const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pin", authKey: pin });
         setPin(pin); setPattern(null);
         localStorage.setItem(SAVED_PHONE_KEY, rPhone);
@@ -217,6 +242,12 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (!patternFirst) { setPatternFirst(pattern); return; }
     if (pattern === patternFirst) {
       try {
+        if (mode === "courier") {
+          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle, authMethod: "pattern", authKey: pattern });
+          localStorage.setItem(SAVED_PHONE_KEY, rPhone);
+          onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
+          return;
+        }
         const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pattern", authKey: pattern });
         setPattern(pattern); setPin(null);
         localStorage.setItem(SAVED_PHONE_KEY, rPhone);
@@ -265,7 +296,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
                 hvrgelt<span className="text-primary">.mn</span>
               </span>
             </div>
-            <button onClick={() => setScreen("phone")} className="text-sm text-white/70 hover:text-white transition-colors">
+            <button onClick={() => setScreen("role")} className="text-sm text-white/70 hover:text-white transition-colors">
               Нэвтрэх
             </button>
           </nav>
@@ -280,7 +311,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
             <motion.div className="space-y-2.5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}>
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setScreen("phone")}
+                onClick={() => setScreen("role")}
                 className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}
               >
@@ -293,17 +324,89 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     );
   }
 
+  // ── ROLE CHOICE ───────────────────────────────────────────────────
+  if (screen === "role") {
+    const cards: { mode: LoginMode; icon: typeof User; title: string; desc: string; hint: string }[] = [
+      {
+        mode: "customer",
+        icon: User,
+        title: "Үйлчлүүлэгчээр нэвтрэх",
+        desc: "Хүргэлт захиалах, ачаа илгээх",
+        hint: "30 секундэд захиалга өгнө",
+      },
+      {
+        mode: "courier",
+        icon: Truck,
+        title: "Жолоочоор нэвтрэх",
+        desc: "Хүргэлт хийж орлого олох",
+        hint: "Баримт бичгээ оруулаад эхэлнэ",
+      },
+    ];
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        {!skipLanding && (
+          <button onClick={() => setScreen("landing")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+            <ArrowLeft className="w-4 h-4" /> Буцах
+          </button>
+        )}
+        <Logo />
+        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Хэн бэ?</h2>
+        <p className="text-muted-foreground text-sm mt-1 mb-8">Нэвтрэх хэлбэрээ сонгоно уу</p>
+
+        <div className="space-y-3 flex-1">
+          {cards.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <motion.button
+                key={c.mode}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08, type: "spring", damping: 20, stiffness: 280 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => { setMode(c.mode); setPhone(""); setPhoneError(""); resetRegister(); setScreen("phone"); }}
+                className="w-full bg-card border border-border rounded-2xl p-5 flex items-center gap-4 text-left hover:border-primary/50 transition-colors group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 group-hover:bg-primary/25 transition-colors">
+                  <Icon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{c.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{c.desc}</p>
+                  <p className="text-[11px] text-primary mt-1">{c.hint}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center mt-6">
+          Оператор, админ бол <button onClick={() => { setMode("customer"); setScreen("phone"); }} className="text-primary underline">эндээс нэвтэрнэ</button>
+        </p>
+      </div>
+    );
+  }
+
   // ── PHONE INPUT ───────────────────────────────────────────────────
   if (screen === "phone") {
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
-        <button onClick={() => setScreen("landing")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+        <button onClick={() => setScreen("role")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
         <Logo />
 
-        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Нэвтрэх</h2>
-        <p className="text-muted-foreground text-sm mt-1 mb-8">Утасны дугаараа оруулна уу</p>
+        <div className="flex items-center gap-2">
+          {mode === "courier" ? <Truck className="w-5 h-5 text-primary" /> : <User className="w-5 h-5 text-primary" />}
+          <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>
+            {mode === "courier" ? "Жолоочоор нэвтрэх" : "Нэвтрэх"}
+          </h2>
+        </div>
+        <p className="text-muted-foreground text-sm mt-1 mb-8">
+          {mode === "courier"
+            ? "Бүртгэлгүй бол дугаараа оруулаад шууд бүртгүүлнэ"
+            : "Утасны дугаараа оруулна уу"}
+        </p>
 
         <div className="space-y-3 flex-1">
           <div>
@@ -582,8 +685,14 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
         <RegHeader onBack={() => { resetRegister(); setScreen("phone"); }} />
-        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Бүртгүүлэх</h2>
-        <p className="text-muted-foreground text-sm mt-1 mb-6">Нэг удаа бүртгүүлж, хурдан захиалаарай</p>
+        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>
+          {mode === "courier" ? "Жолоочоор бүртгүүлэх" : "Бүртгүүлэх"}
+        </h2>
+        <p className="text-muted-foreground text-sm mt-1 mb-6">
+          {mode === "courier"
+            ? "Бүртгүүлсний дараа баримт бичгээ оруулна"
+            : "Нэг удаа бүртгүүлж, хурдан захиалаарай"}
+        </p>
         <div className="space-y-3 flex-1">
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Овог нэр</label>
@@ -607,9 +716,31 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               />
             </div>
           </div>
+          {mode === "courier" && (
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1.5">Тээврийн хэрэгсэл</label>
+              <div className="grid grid-cols-2 gap-2">
+                {VEHICLES.map((v) => (
+                  <button
+                    key={v.key}
+                    onClick={() => setRVehicle(v.key)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+                      rVehicle === v.key
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-card border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <span>{v.emoji}</span> {v.key}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
             <CheckCircle className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
-            Бүртгүүлснээр үйлчилгээний нөхцөлийг зөвшөөрсөнд тооцогдоно
+            {mode === "courier"
+              ? "Жолооч захиалга авахын өмнө баримт бичиг нь шалгагдаж баталгаажна"
+              : "Бүртгүүлснээр үйлчилгээний нөхцөлийг зөвшөөрсөнд тооцогдоно"}
           </div>
         </div>
         <div className="mt-6 space-y-3">

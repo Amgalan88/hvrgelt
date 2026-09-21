@@ -7,6 +7,7 @@ import { CustomerApp } from "./components/customer/CustomerApp";
 import { OperatorApp } from "./components/operator/OperatorApp";
 import { CourierApp } from "./components/courier/CourierApp";
 import { SuperadminApp } from "./components/superadmin/SuperadminApp";
+import { PartnerApp } from "./components/partner/PartnerApp";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
@@ -273,6 +274,7 @@ function Inner() {
         addCustomer={store.addCustomer}
         updateAccountAuth={store.updateAccountAuth}
         updateCustomerAuth={store.updateCustomerAuth}
+        registerCourier={store.registerCourier}
       />
     );
   }
@@ -335,6 +337,10 @@ function Inner() {
           onUpdateCourier={store.updateCourier}
           onDeleteCourier={store.deleteCourier}
           onResetCustomerAuth={store.resetCustomerAuth}
+          onVerifyCourier={store.verifyCourier}
+          onUpdatePartnerAccess={store.updatePartnerAccess}
+          feedback={store.feedback}
+          onHandleFeedback={store.setFeedbackHandled}
           onAddPartner={store.addPartner}
           onUpdatePartner={store.updatePartner}
           onDeletePartner={store.deletePartner}
@@ -347,10 +353,30 @@ function Inner() {
         <CustomerApp
           orders={store.orders}
           partners={store.partners}
+          products={store.products}
           bankInfo={store.bankInfo}
+          courierDocs={(courierId) => {
+            const c = store.courierAccounts.find((x) => x.id === courierId);
+            if (!c) return undefined;
+            return {
+              photoUrl: c.photoUrl,
+              licensePhotoUrl: c.licensePhotoUrl,
+              licenseNo: c.licenseNo,
+              licenseClass: c.licenseClass,
+              licenseExpiry: c.licenseExpiry,
+              carPhotoUrl: c.carPhotoUrl,
+              plate: c.plate,
+              verified: c.verified,
+              verifiedAt: c.verifiedAt,
+            };
+          }}
           onAddOrder={store.addOrder}
           onCancelOrder={store.cancelOrder}
           onConfirmOrder={store.confirmOrder}
+          onCreatePayment={store.createPayment}
+          onMarkPaid={store.markOrderPaid}
+          onRate={store.rateOrder}
+          onFeedback={store.submitFeedback}
           myOrderId={myOrderId}
           setMyOrderId={setMyOrderId}
           userName={session.name}
@@ -368,7 +394,10 @@ function Inner() {
           couriers={store.couriers}
           operatorId={session.id}
           operatorName={session.name}
+          onSetPrice={store.operatorSetPrice}
           onAssign={store.assignCourier}
+          onMarkPaid={store.markOrderPaid}
+          onCancelOrder={store.cancelOrder}
           onUpdateStatus={() => { }}
           onLogout={requestLogout}
         />
@@ -380,8 +409,22 @@ function Inner() {
           courierId={session.id}
           courierName={session.name}
           courierInfo={store.couriers.find((c) => c.id === session.id)}
+          account={store.courierAccounts.find((c) => c.id === session.id)}
+          onSaveDocs={(docs) => store.updateCourierDocs(session.id, docs)}
           onPickup={(id) => store.courierUpdateStatus(id, "авсан")}
           onDeliver={(id) => store.courierUpdateStatus(id, "хүргэгдсэн")}
+          onLogout={requestLogout}
+        />
+      )}
+
+      {session.role === "partner" && (
+        <PartnerApp
+          partner={store.partners.find((x) => x.id === session.id)}
+          products={store.products.filter((x) => x.partnerId === session.id)}
+          onAddProduct={store.addProduct}
+          onUpdateProduct={store.updateProduct}
+          onDeleteProduct={store.deleteProduct}
+          onSaveQr={(url) => store.updatePartnerAccess(session.id, { paymentQrUrl: url })}
           onLogout={requestLogout}
         />
       )}
