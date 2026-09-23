@@ -9,3 +9,9 @@
 
   Run `npm run dev` to start the development server.
   
+
+  ## Баримт бичиг
+
+  - [SUPABASE_SETUP.md](SUPABASE_SETUP.md) — өгөгдлийн сан, төлбөр, Edge Function
+  - [PUSH_NOTIFICATIONS_SETUP.md](PUSH_NOTIFICATIONS_SETUP.md) — push мэдэгдэл
+  - [DEV_LOGIN.md](DEV_LOGIN.md) — хөгжүүлэгчийн бүртгэл, бүх role-оор шалгах
