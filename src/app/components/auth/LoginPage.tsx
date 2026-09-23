@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User, FlaskConical } from "lucide-react";
 import { Logo as AppLogo } from "../shared/Logo";
 import { Spinner } from "../shared/Spinner";
 import type { UserRole } from "../shared/types";
@@ -9,7 +9,7 @@ import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 import { normalizePhone, isValidPhone } from "../../lib/phone";
-import { DEV_ACCOUNT_NAME, isDevPhone, checkDevPassword } from "../../lib/devMode";
+import { DEV_ACCOUNT_NAME, devPhone, isDevPhone, checkDevPassword } from "../../lib/devMode";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
@@ -117,6 +117,18 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
   }
 
+  // ── Хөгжүүлэгчийн нууц үгийн дэлгэц ──────────────────────────────
+  function openDevAuth() {
+    setPhone(devPhone());
+    setPhoneError("");
+    setDevAuth(true);
+    setAccount({ role: "superadmin", id: "dev", name: DEV_ACCOUNT_NAME, authMethod: "password", authKey: "" });
+    setAuthStep("password");
+    setPassword(""); setAuthError("");
+    setFailCount(0); setLockUntil(0);
+    setScreen("auth");
+  }
+
   // ── Phone submit ─────────────────────────────────────────────────
   async function handlePhoneSubmit() {
     if (submitting) return;
@@ -124,15 +136,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (clean.length !== 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
 
     // Хөгжүүлэгчийн бүртгэл — DB-д байхгүй тул шууд нууц үгийн дэлгэц рүү
-    if (onDevUnlock && isDevPhone(clean)) {
-      setDevAuth(true);
-      setAccount({ role: "superadmin", id: "dev", name: DEV_ACCOUNT_NAME, authMethod: "password", authKey: "" });
-      setAuthStep("password");
-      setPassword(""); setAuthError("");
-      setFailCount(0); setLockUntil(0);
-      setScreen("auth");
-      return;
-    }
+    if (onDevUnlock && isDevPhone(clean)) { openDevAuth(); return; }
 
     setSubmitting(true);
     try {
@@ -411,6 +415,16 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <p className="text-xs text-muted-foreground text-center mt-6">
           Оператор, админ бол <button onClick={() => { setMode("customer"); setScreen("phone"); }} className="text-primary underline">эндээс нэвтэрнэ</button>
         </p>
+
+        {/* Зөвхөн хөгжүүлэлтийн build дээр харагдана */}
+        {onDevUnlock && (
+          <button
+            onClick={openDevAuth}
+            className="mt-3 mx-auto flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
+          >
+            <FlaskConical className="w-3.5 h-3.5" /> Хөгжүүлэгчээр нэвтрэх
+          </button>
+        )}
       </div>
     );
   }
@@ -462,6 +476,16 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               </button>
             )}
           </div>
+
+          {/* Зөвхөн хөгжүүлэлтийн build дээр харагдана */}
+          {onDevUnlock && (
+            <button
+              onClick={openDevAuth}
+              className="flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
+            >
+              <FlaskConical className="w-3.5 h-3.5" /> Хөгжүүлэгчээр нэвтрэх
+            </button>
+          )}
         </div>
 
         <div className="mt-6">
