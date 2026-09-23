@@ -411,9 +411,18 @@ export function SuperadminApp({
             <Logo size="sm" />
             <p className="text-xs text-primary leading-none ml-10">Супер Админ</p>
           </div>
-          <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg transition-colors">
-            <LogOut className="w-3.5 h-3.5" /> Гарах
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onViewAs}
+              title="Бусад role-ын дэлгэцийг шалгах"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" /> Role-оор үзэх
+            </button>
+            <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg transition-colors">
+              <LogOut className="w-3.5 h-3.5" /> Гарах
+            </button>
+          </div>
         </div>
       </header>
 
