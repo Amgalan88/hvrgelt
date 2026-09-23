@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare } from "lucide-react";
+import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare, ChevronRight } from "lucide-react";
 import { Logo } from "../shared/Logo";
 import type { OperatorAccount, CourierAccount, CustomerAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
@@ -38,6 +38,8 @@ interface SuperadminAppProps {
   onDeletePartner: (id: string) => void;
   bankInfo: string;
   onUpdateBankInfo: (value: string) => void;
+  /** Бусад role-ын дэлгэцийг шалгах сонгогчийг нээнэ */
+  onViewAs: () => void;
   onLogout: () => void;
 }
 
@@ -375,7 +377,7 @@ export function SuperadminApp({
   onAddPartner, onUpdatePartner, onDeletePartner,
   onVerifyCourier, onUpdatePartnerAccess, feedback, onHandleFeedback,
   bankInfo, onUpdateBankInfo,
-  onLogout,
+  onViewAs, onLogout,
 }: SuperadminAppProps) {
   const [bankDraft, setBankDraft] = useState(bankInfo);
   const [bankSaved, setBankSaved] = useState(false);
@@ -790,6 +792,22 @@ export function SuperadminApp({
 
         {tab === "settings" && (
           <div className="space-y-4">
+            <button
+              onClick={onViewAs}
+              className="w-full bg-card border border-border rounded-2xl p-4 flex items-center gap-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center shrink-0">
+                <Eye className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Role-оор үзэх</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Үйлчлүүлэгч, жолооч, оператор, партнёрын дэлгэцийг тэдний нүдээр шалгана
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </button>
+
             <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-primary" />

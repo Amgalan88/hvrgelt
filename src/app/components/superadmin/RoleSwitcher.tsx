@@ -1,26 +1,22 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { User, Truck, Headset, Store, Shield, ChevronRight, X, LogIn, FlaskConical } from "lucide-react";
+import { User, Truck, Headset, Store, ChevronRight, X, LogIn, Eye } from "lucide-react";
 import type { UserRole } from "../shared/types";
 import type { CourierAccount, CustomerAccount, OperatorAccount } from "../shared/store";
-import { SUPERADMIN } from "../shared/store";
 import type { Partner } from "../customer/partners";
 import { Logo } from "../shared/Logo";
 
-export interface DevAccounts {
+export interface RoleSwitcherAccounts {
   operatorAccounts: OperatorAccount[];
   courierAccounts: CourierAccount[];
   customerAccounts: CustomerAccount[];
   partners: Partner[];
 }
 
-interface DevSwitcherProps extends DevAccounts {
-  /** Одоогийн session (байвал аль role идэвхтэйг тодруулна) */
+interface RoleSwitcherProps extends RoleSwitcherAccounts {
+  /** Одоо аль role-оор үзэж байгаа (тухайн мөрийг тодруулна) */
   currentRole?: UserRole;
-  /** Хаагдах боломжтой эсэх — аппын дотроос нээхэд true */
-  onClose?: () => void;
-  /** Dev горимоос гарч, ердийн нэвтрэх хуудас руу */
-  onRealLogin?: () => void;
+  onClose: () => void;
   onEnter: (role: UserRole, id: string, name: string, phone: string) => void;
 }
 
@@ -36,24 +32,22 @@ const ROLE_META: { role: UserRole; label: string; desc: string; icon: typeof Use
   { role: "courier",    label: "Жолооч",      desc: "Ачаа авах, хүргэх, баримт оруулах",    icon: Truck,   color: "text-amber-400 bg-amber-500/10 border-amber-500/25" },
   { role: "operator",   label: "Оператор",    desc: "Үнэ тогтоох, төлбөр, жолооч хуваарилах", icon: Headset, color: "text-violet-400 bg-violet-500/10 border-violet-500/25" },
   { role: "partner",    label: "Партнёр",     desc: "Бараагаа оруулах, төлбөрийн QR",       icon: Store,   color: "text-green-400 bg-green-500/10 border-green-500/25" },
-  { role: "superadmin", label: "Супер админ", desc: "Бүх бүртгэл, санал хүсэлт, тохиргоо",  icon: Shield,  color: "text-red-400 bg-red-500/10 border-red-500/25" },
 ];
 
 /**
- * Хөгжүүлэлтийн горимын role сонгогч — нууц үггүйгээр аль ч role руу
- * шууд орно. Жинхэнэ бүртгэл байхгүй role дээр демо хэрэглэгч үүсгэнэ
- * (өгөгдөл нь хоосон харагдана).
+ * Супер админ бусад role-ын дэлгэцийг хэрхэн харагддагийг шалгах
+ * сонгогч. Жинхэнэ бүртгэл сонговол тухайн хэрэглэгчийн өгөгдөлтэйгөөр,
+ * жишээ хэрэглэгч сонговол хоосон дэлгэцийг харна.
  */
-export function DevSwitcher({
+export function RoleSwitcher({
   operatorAccounts,
   courierAccounts,
   customerAccounts,
   partners,
   currentRole,
   onClose,
-  onRealLogin,
   onEnter,
-}: DevSwitcherProps) {
+}: RoleSwitcherProps) {
   const [open, setOpen] = useState<UserRole | null>(null);
 
   function choicesFor(role: UserRole): Choice[] {
@@ -69,8 +63,6 @@ export function DevSwitcher({
         return operatorAccounts.filter((o) => o.active).map((o) => ({ id: o.id, name: o.name, phone: o.phone }));
       case "partner":
         return partners.slice(0, 12).map((p) => ({ id: p.id, name: `${p.emoji} ${p.name}`, phone: p.phone ?? "", hint: p.category }));
-      case "superadmin":
-        return [{ id: SUPERADMIN.id, name: SUPERADMIN.name, phone: SUPERADMIN.phone }];
       default:
         return [];
     }
@@ -78,11 +70,10 @@ export function DevSwitcher({
 
   function demoFor(role: UserRole): Choice {
     const map: Record<string, Choice> = {
-      customer:  { id: "dev-customer",  name: "Демо Үйлчлүүлэгч", phone: "99000001" },
-      courier:   { id: "dev-courier",   name: "Демо Жолооч",      phone: "99000002" },
-      operator:  { id: "dev-operator",  name: "Демо Оператор",    phone: "99000003" },
-      partner:   { id: "dev-partner",   name: "Демо Партнёр",     phone: "99000004" },
-      superadmin:{ id: SUPERADMIN.id,   name: SUPERADMIN.name,    phone: SUPERADMIN.phone },
+      customer: { id: "demo-customer", name: "Жишээ үйлчлүүлэгч", phone: "99000001" },
+      courier:  { id: "demo-courier",  name: "Жишээ жолооч",      phone: "99000002" },
+      operator: { id: "demo-operator", name: "Жишээ оператор",    phone: "99000003" },
+      partner:  { id: "demo-partner",  name: "Жишээ партнёр",     phone: "99000004" },
     };
     return map[role];
   }
@@ -94,23 +85,22 @@ export function DevSwitcher({
           <div>
             <Logo size="sm" />
             <div className="flex items-center gap-1.5 mt-2">
-              <FlaskConical className="w-4 h-4 text-amber-500" />
-              <span className="text-xs text-amber-500 font-medium">ХӨГЖҮҮЛЭЛТИЙН ГОРИМ</span>
+              <Eye className="w-4 h-4 text-amber-500" />
+              <span className="text-xs text-amber-500 font-medium">СУПЕР АДМИН — ROLE-ООР ҮЗЭХ</span>
             </div>
           </div>
-          {onClose && (
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div>
           <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.5rem", lineHeight: 1.2 }}>
-            Аль role-оор орох вэ?
+            Аль role-оор үзэх вэ?
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Хөгжүүлэгчийн бүртгэлээр нэвтэрсэн тул role хооронд чөлөөтэй шилжинэ.
+            Сонгосон хэрэглэгчийн нүдээр апп хэрхэн харагдахыг шалгана.
+            Хүссэн үедээ супер админ руугаа буцна.
           </p>
         </div>
 
@@ -172,21 +162,19 @@ export function DevSwitcher({
                         <LogIn className="w-4 h-4 text-muted-foreground shrink-0" />
                       </button>
                     ))}
-                    {r.role !== "superadmin" && (
-                      <button
-                        onClick={() => {
-                          const d = demoFor(r.role);
-                          onEnter(r.role, d.id, d.name, d.phone);
-                        }}
-                        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-secondary/40 transition-colors"
-                      >
-                        <div>
-                          <p className="text-sm text-muted-foreground">Демо хэрэглэгчээр орох</p>
-                          <p className="text-xs text-muted-foreground/70">Хоосон өгөгдөлтэй, зөвхөн дэлгэц үзэх</p>
-                        </div>
-                        <LogIn className="w-4 h-4 text-muted-foreground shrink-0" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        const d = demoFor(r.role);
+                        onEnter(r.role, d.id, d.name, d.phone);
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-secondary/40 transition-colors"
+                    >
+                      <div>
+                        <p className="text-sm text-muted-foreground">Жишээ хэрэглэгчээр үзэх</p>
+                        <p className="text-xs text-muted-foreground/70">Хоосон өгөгдөлтэй, зөвхөн дэлгэцийн бүтэц</p>
+                      </div>
+                      <LogIn className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </button>
                   </div>
                 )}
               </motion.div>
@@ -194,35 +182,43 @@ export function DevSwitcher({
           })}
         </div>
 
-        {onRealLogin && (
-          <button
-            onClick={onRealLogin}
-            className="w-full border border-border text-muted-foreground py-3 rounded-2xl text-sm hover:text-foreground hover:border-primary/40 transition-colors"
-          >
-            Жинхэнэ нэвтрэлтээр орох
-          </button>
-        )}
+        <button
+          onClick={onClose}
+          className="w-full border border-border text-muted-foreground py-3 rounded-2xl text-sm hover:text-foreground hover:border-primary/40 transition-colors"
+        >
+          Болих
+        </button>
 
         <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-          Энэ дэлгэц нь хөгжүүлэгчийн бүртгэлээр нэвтэрсэн үед л нээгддэг
-          (<code className="font-mono">VITE_DEV_PASSWORD</code>). Хөгжүүлэлт дуусмагц
-          .env-ээс хасахад бүх хүн өөрийн role-оороо л нэвтэрнэ.
+          Role-оор үзэж байхдаа дэлгэцийн доод талын товчоор супер админ
+          руугаа буцна. Нууц үг дахин асуухгүй.
         </p>
       </div>
     </div>
   );
 }
 
-/** Аппын дотроос role солих хөвөгч товч */
-export function DevBadge({ onClick }: { onClick: () => void }) {
+/**
+ * Role-оор үзэж байгааг сануулж, супер админ руу буцаах хөвөгч мөр.
+ * Зөвхөн супер админ өөр role-оор үзэж байх үед харагдана.
+ */
+export function ViewAsBar({ label, onSwitch, onExit }: { label: string; onSwitch: () => void; onExit: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      title="Role солих (хөгжүүлэлтийн горим)"
-      className="fixed left-3 bottom-20 z-[90] flex items-center gap-1.5 bg-amber-500 text-black px-3 py-2 rounded-full shadow-lg text-xs font-semibold hover:bg-amber-400 transition-colors"
-      style={{ fontFamily: "'Roboto Slab', serif" }}
-    >
-      <FlaskConical className="w-3.5 h-3.5" /> DEV
-    </button>
+    <div className="fixed left-1/2 -translate-x-1/2 bottom-20 z-[90] flex items-center gap-1 bg-amber-500 text-black rounded-full shadow-lg pl-3 pr-1 py-1">
+      <Eye className="w-3.5 h-3.5 shrink-0" />
+      <span className="text-xs font-semibold truncate max-w-[9rem]" style={{ fontFamily: "'Roboto Slab', serif" }}>{label}</span>
+      <button
+        onClick={onSwitch}
+        className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-black/10 transition-colors"
+      >
+        Солих
+      </button>
+      <button
+        onClick={onExit}
+        className="text-[11px] font-semibold bg-black text-amber-400 px-2.5 py-1 rounded-full hover:bg-black/80 transition-colors"
+      >
+        Буцах
+      </button>
+    </div>
   );
 }

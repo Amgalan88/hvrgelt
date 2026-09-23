@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User, FlaskConical } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User } from "lucide-react";
 import { Logo as AppLogo } from "../shared/Logo";
 import { Spinner } from "../shared/Spinner";
 import type { UserRole } from "../shared/types";
@@ -9,7 +9,6 @@ import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 import { normalizePhone, isValidPhone } from "../../lib/phone";
-import { DEV_ACCOUNT_NAME, devPhone, isDevPhone, checkDevPassword } from "../../lib/devMode";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
@@ -25,8 +24,6 @@ interface LoginPageProps {
     authKey: string;
   }) => Promise<string>;
   skipLanding?: boolean;
-  /** Хөгжүүлэгчийн бүртгэлээр нэвтэрсэн — role сонгох дэлгэц рүү */
-  onDevUnlock?: () => void;
 }
 
 /** Нэвтрэх/бүртгүүлэх урсгалыг 2 салгана */
@@ -50,7 +47,7 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, skipLanding, onDevUnlock }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, skipLanding }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
   const [screen, setScreen] = useState<Screen>(skipLanding ? "role" : "landing");
   const [mode, setMode] = useState<LoginMode>("customer");
@@ -67,8 +64,6 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [authError, setAuthError] = useState("");
-  // Хөгжүүлэгчийн бүртгэлээр нэвтэрч байна (нууц үгийг DB-ээс биш .env-ээс шалгана)
-  const [devAuth, setDevAuth] = useState(false);
 
   // Lockout
   const [failCount, setFailCount]   = useState(0);
@@ -117,27 +112,11 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
   }
 
-  // ── Хөгжүүлэгчийн нууц үгийн дэлгэц ──────────────────────────────
-  function openDevAuth() {
-    setPhone(devPhone());
-    setPhoneError("");
-    setDevAuth(true);
-    setAccount({ role: "superadmin", id: "dev", name: DEV_ACCOUNT_NAME, authMethod: "password", authKey: "" });
-    setAuthStep("password");
-    setPassword(""); setAuthError("");
-    setFailCount(0); setLockUntil(0);
-    setScreen("auth");
-  }
-
   // ── Phone submit ─────────────────────────────────────────────────
   async function handlePhoneSubmit() {
     if (submitting) return;
     const clean = normalizePhone(phone);
     if (clean.length !== 8) { setPhoneError("Утасны дугаар 8 оронтой байх ёстой"); return; }
-
-    // Хөгжүүлэгчийн бүртгэл — DB-д байхгүй тул шууд нууц үгийн дэлгэц рүү
-    if (onDevUnlock && isDevPhone(clean)) { openDevAuth(); return; }
-
     setSubmitting(true);
     try {
       const found = await resolveByPhone(clean);
@@ -147,7 +126,6 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         return;
       }
       setAccount(found);
-      setDevAuth(false);
       // Admin PIN/Pattern-ийг нь цэвэрлэсэн бол (утсаар аль хэдийн
       // баталгаажуулсан) шинэ нууцлал тохируулах руу шууд шилжинэ.
       if (found.authMethod === "reset") {
@@ -174,16 +152,6 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   function verifyAuth(entered: string) {
     if (!account) return;
     if (countdown > 0) return;
-    // Хөгжүүлэгчийн бүртгэл — түгжээ, оролдлогын тоолуур нь ердийнхтэй ижил
-    if (devAuth) {
-      if (checkDevPassword(entered)) {
-        localStorage.setItem(SAVED_PHONE_KEY, phone);
-        onDevUnlock?.();
-      } else {
-        handleFail("Нууц үг буруу байна");
-      }
-      return;
-    }
     if (entered === account.authKey) {
       localStorage.setItem(SAVED_PHONE_KEY, phone);
       // Staff with OTP (authMethod === "password", not superadmin) → must set up PIN/Pattern first
@@ -415,16 +383,6 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <p className="text-xs text-muted-foreground text-center mt-6">
           Оператор, админ бол <button onClick={() => { setMode("customer"); setScreen("phone"); }} className="text-primary underline">эндээс нэвтэрнэ</button>
         </p>
-
-        {/* Зөвхөн хөгжүүлэлтийн build дээр харагдана */}
-        {onDevUnlock && (
-          <button
-            onClick={openDevAuth}
-            className="mt-3 mx-auto flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
-          >
-            <FlaskConical className="w-3.5 h-3.5" /> Хөгжүүлэгчээр нэвтрэх
-          </button>
-        )}
       </div>
     );
   }
@@ -476,16 +434,6 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               </button>
             )}
           </div>
-
-          {/* Зөвхөн хөгжүүлэлтийн build дээр харагдана */}
-          {onDevUnlock && (
-            <button
-              onClick={openDevAuth}
-              className="flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
-            >
-              <FlaskConical className="w-3.5 h-3.5" /> Хөгжүүлэгчээр нэвтрэх
-            </button>
-          )}
         </div>
 
         <div className="mt-6">

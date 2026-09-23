@@ -8,8 +8,7 @@ import { OperatorApp } from "./components/operator/OperatorApp";
 import { CourierApp } from "./components/courier/CourierApp";
 import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PartnerApp } from "./components/partner/PartnerApp";
-import { DevSwitcher, DevBadge } from "./components/dev/DevSwitcher";
-import { isDevAccountEnabled, DEV_UNLOCK_KEY } from "./lib/devMode";
+import { RoleSwitcher, ViewAsBar } from "./components/superadmin/RoleSwitcher";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
@@ -23,14 +22,18 @@ interface Session {
   id: string;
   name: string;
   phone: string;
-  /** Хөгжүүлэлтийн горимоор орсон эсэх — PIN асуухгүй */
-  dev?: boolean;
+  /** Супер админ энэ role-оор үзэж байна — PIN асуухгүй */
+  viaAdmin?: boolean;
 }
+
+const SESSION_KEY = "hvrgelt_session";
+/** Role-оор үзэж байхад супер админы анхны session-ыг хадгалах түлхүүр */
+const ADMIN_RETURN_KEY = "hvrgelt_admin_return";
 
 function Inner() {
   const [session, setSession] = useState<Session | null>(() => {
     try {
-      const saved = localStorage.getItem("hvrgelt_session");
+      const saved = localStorage.getItem(SESSION_KEY);
       return saved ? (JSON.parse(saved) as Session) : null;
     } catch {
       return null;
@@ -42,12 +45,16 @@ function Inner() {
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
-  // Хөгжүүлэгчийн бүртгэл — нэвтэрсний дараа бүх role руу чөлөөтэй шилжинэ
-  const devEnabled = isDevAccountEnabled();
-  const [devUnlocked, setDevUnlocked] = useState(
-    () => devEnabled && localStorage.getItem(DEV_UNLOCK_KEY) === "1",
-  );
-  const [devOpen, setDevOpen] = useState(false);
+  // Супер админ бусад role-оор үзэх — буцаж орох session-оо хадгална
+  const [adminReturn, setAdminReturn] = useState<Session | null>(() => {
+    try {
+      const saved = localStorage.getItem(ADMIN_RETURN_KEY);
+      return saved ? (JSON.parse(saved) as Session) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const store = useStore();
   const { pin, pattern, loadCustomer, clearCustomer } = useUser();
   const hasLock = !!(pin || pattern);
@@ -58,51 +65,54 @@ function Inner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleLogin(role: UserRole, id: string, name: string, phone: string, dev = false) {
-    const s: Session = { role, id, name, phone, dev };
+  function handleLogin(role: UserRole, id: string, name: string, phone: string, viaAdmin = false) {
+    const s: Session = { role, id, name, phone, viaAdmin };
     setSession(s);
-    localStorage.setItem("hvrgelt_session", JSON.stringify(s));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     setPinVerified(true);
     setPinError("");
     if (role === "customer") loadCustomer(id);
   }
 
-  /** Хөгжүүлэгчийн бүртгэлээр нэвтэрлээ — role сонгох дэлгэц рүү */
-  function devUnlock() {
-    localStorage.setItem(DEV_UNLOCK_KEY, "1");
-    setDevUnlocked(true);
-  }
-
-  /** Dev горимоос бүрэн гарах — ердийн нэвтрэлт рүү */
-  function devExit() {
-    localStorage.removeItem(DEV_UNLOCK_KEY);
-    setDevUnlocked(false);
-    setDevOpen(false);
-  }
-
-  /** Аппын дотроос dev горимыг хаах — session-ыг бас хаана */
-  function devSignOut() {
-    devExit();
-    doLogout();
-  }
-
-  /** Dev горимоор role солих — хуучин session-ыг шууд солино */
-  function devEnter(role: UserRole, id: string, name: string, phone: string) {
+  /**
+   * Супер админ сонгосон role-оор үзнэ. Анхны супер админ session-ыг
+   * хадгалж авснаар хүссэн үедээ буцаж орно.
+   */
+  function viewAs(role: UserRole, id: string, name: string, phone: string) {
+    if (!session) return;
+    const back = adminReturn ?? session;
+    if (!adminReturn) {
+      setAdminReturn(back);
+      localStorage.setItem(ADMIN_RETURN_KEY, JSON.stringify(back));
+    }
     clearCustomer();
     setMyOrderId(null);
     handleLogin(role, id, name, phone, true);
-    setDevOpen(false);
+    setSwitcherOpen(false);
+  }
+
+  /** Role-оор үзэхээ больж супер админ руугаа буцах */
+  function exitViewAs() {
+    if (!adminReturn) return;
+    clearCustomer();
+    setMyOrderId(null);
+    setSwitcherOpen(false);
+    setAdminReturn(null);
+    localStorage.removeItem(ADMIN_RETURN_KEY);
+    handleLogin(adminReturn.role, adminReturn.id, adminReturn.name, adminReturn.phone);
   }
 
   function doLogout() {
-    localStorage.removeItem("hvrgelt_session");
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(ADMIN_RETURN_KEY);
+    setAdminReturn(null);
     setSession(null);
     setMyOrderId(null);
     setPinVerified(false);
     setPinError("");
     setConfirmLogout(false);
     setLandingDone(false);
-    setDevOpen(false);
+    setSwitcherOpen(false);
     clearCustomer();
   }
 
@@ -303,20 +313,6 @@ function Inner() {
     );
   }
 
-  if (!session && devUnlocked) {
-    if (store.loading) return <LoadingScreen />;
-    return (
-      <DevSwitcher
-        operatorAccounts={store.operatorAccounts}
-        courierAccounts={store.courierAccounts}
-        customerAccounts={store.customerAccounts}
-        partners={store.partners}
-        onEnter={devEnter}
-        onRealLogin={devExit}
-      />
-    );
-  }
-
   if (!session) {
     return (
       <LoginPage
@@ -327,13 +323,12 @@ function Inner() {
         updateAccountAuth={store.updateAccountAuth}
         updateCustomerAuth={store.updateCustomerAuth}
         registerCourier={store.registerCourier}
-        onDevUnlock={devEnabled ? devUnlock : undefined}
       />
     );
   }
 
   // Customer with lock set → require PIN or Pattern before entering app
-  if (session.role === "customer" && hasLock && !pinVerified && !session.dev) {
+  if (session.role === "customer" && hasLock && !pinVerified && !session.viaAdmin) {
     const greeting = `Сайн байна уу, ${session.name.split(".")[0] ?? session.name}!`;
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -376,19 +371,24 @@ function Inner() {
 
   return (
     <>
-      {/* Хөгжүүлэлтийн горим — role солих */}
-      {devUnlocked && <DevBadge onClick={() => setDevOpen(true)} />}
-      {devUnlocked && devOpen && (
+      {/* Супер админ өөр role-оор үзэж байгааг сануулах мөр */}
+      {adminReturn && session.viaAdmin && (
+        <ViewAsBar
+          label={session.name}
+          onSwitch={() => setSwitcherOpen(true)}
+          onExit={exitViewAs}
+        />
+      )}
+      {switcherOpen && (
         <div className="fixed inset-0 z-[120] bg-background overflow-y-auto">
-          <DevSwitcher
+          <RoleSwitcher
             operatorAccounts={store.operatorAccounts}
             courierAccounts={store.courierAccounts}
             customerAccounts={store.customerAccounts}
             partners={store.partners}
-            currentRole={session.role}
-            onClose={() => setDevOpen(false)}
-            onRealLogin={devSignOut}
-            onEnter={devEnter}
+            currentRole={session.viaAdmin ? session.role : undefined}
+            onClose={() => setSwitcherOpen(false)}
+            onEnter={viewAs}
           />
         </div>
       )}
@@ -415,6 +415,7 @@ function Inner() {
           onUpdatePartner={store.updatePartner}
           onDeletePartner={store.deletePartner}
           onUpdateBankInfo={store.updateBankInfo}
+          onViewAs={() => setSwitcherOpen(true)}
           onLogout={requestLogout}
         />
       )}
