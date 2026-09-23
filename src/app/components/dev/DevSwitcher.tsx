@@ -19,7 +19,7 @@ interface DevSwitcherProps extends DevAccounts {
   currentRole?: UserRole;
   /** Хаагдах боломжтой эсэх — аппын дотроос нээхэд true */
   onClose?: () => void;
-  /** Жинхэнэ нэвтрэх хуудас руу */
+  /** Dev горимоос гарч, ердийн нэвтрэх хуудас руу */
   onRealLogin?: () => void;
   onEnter: (role: UserRole, id: string, name: string, phone: string) => void;
 }
@@ -110,7 +110,7 @@ export function DevSwitcher({
             Аль role-оор орох вэ?
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Нууц үг шаардахгүй — шалгах, туршихад зориулав. Хөгжүүлэлт дуусмагц хаагдана.
+            Хөгжүүлэгчийн бүртгэлээр нэвтэрсэн тул role хооронд чөлөөтэй шилжинэ.
           </p>
         </div>
 
@@ -204,8 +204,9 @@ export function DevSwitcher({
         )}
 
         <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-          Энэ дэлгэц нь <code className="font-mono">VITE_DEV_LOGIN</code> тохиргоогоор асдаг.
-          Хөгжүүлэлт дуусмагц .env-ээс хасахад бүх хүн өөрийн role-оороо л нэвтэрнэ.
+          Энэ дэлгэц нь хөгжүүлэгчийн бүртгэлээр нэвтэрсэн үед л нээгддэг
+          (<code className="font-mono">VITE_DEV_PASSWORD</code>). Хөгжүүлэлт дуусмагц
+          .env-ээс хасахад бүх хүн өөрийн role-оороо л нэвтэрнэ.
         </p>
       </div>
     </div>
