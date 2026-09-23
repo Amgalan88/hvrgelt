@@ -8,6 +8,8 @@ import { OperatorApp } from "./components/operator/OperatorApp";
 import { CourierApp } from "./components/courier/CourierApp";
 import { SuperadminApp } from "./components/superadmin/SuperadminApp";
 import { PartnerApp } from "./components/partner/PartnerApp";
+import { DevSwitcher, DevBadge } from "./components/dev/DevSwitcher";
+import { isDevLoginEnabled } from "./lib/devMode";
 import { PinPad } from "./components/shared/PinPad";
 import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
@@ -21,6 +23,8 @@ interface Session {
   id: string;
   name: string;
   phone: string;
+  /** Хөгжүүлэлтийн горимоор орсон эсэх — PIN асуухгүй */
+  dev?: boolean;
 }
 
 function Inner() {
@@ -38,6 +42,10 @@ function Inner() {
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  // Хөгжүүлэлтийн горим — нэг дэлгэцээс бүх role руу орно
+  const devLogin = isDevLoginEnabled();
+  const [devOpen, setDevOpen] = useState(false);
+  const [devBypass, setDevBypass] = useState(false); // жинхэнэ нэвтрэлт рүү түр шилжих
   const store = useStore();
   const { pin, pattern, loadCustomer, clearCustomer } = useUser();
   const hasLock = !!(pin || pattern);
@@ -48,13 +56,21 @@ function Inner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleLogin(role: UserRole, id: string, name: string, phone: string) {
-    const s = { role, id, name, phone };
+  function handleLogin(role: UserRole, id: string, name: string, phone: string, dev = false) {
+    const s: Session = { role, id, name, phone, dev };
     setSession(s);
     localStorage.setItem("hvrgelt_session", JSON.stringify(s));
     setPinVerified(true);
     setPinError("");
     if (role === "customer") loadCustomer(id);
+  }
+
+  /** Dev горимоор role солих — хуучин session-ыг шууд солино */
+  function devEnter(role: UserRole, id: string, name: string, phone: string) {
+    clearCustomer();
+    setMyOrderId(null);
+    handleLogin(role, id, name, phone, true);
+    setDevOpen(false);
   }
 
   function doLogout() {
@@ -65,6 +81,7 @@ function Inner() {
     setPinError("");
     setConfirmLogout(false);
     setLandingDone(false);
+    setDevBypass(false);
     clearCustomer();
   }
 
@@ -265,6 +282,20 @@ function Inner() {
     );
   }
 
+  if (!session && devLogin && !devBypass) {
+    if (store.loading) return <LoadingScreen />;
+    return (
+      <DevSwitcher
+        operatorAccounts={store.operatorAccounts}
+        courierAccounts={store.courierAccounts}
+        customerAccounts={store.customerAccounts}
+        partners={store.partners}
+        onEnter={devEnter}
+        onRealLogin={() => setDevBypass(true)}
+      />
+    );
+  }
+
   if (!session) {
     return (
       <LoginPage
@@ -280,7 +311,7 @@ function Inner() {
   }
 
   // Customer with lock set → require PIN or Pattern before entering app
-  if (session.role === "customer" && hasLock && !pinVerified) {
+  if (session.role === "customer" && hasLock && !pinVerified && !session.dev) {
     const greeting = `Сайн байна уу, ${session.name.split(".")[0] ?? session.name}!`;
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -323,6 +354,22 @@ function Inner() {
 
   return (
     <>
+      {/* Хөгжүүлэлтийн горим — role солих */}
+      {devLogin && <DevBadge onClick={() => setDevOpen(true)} />}
+      {devLogin && devOpen && (
+        <div className="fixed inset-0 z-[120] bg-background overflow-y-auto">
+          <DevSwitcher
+            operatorAccounts={store.operatorAccounts}
+            courierAccounts={store.courierAccounts}
+            customerAccounts={store.customerAccounts}
+            partners={store.partners}
+            currentRole={session.role}
+            onClose={() => setDevOpen(false)}
+            onEnter={devEnter}
+          />
+        </div>
+      )}
+
       {session.role === "superadmin" && (
         <SuperadminApp
           operatorAccounts={store.operatorAccounts}
