@@ -315,7 +315,9 @@ function Inner() {
           onCancelOrder={store.cancelOrder}
           onConfirmOrder={store.confirmOrder}
           onCreatePayment={store.createPayment}
+          onCheckPayment={store.checkPayment}
           onMarkPaid={store.markOrderPaid}
+          testPayments={!!session.viaAdmin || import.meta.env.VITE_PAYMENT_PROVIDER === "mock"}
           onRate={store.rateOrder}
           onFeedback={store.submitFeedback}
           myOrderId={myOrderId}

@@ -155,6 +155,8 @@ Deno.serve(async (req) => {
       qrText: invoice.qrText,
       qrImage: invoice.qrImage,
       checkoutUrl: invoice.checkoutUrl,
+      // QPay-ийн urls[] — апп дээр банк бүрийн товч болж харагдана
+      banks: (invoice.raw as { urls?: unknown[] } | undefined)?.urls ?? [],
     });
   } catch (err) {
     console.error("create-payment", err);

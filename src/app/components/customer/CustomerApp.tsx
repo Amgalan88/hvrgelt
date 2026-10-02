@@ -63,8 +63,11 @@ interface CustomerAppProps {
   onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
   onCancelOrder: (orderId: string) => void;
   onConfirmOrder: (orderId: string) => void;
-  onCreatePayment: (orderId: string, amount: number) => Promise<PaymentIntent>;
+  onCreatePayment: (orderId: string, amount: number, opts?: { test?: boolean }) => Promise<PaymentIntent>;
+  onCheckPayment: (paymentId: string, opts?: { test?: boolean }) => Promise<boolean>;
   onMarkPaid: (orderId: string, method: string) => Promise<void>;
+  /** Туршилтын QPay харуулах эсэх (супер админ role-оор үзэж байх үед) */
+  testPayments?: boolean;
   onRate: (orderId: string, score: number, comment?: string) => Promise<void>;
   onFeedback: (data: { phone: string; message: string; orderId?: string }) => Promise<void>;
   myOrderId: string | null;
@@ -104,7 +107,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
   );
 }
 
-export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onMarkPaid, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
@@ -809,6 +812,8 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                     order={myOrder}
                     bankInfo={bankInfo}
                     createPayment={onCreatePayment}
+                    checkPayment={onCheckPayment}
+                    test={testPayments}
                     onPaid={(method) => onMarkPaid(myOrder.id, method)}
                   />
                 )}

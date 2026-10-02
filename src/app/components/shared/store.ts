@@ -1,3 +1,4 @@
+import { createMockInvoice, type QpayBank } from "../../lib/mockQpay";
 import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser, CourierDocs, PartnerProduct, OrderRating, BasketItem } from "./types";
 import type { Partner, PartnerCategory } from "../customer/partners";
@@ -17,9 +18,16 @@ export interface FeedbackRow {
 export interface PaymentIntent {
   provider: string;
   manual: boolean;
+  /** payments хүснэгтийн id — "Төлбөрөө шалгах"-д сервер дээр шалгуулна */
+  paymentId?: string;
+  invoiceId?: string;
   qrText?: string;
   qrImage?: string;
   checkoutUrl?: string;
+  /** QPay-ийн urls[] — банк бүрийн апп руу орох холбоос */
+  banks?: QpayBank[];
+  /** Туршилтын QPay — жинхэнэ мөнгө шилжихгүй */
+  test?: boolean;
 }
 
 // ── Auth method types ─────────────────────────────────────────────────
@@ -545,6 +553,28 @@ export function useStore() {
     [refreshOrders],
   );
 
+  /**
+   * "Төлбөрөө шалгах" — QPay-д төлбөр орсон эсэхийг СЕРВЕР дээр шалгуулна
+   * (payment-webhook нь QPay /payment/check-ээр баталгаажуулдаг). Өмнө нь
+   * энэ товч шалгалгүйгээр шууд "төлөгдсөн" гэж тэмдэглэдэг байв.
+   */
+  const checkPayment = useCallback(
+    async (paymentId: string, opts?: { test?: boolean }): Promise<boolean> => {
+      // Туршилтын нэхэмжлэхийг жинхэнэ QPay руу шалгуулахгүй — DB-ээс л уншина
+      if (!opts?.test) {
+        try {
+          await supabase.functions.invoke("payment-webhook", { body: { payment_id: paymentId } });
+        } catch {
+          /* 402 = хараахан төлөгдөөгүй — доор DB-ээс уншина */
+        }
+      }
+      const { data } = await supabase.from("payments").select("status").eq("id", paymentId).single();
+      await refreshOrders();
+      return data?.status === "paid";
+    },
+    [refreshOrders],
+  );
+
   /** Төлбөр орсны дараа оператор жолооч хуваарилна */
   const assignCourier = useCallback(
     async (orderId: string, courierId: string, price?: number) => {
@@ -615,8 +645,35 @@ export function useStore() {
    * авлагын горимд шилжиж, оператор төлбөрийг баталгаажуулна.
    */
   const createPayment = useCallback(
-    async (orderId: string, amount: number): Promise<PaymentIntent> => {
+    async (orderId: string, amount: number, opts?: { test?: boolean }): Promise<PaymentIntent> => {
       const provider = (import.meta.env.VITE_PAYMENT_PROVIDER as string | undefined)?.trim();
+
+      // Туршилтын QPay — Edge Function, гэрээ шаардахгүй. payments мөрийг
+      // жинхэнэтэй ижилээр үүсгэж, provider-ийг "qpay-test" гэж тэмдэглэнэ.
+      if (opts?.test || provider === "mock") {
+        const inv = createMockInvoice(orderId, amount);
+        const paymentId = `pay-${orderId}-${Date.now()}`;
+        await supabase.from("payments").insert({
+          id: paymentId,
+          order_id: orderId,
+          provider: "qpay-test",
+          invoice_id: inv.invoiceId,
+          amount,
+          status: "pending",
+          qr_text: inv.qrText,
+          created_at: new Date().toISOString(),
+        });
+        return {
+          provider: "qpay",
+          manual: false,
+          test: true,
+          paymentId,
+          invoiceId: inv.invoiceId,
+          qrText: inv.qrText,
+          qrImage: inv.qrImage,
+          banks: inv.banks,
+        };
+      }
 
       if (provider) {
         try {
@@ -628,9 +685,11 @@ export function useStore() {
           return {
             provider,
             manual: false,
+            paymentId: data?.paymentId,
             qrText: data?.qrText,
             qrImage: data?.qrImage,
             checkoutUrl: data?.checkoutUrl,
+            banks: data?.banks,
           };
         } catch {
           // Edge Function бэлэн биш — гарын авлагын горимд шилжинэ
@@ -1021,6 +1080,7 @@ export function useStore() {
     confirmOrder,
     markOrderPaid,
     createPayment,
+    checkPayment,
     cancelOrder,
     courierUpdateStatus,
     rateOrder,
