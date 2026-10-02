@@ -45,7 +45,12 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   const activeOrders = myOrders.filter((o) => o.status === "томилогдсон" || o.status === "авсан");
   const doneOrders = myOrders.filter((o) => o.status === "хүргэгдсэн");
 
-  const todayEarnings = doneOrders.reduce((sum, o) => sum + Math.round(o.price * 0.8), 0);
+  // "Өнөөдөр" — delivered_at нь зөвхөн цаг (HH:MM) хадгалдаг тул өдрийг
+  // захиалга үүссэн огноогоор (inserted_at) тогтооно. Өмнө нь бүх цаг
+  // үеийн хүргэлтийг "өнөөдрийн орлого" гэж харуулдаг байв.
+  const todayKey = new Date().toDateString();
+  const todayDone = doneOrders.filter((o) => !!o.insertedAt && new Date(o.insertedAt).toDateString() === todayKey);
+  const todayEarnings = todayDone.reduce((sum, o) => sum + Math.round(o.price * 0.8), 0);
 
   const docs: CourierDocs = {
     photoUrl: account?.photoUrl,
@@ -124,7 +129,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Идэвхтэй", value: activeOrders.length, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
-            { label: "Хүргэсэн", value: doneOrders.length, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+            { label: "Өнөөдөр хүргэсэн", value: todayDone.length, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
             { label: "Өнөөдрийн орлого", value: `₮${todayEarnings.toLocaleString()}`, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} border rounded-xl p-2.5 text-center`}>
