@@ -1,3 +1,5 @@
+import { LogoMark } from "./Logo";
+
 interface SpinnerProps {
   className?: string;
 }
@@ -15,9 +17,11 @@ export function Spinner({ className = "w-5 h-5" }: SpinnerProps) {
 // Бүтэн дэлгэцийн ачааллын төлөв
 export function LoadingScreen({ label = "Ачааллаж байна..." }: { label?: string }) {
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-3" style={{ fontFamily: "var(--font-body)" }}>
-      <Spinner className="w-8 h-8 text-primary" />
-      <p className="text-sm text-muted-foreground">{label}</p>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-5">
+      <LogoMark size={56} className="animate-pulse" />
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner className="w-4 h-4 text-primary" /> {label}
+      </div>
     </div>
   );
 }

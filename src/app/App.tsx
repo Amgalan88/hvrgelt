@@ -63,9 +63,28 @@ function Inner() {
   const { pin, pattern, loadCustomer, clearCustomer } = useUser();
   const hasLock = !!(pin || pattern);
 
+  // Сэргээсэн үйлчлүүлэгчийн PIN/pattern серверээс ирэх хүртэл апп-ыг
+  // харуулахгүй. Өмнө нь татагдах хооронд апп түгжээгүй харагддаг,
+  // сүлжээний алдаа гарвал түгжээ огт идэвхждэггүй байв.
+  const needsLockCheck = (s: Session | null) => s?.role === "customer" && !s.viaAdmin;
+  const [lockState, setLockState] = useState<"checking" | "ready" | "error">(
+    () => (needsLockCheck(session) ? "checking" : "ready"),
+  );
+
+  function checkCustomerLock(id: string) {
+    setLockState("checking");
+    loadCustomer(id).then((r) => {
+      if (r === "missing") doLogout(); // бүртгэл устсан — хуучин session-ыг хаана
+      else setLockState(r === "ok" ? "ready" : "error");
+    });
+  }
+
   // If a customer session was restored from localStorage, load their saved data
   useEffect(() => {
-    if (session?.role === "customer") loadCustomer(session.id);
+    if (session?.role === "customer") {
+      if (needsLockCheck(session)) checkCustomerLock(session.id);
+      else loadCustomer(session.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,6 +94,7 @@ function Inner() {
     localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     setPinVerified(true);
     setPinError("");
+    setLockState("ready"); // дөнгөж нэвтэрсэн — дахин асуух шаардлагагүй
     if (role === "customer") loadCustomer(id);
   }
 
@@ -151,6 +171,29 @@ function Inner() {
         initialMode={loginMode}
         onBack={() => setLandingDone(false)}
       />
+    );
+  }
+
+  // Түгжээ шалгаж байна / шалгаж чадсангүй
+  if (needsLockCheck(session) && lockState !== "ready") {
+    if (lockState === "checking") return <LoadingScreen />;
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <Logo />
+        <div>
+          <p className="text-lg font-bold">Холбогдож чадсангүй</p>
+          <p className="text-sm text-muted-foreground mt-1">Интернэт холболтоо шалгаад дахин оролдоно уу.</p>
+        </div>
+        <button
+          onClick={() => checkCustomerLock(session.id)}
+          className="w-full max-w-xs bg-primary text-primary-foreground py-3.5 rounded-2xl font-bold hover:bg-primary/90 transition-colors"
+        >
+          Дахин оролдох
+        </button>
+        <button onClick={doLogout} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Өөр дугаараар нэвтрэх
+        </button>
+      </div>
     );
   }
 

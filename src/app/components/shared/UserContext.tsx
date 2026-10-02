@@ -19,6 +19,8 @@ export interface QuickOrder {
   toDetail: string;
 }
 
+export type CustomerLoad = "ok" | "missing" | "error";
+
 export type AccentColor = "orange" | "blue" | "green" | "violet";
 
 interface UserContextValue {
@@ -32,7 +34,8 @@ interface UserContextValue {
   removeAddress: (id: string) => void;
   quickOrders: QuickOrder[];
   saveQuickOrders: (list: QuickOrder[]) => void;
-  loadCustomer: (customerId: string) => Promise<void>;
+  /** PIN түгжээг шийдэхэд хэрэглэнэ: ok | missing (бүртгэл устсан) | error (сүлжээ) */
+  loadCustomer: (customerId: string) => Promise<CustomerLoad>;
   clearCustomer: () => void;
   pin: string | null;
   setPin: (pin: string | null) => void;
@@ -96,7 +99,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   // Load a customer's saved data + auth method from the DB on login / session restore
-  const loadCustomer = useCallback(async (cid: string) => {
+  const loadCustomer = useCallback(async (cid: string): Promise<CustomerLoad> => {
     setCustomerId(cid);
     const { data, error } = await supabase
       .from("customers")
@@ -105,11 +108,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .single();
     // Сүлжээний алдаа гарвал хадгалсан хаяг/PIN-ийг хоослохгүй, дараагийн
     // амжилттай ачаалалт хүртэл өмнөх утгыг хэвээр үлдээнэ.
-    if (error) { console.error("loadCustomer failed", error); return; }
+    if (error) {
+      // PGRST116 = мөр олдсонгүй (бүртгэл устсан) — сүлжээний алдаанаас ялгана
+      if (error.code === "PGRST116") return "missing";
+      console.error("loadCustomer failed", error);
+      return "error";
+    }
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
     setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
     if (data?.auth_method === "pin") { setPin(data.auth_key); setPattern(null); }
     else if (data?.auth_method === "pattern") { setPattern(data.auth_key); setPin(null); }
+    return "ok";
   }, []);
 
   const clearCustomer = useCallback(() => {
