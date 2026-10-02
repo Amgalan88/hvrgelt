@@ -1,3 +1,5 @@
+import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { RoleHeader } from "../shared/RoleHeader";
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Plus, Pencil, Trash2, LogOut, QrCode, Camera, Loader2, Package, Sun, Moon, X, Check } from "lucide-react";
@@ -28,6 +30,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
 
   const [editing, setEditing] = useState<PartnerProduct | null>(null);
   const [adding, setAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PartnerProduct | null>(null);
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -114,22 +117,13 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
-        <div className="max-w-sm mx-auto flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <Logo size="sm" />
-            <p className="text-xs text-primary leading-none ml-10">{partner.emoji} {partner.name}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <RoleHeader
+        title={`${partner.emoji} ${partner.name}`}
+        subtitle="Партнёр"
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={onLogout}
+      />
 
       <div className="flex-1 max-w-sm mx-auto w-full px-4 py-4 space-y-4 pb-24">
         <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl">
@@ -190,7 +184,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
                       <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => onDeleteProduct(p.id)} className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors">
+                      <button onClick={() => setDeleteTarget(p)} aria-label="Устгах" className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -325,6 +319,14 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
           </motion.div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Бараа устгах уу?"
+        body={deleteTarget ? `"${deleteTarget.name}" жагсаалтаас бүрмөсөн устна.` : undefined}
+        confirmLabel="Устгах"
+        onConfirm={() => { if (deleteTarget) void onDeleteProduct(deleteTarget.id); }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

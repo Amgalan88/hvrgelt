@@ -1,3 +1,4 @@
+import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus } from "lucide-react";
@@ -1090,41 +1091,20 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
       )}
       </AnimatePresence>
 
-      {/* Захиалга цуцлахыг баталгаажуулах */}
-      <AnimatePresence>
-      {cancelTarget && (
-        <motion.div
-          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center px-6"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => setCancelTarget(null)}
-        >
-          <motion.div
-            className="bg-card border border-border rounded-3xl p-5 w-full max-w-xs text-center"
-            initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-lg font-bold">Захиалга цуцлах уу?</p>
-            <p className="text-sm text-muted-foreground mt-1.5">Цуцалсан захиалгыг сэргээх боломжгүй.</p>
-            <div className="flex gap-2.5 mt-5">
-              <button onClick={() => setCancelTarget(null)} className="flex-1 border border-border py-3 rounded-2xl text-sm font-semibold hover:bg-secondary/60 transition-colors">
-                Үгүй
-              </button>
-              <button
-                onClick={() => {
-                  onCancelOrder(cancelTarget);
-                  setCancelTarget(null);
-                  setMyOrderId(null);
-                  setOrderStep("form");
-                }}
-                className="flex-1 bg-destructive text-white py-3 rounded-2xl text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                Тийм, цуцлах
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        title="Захиалга цуцлах уу?"
+        body="Цуцалсан захиалгыг сэргээх боломжгүй."
+        cancelLabel="Үгүй"
+        confirmLabel="Тийм, цуцлах"
+        onConfirm={() => {
+          if (!cancelTarget) return;
+          onCancelOrder(cancelTarget);
+          setMyOrderId(null);
+          setOrderStep("form");
+        }}
+        onClose={() => setCancelTarget(null)}
+      />
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">

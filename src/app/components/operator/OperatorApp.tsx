@@ -1,3 +1,5 @@
+import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { RoleHeader, HeaderIconButton } from "../shared/RoleHeader";
 import { useState, Fragment } from "react";
 import { Package, Truck, MapPin, Phone, User, ChevronDown, Bell, LogOut, CheckCircle, Clock, X, Sun, Moon, Trash2, Download } from "lucide-react";
 import type { Order, OrderStatus, CourierUser } from "../shared/types";
@@ -59,6 +61,7 @@ type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан"
 export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetPrice, onAssign, onMarkPaid, onCancelOrder, onUpdateStatus, onLogout }: OperatorAppProps) {
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cancelId, setCancelId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("5000");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const { theme, toggleTheme } = useUser();
@@ -95,37 +98,20 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <Logo size="sm" />
-            <p className="text-xs text-purple-400 leading-none ml-10">{operatorName} · Оператор</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {newCount > 0 && (
-              <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 rounded-full">
-                <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                <span className="text-xs text-amber-400 font-mono">{newCount} шинэ</span>
-              </div>
-            )}
-            <button
-              onClick={() => setExportOpen(true)}
-              title="Захиалгын тайлан татах"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-            <HelpButton onClick={() => setHelpOpen(true)} />
-            <PushToggle role="operator" userId={operatorId} />
-            <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <RoleHeader
+        title={operatorName}
+        subtitle="Оператор"
+        width="2xl"
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={onLogout}
+      >
+        <HeaderIconButton onClick={() => setExportOpen(true)} label="Захиалгын тайлан татах">
+          <Download className="w-[18px] h-[18px]" />
+        </HeaderIconButton>
+        <HelpButton onClick={() => setHelpOpen(true)} />
+        <PushToggle role="operator" userId={operatorId} />
+      </RoleHeader>
 
       <div className="max-w-2xl mx-auto w-full px-4 py-4 space-y-4">
         {/* Stats */}
@@ -357,7 +343,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                         </div>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => onCancelOrder(order.id)}
+                            onClick={() => setCancelId(order.id)}
                             className="px-4 border border-destructive/50 text-destructive rounded-xl text-sm hover:bg-destructive/10 transition-colors"
                           >
                             Цуцлах
@@ -485,6 +471,14 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
           onClose={() => setHelpOpen(false)}
         />
       )}
+      <ConfirmDialog
+        open={cancelId !== null}
+        title="Захиалга цуцлах уу?"
+        body={cancelId ? `#${cancelId} захиалга цуцлагдаж, үйлчлүүлэгчид мэдэгдэнэ.` : undefined}
+        confirmLabel="Тийм, цуцлах"
+        onConfirm={() => { if (cancelId) void onCancelOrder(cancelId); }}
+        onClose={() => setCancelId(null)}
+      />
     </div>
   );
 }

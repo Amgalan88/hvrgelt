@@ -1,3 +1,4 @@
+import { HEADER_ICON_BTN } from "./RoleHeader";
 import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing } from "lucide-react";
 import { pushConfigured, pushSupported, notificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribed, type PushRole } from "../../lib/push";
@@ -45,9 +46,10 @@ export function PushToggle({ role, userId, className }: PushToggleProps) {
       onClick={handleClick}
       disabled={busy || denied}
       title={denied ? "Мэдэгдэл хориглогдсон — browser тохиргооноос зөвшөөрнө үү" : on ? "Push мэдэгдэл идэвхтэй" : "Push мэдэгдэл идэвхжүүлэх"}
-      className={`text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors ${className ?? ""}`}
+      aria-label="Push мэдэгдэл"
+      className={`${HEADER_ICON_BTN} ${className ?? ""}`}
     >
-      {on ? <BellRing className="w-4 h-4 text-primary" /> : denied ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+      {on ? <BellRing className="w-[18px] h-[18px] text-primary" /> : denied ? <BellOff className="w-[18px] h-[18px]" /> : <Bell className="w-[18px] h-[18px]" />}
     </button>
   );
 }

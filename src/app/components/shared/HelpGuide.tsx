@@ -1,3 +1,4 @@
+import { HEADER_ICON_BTN } from "./RoleHeader";
 import { useState, useEffect } from "react";
 import { HelpCircle, X } from "lucide-react";
 
@@ -22,8 +23,8 @@ export function useFirstVisitHelp(role: string) {
 
 export function HelpButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="text-muted-foreground hover:text-foreground transition-colors" title="Заавар">
-      <HelpCircle className="w-4 h-4" />
+    <button onClick={onClick} className={HEADER_ICON_BTN} title="Заавар" aria-label="Заавар">
+      <HelpCircle className="w-[18px] h-[18px]" />
     </button>
   );
 }

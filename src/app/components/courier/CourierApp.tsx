@@ -1,3 +1,4 @@
+import { RoleHeader } from "../shared/RoleHeader";
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon, IdCard, Lock, ShieldAlert } from "lucide-react";
 import type { Order, CourierUser, CourierDocs } from "../shared/types";
@@ -97,26 +98,26 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Header */}
-      <header className="bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          <Logo size="sm" />
-          <div className="flex items-center gap-1 ml-10">
-            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="text-xs text-muted-foreground">{courierName} · {courier?.rating} {courier?.vehicle && VEHICLE_ICON[courier.vehicle]}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <HelpButton onClick={() => setHelpOpen(true)} />
-          <PushToggle role="courier" userId={courierId} />
-          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-          <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+      <RoleHeader
+        title={courierName}
+        subtitle={
+          <span className="inline-flex items-center gap-1">
+            Хүргэгч
+            {courier?.vehicle && <span>· {VEHICLE_ICON[courier.vehicle]} {courier.vehicle}</span>}
+            {courier?.rating ? (
+              <span className="inline-flex items-center gap-0.5">
+                · <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> {courier.rating}
+              </span>
+            ) : null}
+          </span>
+        }
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={onLogout}
+      >
+        <HelpButton onClick={() => setHelpOpen(true)} />
+        <PushToggle role="courier" userId={courierId} />
+      </RoleHeader>
 
       <div className="max-w-sm mx-auto w-full px-4 py-4 space-y-4">
         {/* Today stats */}
@@ -124,7 +125,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
           {[
             { label: "Идэвхтэй", value: activeOrders.length, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
             { label: "Хүргэсэн", value: doneOrders.length, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
-            { label: "Өнөөдрийн орлого", value: `₮${Math.round(todayEarnings / 1000)}K`, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+            { label: "Өнөөдрийн орлого", value: `₮${todayEarnings.toLocaleString()}`, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} border rounded-xl p-2.5 text-center`}>
               <p className={`text-lg font-bold font-mono ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>

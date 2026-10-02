@@ -1,3 +1,5 @@
+import { RoleHeader } from "../shared/RoleHeader";
+import { useUser } from "../shared/UserContext";
 import { useState, useRef } from "react";
 import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare, ChevronRight } from "lucide-react";
 import { Logo } from "../shared/Logo";
@@ -379,6 +381,7 @@ export function SuperadminApp({
   bankInfo, onUpdateBankInfo,
   onViewAs, onLogout,
 }: SuperadminAppProps) {
+  const { theme, toggleTheme } = useUser();
   const [bankDraft, setBankDraft] = useState(bankInfo);
   const [bankSaved, setBankSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("operators");
@@ -404,27 +407,22 @@ export function SuperadminApp({
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <Logo size="sm" />
-            <p className="text-xs text-primary leading-none ml-10">Супер Админ</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onViewAs}
-              title="Бусад role-ын дэлгэцийг шалгах"
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <Eye className="w-3.5 h-3.5" /> Role-оор үзэх
-            </button>
-            <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border px-3 py-1.5 rounded-lg transition-colors">
-              <LogOut className="w-3.5 h-3.5" /> Гарах
-            </button>
-          </div>
-        </div>
-      </header>
+      <RoleHeader
+        title="Супер админ"
+        subtitle="Удирдлага"
+        width="2xl"
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={onLogout}
+      >
+        <button
+          onClick={onViewAs}
+          title="Бусад role-ын дэлгэцийг шалгах"
+          className="mr-1 flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3 h-9 rounded-xl transition-colors"
+        >
+          <Eye className="w-4 h-4" /> Role-оор үзэх
+        </button>
+      </RoleHeader>
 
       <div className="max-w-2xl mx-auto w-full px-4 py-4 space-y-4">
         {/* Stats */}
@@ -441,8 +439,8 @@ export function SuperadminApp({
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl">
+        {/* Tabs — утсан дээр хажуу тийш гүйлгэнэ */}
+        <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {([
             { key: "operators" as Tab, label: "Операторууд", icon: Users },
             { key: "couriers" as Tab, label: "Хүргэгчид", icon: Truck },
@@ -452,7 +450,7 @@ export function SuperadminApp({
             { key: "settings" as Tab, label: "Тохиргоо", icon: Settings },
           ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs transition-colors relative ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
+              className={`shrink-0 sm:flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-colors relative ${tab === key ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
               <Icon className="w-4 h-4" /> {label}
               {key === "feedback" && feedback.some((f) => !f.handled) && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
