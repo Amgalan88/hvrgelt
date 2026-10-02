@@ -29,8 +29,8 @@ interface Choice {
 
 const ROLE_META: { role: UserRole; label: string; desc: string; icon: typeof User; color: string }[] = [
   { role: "customer",   label: "Үйлчлүүлэгч", desc: "Захиалга өгөх, хянах, үнэлэх",        icon: User,    color: "text-blue-400 bg-blue-500/10 border-blue-500/25" },
-  { role: "courier",    label: "Жолооч",      desc: "Ачаа авах, хүргэх, баримт оруулах",    icon: Truck,   color: "text-amber-400 bg-amber-500/10 border-amber-500/25" },
-  { role: "operator",   label: "Оператор",    desc: "Үнэ тогтоох, төлбөр, жолооч хуваарилах", icon: Headset, color: "text-violet-400 bg-violet-500/10 border-violet-500/25" },
+  { role: "courier",    label: "Хүргэгч",      desc: "Ачаа авах, хүргэх, баримт оруулах",    icon: Truck,   color: "text-amber-400 bg-amber-500/10 border-amber-500/25" },
+  { role: "operator",   label: "Оператор",    desc: "Үнэ тогтоох, төлбөр, хүргэгч хуваарилах", icon: Headset, color: "text-violet-400 bg-violet-500/10 border-violet-500/25" },
   { role: "partner",    label: "Партнёр",     desc: "Бараагаа оруулах, төлбөрийн QR",       icon: Store,   color: "text-green-400 bg-green-500/10 border-green-500/25" },
 ];
 
@@ -71,7 +71,7 @@ export function RoleSwitcher({
   function demoFor(role: UserRole): Choice {
     const map: Record<string, Choice> = {
       customer: { id: "demo-customer", name: "Жишээ үйлчлүүлэгч", phone: "99000001" },
-      courier:  { id: "demo-courier",  name: "Жишээ жолооч",      phone: "99000002" },
+      courier:  { id: "demo-courier",  name: "Жишээ хүргэгч",      phone: "99000002" },
       operator: { id: "demo-operator", name: "Жишээ оператор",    phone: "99000003" },
       partner:  { id: "demo-partner",  name: "Жишээ партнёр",     phone: "99000004" },
     };

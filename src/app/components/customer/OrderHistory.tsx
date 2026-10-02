@@ -7,7 +7,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: t
   шинэ:          { label: "Хүлээгдэж байна",      color: "text-amber-400",  icon: Clock },
   "үнэ батлах":  { label: "Үнэ батлахыг хүлээж", color: "text-orange-400", icon: Clock },
   "төлбөр хүлээж байна": { label: "Төлбөр хүлээгдэж", color: "text-violet-400", icon: Clock },
-  "жолооч хайж байна":   { label: "Жолооч хайж байна", color: "text-cyan-400",   icon: Clock },
+  "жолооч хайж байна":   { label: "Хүргэгч хайж байна", color: "text-cyan-400",   icon: Clock },
   томилогдсон:   { label: "Хүргэгч томилогдсон",  color: "text-blue-400",   icon: Clock },
   авсан:         { label: "Ачаа авсан",            color: "text-primary",    icon: Clock },
   хүргэгдсэн:   { label: "Хүргэгдсэн",            color: "text-green-400",  icon: CheckCircle },

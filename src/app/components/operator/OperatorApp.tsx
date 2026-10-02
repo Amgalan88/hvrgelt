@@ -36,7 +36,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   шинэ:                   "Шинэ · үнэ тогтоох",
   "үнэ батлах":           "Үнэ батлах хүлээж",
   "төлбөр хүлээж байна":  "Төлбөр хүлээж",
-  "жолооч хайж байна":    "Жолооч хуваарилах",
+  "жолооч хайж байна":    "Хүргэгч хуваарилах",
   томилогдсон:   "Томилогдсон",
   авсан:         "Ачаа авсан",
   хүргэгдсэн:   "Хүргэгдсэн",
@@ -118,7 +118,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: "Шинэ", value: newCount, color: "text-amber-400", ring: "border-amber-500/30 bg-amber-500/10" },
-            { label: "Жолооч?", value: waitingCourierCount, color: "text-cyan-400", ring: "border-cyan-500/30 bg-cyan-500/10" },
+            { label: "Хүргэгч?", value: waitingCourierCount, color: "text-cyan-400", ring: "border-cyan-500/30 bg-cyan-500/10" },
             { label: "Идэвхтэй", value: activeCount, color: "text-primary", ring: "border-primary/30 bg-primary/10" },
             { label: "Хүргэгдсэн", value: doneCount, color: "text-green-400", ring: "border-green-500/30 bg-green-500/10" },
           ].map((s) => (

@@ -103,7 +103,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
         <p className="text-sm font-medium" style={{ fontFamily: "var(--font-display)" }}>
           {order.courierName ? `${order.courierName}-г үнэлнэ үү` : "Хүргэлтээ үнэлнэ үү"}
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">Таны оноо жолоочийн урамшуулалд нөлөөлнө</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Таны оноо хүргэгчийн урамшуулалд нөлөөлнө</p>
 
         <div className="flex items-center justify-center gap-1.5 mt-3">
           {[1, 2, 3, 4, 5].map((n) => (

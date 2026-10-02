@@ -54,7 +54,7 @@ export function PaymentPanel({ order, bankInfo, createPayment, onPaid }: Payment
         <p className="text-3xl font-bold text-primary mt-0.5" style={{ fontFamily: "var(--font-display)" }}>
           ₮{order.price.toLocaleString()}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">Төлбөр орсны дараа жолооч хуваарилагдана</p>
+        <p className="text-xs text-muted-foreground mt-1">Төлбөр орсны дараа хүргэгч хуваарилагдана</p>
       </div>
 
       {loading ? (

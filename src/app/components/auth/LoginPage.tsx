@@ -654,7 +654,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
           <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
             <CheckCircle className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
             {mode === "courier"
-              ? "Жолооч захиалга авахын өмнө баримт бичиг нь шалгагдаж баталгаажна"
+              ? "Хүргэгч захиалга авахын өмнө баримт бичиг нь шалгагдаж баталгаажна"
               : "Бүртгүүлснээр үйлчилгээний нөхцөлийг зөвшөөрсөнд тооцогдоно"}
           </div>
         </div>

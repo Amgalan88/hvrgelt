@@ -187,7 +187,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
 
           {isMock && (
             <p className="text-[10px] text-center text-amber-500/80">
-              Жолооч баримт бичгээ хараахан оруулаагүй — туршилтын өгөгдөл харуулж байна.
+              Хүргэгч баримт бичгээ хараахан оруулаагүй — туршилтын өгөгдөл харуулж байна.
             </p>
           )}
         </div>

@@ -26,10 +26,10 @@ export function SearchingCourier() {
         </div>
 
         <p className="mt-3 font-semibold text-center" style={{ fontFamily: "var(--font-display)" }}>
-          Жолооч хайж байна...
+          Хүргэгч хайж байна...
         </p>
         <p className="text-xs text-muted-foreground text-center mt-1 max-w-[16rem]">
-          Танд жолооч хуваарилаад мэдээллийг нь илгээнэ. Апп-аа хаасан ч мэдэгдэл ирнэ.
+          Танд хүргэгч хуваарилаад мэдээллийг нь илгээнэ. Апп-аа хаасан ч мэдэгдэл ирнэ.
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export function SearchingCourier() {
             { icon: Zap, label: "Хүргэлтийн хурд өндөр" },
             { icon: PiggyBank, label: "Төлбөр хэмнэлттэй" },
             { icon: ShieldCheck, label: "Ачаа даатгалтай" },
-            { icon: Truck, label: "Баталгаатай жолооч" },
+            { icon: Truck, label: "Баталгаатай хүргэгч" },
           ].map((b) => {
             const Icon = b.icon;
             return (

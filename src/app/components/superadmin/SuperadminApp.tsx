@@ -809,7 +809,7 @@ export function SuperadminApp({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Role-оор үзэх</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Үйлчлүүлэгч, жолооч, оператор, партнёрын дэлгэцийг тэдний нүдээр шалгана
+                  Үйлчлүүлэгч, хүргэгч, оператор, партнёрын дэлгэцийг тэдний нүдээр шалгана
                 </p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
