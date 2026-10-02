@@ -1,7 +1,7 @@
 import { ConfirmDialog } from "../shared/ConfirmDialog";
-import { useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus } from "lucide-react";
+import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent } from "../shared/store";
 import { useUser, type QuickOrder } from "../shared/UserContext";
@@ -19,6 +19,11 @@ import { PartnerShop } from "./PartnerShop";
 import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
+import { LocationPicker } from "./LocationPicker";
+import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, type LatLng, type CourierLocation } from "../../lib/geo";
+import type { MapMarker } from "../shared/MapView";
+
+const MapView = lazy(() => import("../shared/MapView"));
 
 const CUSTOMER_HELP_STEPS = [
   "Утасны дугаараа оруулж нэг л удаа бүртгүүлнэ.",
@@ -79,31 +84,60 @@ interface CustomerAppProps {
   onLogout: () => void;
 }
 
-// Route preview — Google Maps link only (no fake embedded map)
-function RoutePreview({ from, to }: { from: string; to: string }) {
-  const mapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(from + " Дархан Монгол")}/${encodeURIComponent(to + " Дархан Монгол")}`;
+// Маршрут — цэг заасан бол газрын зураг (OpenStreetMap), доор нь Google Maps чиглэл.
+// Хүргэгчийн байршил ирвэл газрын зураг дээр хөдөлж харагдана.
+function RoutePreview({
+  from, to, fromPos, toPos, courier,
+}: {
+  from: string;
+  to: string;
+  fromPos?: LatLng | null;
+  toPos?: LatLng | null;
+  courier?: CourierLocation | null;
+}) {
+  const markers: MapMarker[] = [];
+  if (isLatLng(fromPos)) markers.push({ pos: fromPos, kind: "from" });
+  if (isLatLng(toPos)) markers.push({ pos: toPos, kind: "to" });
+  if (courier) markers.push({ pos: courier, kind: "courier" });
+  const km = isLatLng(fromPos) && isLatLng(toPos) ? distanceKm(fromPos, toPos) : null;
+
   return (
-    <a
-      href={mapsUrl}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-center justify-between bg-secondary/50 border border-border rounded-2xl px-4 py-3 hover:border-primary/40 hover:bg-secondary/80 transition-all group"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex flex-col items-center gap-1 shrink-0">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-          <div className="w-px h-4 bg-border" />
-          <MapPin className="w-3 h-3 text-primary" />
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      {markers.length > 0 && (
+        <Suspense fallback={<div className="h-44 bg-secondary animate-pulse" />}>
+          <MapView className="h-44" markers={markers} fit />
+        </Suspense>
+      )}
+      {courier && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border text-xs">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="font-semibold">Хүргэгчийн байршил</span>
+          <span className="text-muted-foreground">· {agoText(courier.updatedAt)}</span>
         </div>
-        <div className="min-w-0">
-          <p className="text-xs text-foreground leading-relaxed">{from}</p>
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{to}</p>
+      )}
+      <a
+        href={routeUrl(fromPos, toPos, from, to)}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors group"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+            <div className="w-px h-4 bg-border" />
+            <MapPin className="w-3 h-3 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-foreground leading-relaxed truncate">{from}</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed truncate">{to}</p>
+          </div>
         </div>
-      </div>
-      <span className="shrink-0 text-xs text-primary flex items-center gap-1 ml-3 group-hover:underline">
-        Google Maps <ArrowRight className="w-3 h-3" />
-      </span>
-    </a>
+        <span className="shrink-0 text-xs text-primary flex flex-col items-end gap-0.5 ml-3">
+          <span className="flex items-center gap-1 group-hover:underline">Google Maps <ArrowRight className="w-3 h-3" /></span>
+          {km !== null && <span className="text-muted-foreground tabular">≈ {km < 1 ? `${Math.round(km * 1000)} м` : `${km.toFixed(1)} км`}</span>}
+        </span>
+      </a>
+    </div>
   );
 }
 
@@ -128,6 +162,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  // Газрын зураг дээр заасан цэгүүд
+  const [fromPos, setFromPos] = useState<LatLng | null>(null);
+  const [toPos, setToPos] = useState<LatLng | null>(null);
+  const [pickerFor, setPickerFor] = useState<"from" | "to" | null>(null);
   // Цуцлахын өмнө асуух — нэг товшилтоор санамсаргүй цуцлагдахаас сэргийлнэ
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
@@ -160,6 +198,15 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     if (!sv?.needsCargo) setCargo({ fragile: false, urgent: false });
   }
   const myOrder = orders.find((o) => o.id === myOrderId);
+
+  const trackCourierId =
+    myOrder && ["томилогдсон", "авсан"].includes(myOrder.status) ? myOrder.courierId ?? null : null;
+  const [courierLoc, setCourierLoc] = useState<CourierLocation | null>(null);
+  useEffect(() => {
+    setCourierLoc(null);
+    if (!trackCourierId) return;
+    return watchCourierLocation(trackCourierId, setCourierLoc);
+  }, [trackCourierId]);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
   const activeCount = orders.filter((o) => o.customerId === userId && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
 
@@ -176,6 +223,8 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         fromAddress: fromAddr, toAddress: toAddr,
         fromDetail: fromDetail || fromAddr, toDetail: toDetail || toAddr,
         packageNote: note || "Тэмдэглэлгүй",
+        fromLat: fromPos?.lat, fromLng: fromPos?.lng,
+        toLat: toPos?.lat, toLng: toPos?.lng,
         serviceId,
         subServiceId: subServiceId ?? undefined,
         cargoPhotoUrl: cargo.photoUrl,
@@ -269,6 +318,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     const fullAddr = [shopPartner.name, shopPartner.address, shopPartner.detail].filter(Boolean).join(", ");
     setFromAddr(fullAddr);
     setFromDetail("");
+    setFromPos(null);
     setServiceId("goods");
     // Партнёрын ангилалыг үйлчилгээний дэд төрөл рүү буулгана
     const SUB_BY_CATEGORY: Record<string, string> = {
@@ -289,6 +339,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     const fullAddr = [p.name, p.address, p.detail].filter(Boolean).join(", ");
     setFromAddr(fullAddr);
     setFromDetail("");
+    setFromPos(null);
     setNote("");
     setToAddr(""); setToDetail("");
     setOrderStep("form");
@@ -300,8 +351,20 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setBasket([]); setBasketPartnerId(null);
     setCargo({ fragile: false, urgent: false });
     setFromAddr(""); setFromDetail(""); setToAddr(""); setToDetail(""); setNote("");
+    setFromPos(null); setToPos(null);
     setEstimated(null);
     setOrderStep("form");
+  }
+
+  function applyPick(pos: LatLng) {
+    if (pickerFor === "from") {
+      setFromPos(pos);
+      if (!fromAddr.trim()) setFromAddr("Газрын зураг дээр заасан цэг");
+    } else if (pickerFor === "to") {
+      setToPos(pos);
+      if (!toAddr.trim()) setToAddr("Газрын зураг дээр заасан цэг");
+    }
+    setPickerFor(null);
   }
 
   function fillAddress(target: "from" | "to", addr: string, detail: string) {
@@ -398,8 +461,18 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         placeholder="Авах хаяг — дүүрэг, хороо"
                         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
-                      {fromAddr && <button onClick={() => { setFromAddr(""); setFromDetail(""); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      {fromAddr && <button aria-label="Арилгах" onClick={() => { setFromAddr(""); setFromDetail(""); setFromPos(null); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      <button
+                        onClick={() => setPickerFor("from")}
+                        aria-label="Авах цэгийг газрын зураг дээр заах"
+                        className={`shrink-0 w-8 h-8 -mr-1 rounded-lg flex items-center justify-center transition-colors ${fromPos ? "bg-green-500/15 text-green-600" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+                      >
+                        <MapIcon className="w-4 h-4" />
+                      </button>
                     </div>
+                    {fromPos && (
+                      <p className="text-[11px] text-green-600 pl-6 font-medium">Газрын зураг дээр заасан ✓</p>
+                    )}
                     {(fromDetail || addrTarget === "from") && fromAddr && (
                       <input
                         value={fromDetail}
@@ -419,8 +492,18 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         placeholder="Хүргэх хаяг — дүүрэг, хороо"
                         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
-                      {toAddr && <button onClick={() => { setToAddr(""); setToDetail(""); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      {toAddr && <button aria-label="Арилгах" onClick={() => { setToAddr(""); setToDetail(""); setToPos(null); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      <button
+                        onClick={() => setPickerFor("to")}
+                        aria-label="Хүргэх цэгийг газрын зураг дээр заах"
+                        className={`shrink-0 w-8 h-8 -mr-1 rounded-lg flex items-center justify-center transition-colors ${toPos ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+                      >
+                        <MapIcon className="w-4 h-4" />
+                      </button>
                     </div>
+                    {toPos && (
+                      <p className="text-[11px] text-primary pl-6 font-medium">Газрын зураг дээр заасан ✓</p>
+                    )}
                     {(toDetail || addrTarget === "to") && toAddr && (
                       <input
                         value={toDetail}
@@ -578,7 +661,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.3rem" }}>Баталгаажуулах</h2>
 
                 {/* Map */}
-                <RoutePreview from={fromAddr} to={toAddr} />
+                <RoutePreview from={fromAddr} to={toAddr} fromPos={fromPos} toPos={toPos} />
 
                 {/* Route */}
                 <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
@@ -676,7 +759,13 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 </div>
 
                 {/* Map */}
-                <RoutePreview from={myOrder.fromAddress} to={myOrder.toAddress} />
+                <RoutePreview
+                  from={myOrder.fromDetail || myOrder.fromAddress}
+                  to={myOrder.toDetail || myOrder.toAddress}
+                  fromPos={myOrder.fromLat != null ? { lat: myOrder.fromLat, lng: myOrder.fromLng! } : null}
+                  toPos={myOrder.toLat != null ? { lat: myOrder.toLat, lng: myOrder.toLng! } : null}
+                  courier={courierLoc}
+                />
 
                 {/* Progress steps */}
                 <div className="bg-card border border-border rounded-2xl p-4">
@@ -1050,6 +1139,18 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      {/* Газрын зураг дээр цэг заах */}
+      <AnimatePresence>
+        {pickerFor && (
+          <LocationPicker
+            target={pickerFor}
+            initial={pickerFor === "from" ? fromPos : toPos}
+            onPick={applyPick}
+            onClose={() => setPickerFor(null)}
+          />
+        )}
       </AnimatePresence>
 
       {/* Үйлчилгээ сонгох — доороос гарах цонх */}

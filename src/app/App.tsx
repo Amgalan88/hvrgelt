@@ -356,6 +356,7 @@ function Inner() {
           onPickup={(id) => store.courierUpdateStatus(id, "авсан")}
           onDeliver={(id) => store.courierUpdateStatus(id, "хүргэгдсэн")}
           onLogout={requestLogout}
+          shareLocation={!session.viaAdmin}
         />
       )}
 

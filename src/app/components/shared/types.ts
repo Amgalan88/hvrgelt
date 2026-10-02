@@ -36,6 +36,11 @@ export interface Order {
   toAddress: string;
   fromDetail: string;
   toDetail: string;
+  /** Газрын зураг дээр заасан цэг (migration 19) */
+  fromLat?: number;
+  fromLng?: number;
+  toLat?: number;
+  toLng?: number;
   packageNote: string;
   serviceId?: string;     // services.ts — үндсэн үйлчилгээ
   subServiceId?: string;  // services.ts — дэд төрөл

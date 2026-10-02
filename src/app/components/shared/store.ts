@@ -129,6 +129,10 @@ function rowToOrder(r: any): Order {
     toAddress: r.to_address,
     fromDetail: r.from_detail,
     toDetail: r.to_detail,
+    fromLat: r.from_lat ?? undefined,
+    fromLng: r.from_lng ?? undefined,
+    toLat: r.to_lat ?? undefined,
+    toLng: r.to_lng ?? undefined,
     packageNote: r.package_note,
     serviceId: r.service_id ?? undefined,
     subServiceId: r.sub_service_id ?? undefined,
@@ -499,7 +503,17 @@ export function useStore() {
         basket_total: order.basketTotal ?? 0,
         partner_id: order.partnerId ?? null,
       };
-      let { data, error } = await supabase.from("orders").insert({ ...base, ...extra }).select("id").single();
+      // Газрын зураг дээрх цэг (migration 19) — байхгүй бол координатгүйгээр хадгална
+      const geo = {
+        from_lat: order.fromLat ?? null,
+        from_lng: order.fromLng ?? null,
+        to_lat: order.toLat ?? null,
+        to_lng: order.toLng ?? null,
+      };
+      let { data, error } = await supabase.from("orders").insert({ ...base, ...extra, ...geo }).select("id").single();
+      if (error && isMissingColumn(error)) {
+        ({ data, error } = await supabase.from("orders").insert({ ...base, ...extra }).select("id").single());
+      }
       if (error && isMissingColumn(error)) {
         ({ data, error } = await supabase.from("orders").insert(base).select("id").single());
       }

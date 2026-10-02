@@ -10,6 +10,8 @@ import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { serviceById, serviceLabel } from "../customer/services";
+import { useLocationSharing } from "./useLocationSharing";
+import { navigateUrl } from "../../lib/geo";
 
 const COURIER_HELP_STEPS = [
   "Шинэ захиалга томилогдоход мэдэгдэл авна (хонх идэвхжүүлсэн бол).",
@@ -28,11 +30,13 @@ interface CourierAppProps {
   onPickup: (orderId: string) => void;
   onDeliver: (orderId: string) => void;
   onLogout: () => void;
+  /** Байршлаа илгээх эсэх — супер админ role-оор үзэж байхад өөрийнхөө байршлыг илгээхгүй */
+  shareLocation?: boolean;
 }
 
 const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
-export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout }: CourierAppProps) {
+export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true }: CourierAppProps) {
   const [tab, setTab] = useState<"active" | "done" | "docs">("active");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
@@ -44,6 +48,9 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   const myOrders = orders.filter((o) => o.courierId === courierId);
   const activeOrders = myOrders.filter((o) => o.status === "томилогдсон" || o.status === "авсан");
   const doneOrders = myOrders.filter((o) => o.status === "хүргэгдсэн");
+
+  // Идэвхтэй захиалгатай үед л байршлаа илгээнэ
+  const sharing = useLocationSharing(courierId, shareLocation && activeOrders.length > 0);
 
   // "Өнөөдөр" — delivered_at нь зөвхөн цаг (HH:MM) хадгалдаг тул өдрийг
   // захиалга үүссэн огноогоор (inserted_at) тогтооно. Өмнө нь бүх цаг
@@ -162,6 +169,27 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
         {/* Active orders — PRIMARY FOCUS */}
         {tab === "active" && (
           <div className="space-y-3">
+            {activeOrders.length > 0 && shareLocation && (
+              <div
+                className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs border ${
+                  sharing.state === "on" || sharing.state === "starting"
+                    ? "bg-green-500/10 border-green-500/25"
+                    : "bg-amber-500/10 border-amber-500/30"
+                }`}
+              >
+                <MapPin className={`w-4 h-4 shrink-0 ${sharing.state === "on" ? "text-green-600" : "text-amber-600"}`} />
+                <p className="flex-1 leading-snug">
+                  {sharing.state === "on" && "Байршлаа илгээж байна — үйлчлүүлэгч таныг газрын зураг дээр харна. Апп-аа нээлттэй байлгаарай."}
+                  {sharing.state === "starting" && "Байршил тодорхойлж байна..."}
+                  {sharing.state === "denied" && "Байршлын зөвшөөрөл өгөөгүй байна. Хөтчийн тохиргооноос зөвшөөрөөд дахин оролдоно уу."}
+                  {sharing.state === "unsupported" && "Энэ төхөөрөмж байршил илгээх боломжгүй."}
+                  {sharing.state === "error" && "Байршил илгээж чадсангүй. GPS асаалттай эсэхийг шалгана уу."}
+                </p>
+                {(sharing.state === "denied" || sharing.state === "error") && (
+                  <button onClick={sharing.retry} className="shrink-0 font-semibold text-primary">Дахин</button>
+                )}
+              </div>
+            )}
             {activeOrders.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-3">
@@ -299,7 +327,12 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                       {/* ACTION BUTTONS — MINIMAL */}
                       <div className="flex gap-2">
                         <a
-                          href={`https://maps.google.com?q=${encodeURIComponent(isAssigned ? (order.fromDetail || order.fromAddress) : (order.toDetail || order.toAddress))}`}
+                          href={
+                            isAssigned
+                              ? navigateUrl(order.fromLat != null ? { lat: order.fromLat, lng: order.fromLng! } : null, order.fromDetail || order.fromAddress)
+                              : navigateUrl(order.toLat != null ? { lat: order.toLat, lng: order.toLng! } : null, order.toDetail || order.toAddress)
+                          }
+                          aria-label={isAssigned ? "Авах цэг рүү чиглэл" : "Хүргэх цэг рүү чиглэл"}
                           className="flex items-center gap-1.5 border border-border px-3 py-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
                           target="_blank"
                           rel="noreferrer"

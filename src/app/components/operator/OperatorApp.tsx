@@ -1,3 +1,4 @@
+import { routeUrl, distanceKm } from "../../lib/geo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { RoleHeader, HeaderIconButton } from "../shared/RoleHeader";
 import { useState, Fragment } from "react";
@@ -251,6 +252,28 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                           )}
                         </div>
                       </div>
+                      {/* Газрын зураг дээр заасан цэг — Google Maps-д зам харуулна */}
+                      {(order.fromLat != null || order.toLat != null) && (
+                        <a
+                          href={routeUrl(
+                            order.fromLat != null ? { lat: order.fromLat, lng: order.fromLng! } : null,
+                            order.toLat != null ? { lat: order.toLat, lng: order.toLng! } : null,
+                            order.fromDetail || order.fromAddress,
+                            order.toDetail || order.toAddress,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          Газрын зураг дээр заасан цэг харах
+                          {order.fromLat != null && order.toLat != null && (
+                            <span className="text-muted-foreground font-normal tabular">
+                              · ≈ {distanceKm({ lat: order.fromLat, lng: order.fromLng! }, { lat: order.toLat, lng: order.toLng! }).toFixed(1)} км
+                            </span>
+                          )}
+                        </a>
+                      )}
                       {serviceById(order.serviceId) && (
                         <div className="flex gap-2 items-center text-xs flex-wrap">
                           <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>

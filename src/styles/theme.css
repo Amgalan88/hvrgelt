@@ -253,3 +253,24 @@
     line-height: 1.5;
   }
 }
+
+/* ── Газрын зураг (Leaflet) ───────────────────────────────────────────── */
+/* isolation: Leaflet-ийн дотоод z-index (400–1000) апп-ын цонх, толгойн дээр гарахгүй */
+.hv-map { isolation: isolate; background: var(--secondary); font-family: var(--font-body); }
+.hv-map .leaflet-tile-pane { filter: var(--map-filter); }
+.hv-map .leaflet-control-attribution { font-size: 10px; background: color-mix(in oklab, var(--card) 80%, transparent); color: var(--muted-foreground); }
+.hv-map .leaflet-control-attribution a { color: var(--muted-foreground); }
+.hv-map .leaflet-bar a { background: var(--card); color: var(--foreground); border-color: var(--border); }
+.hv-marker { background: transparent; border: 0; }
+.hv-courier {
+  position: relative; width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--brand);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.hv-courier::after {
+  content: ""; position: absolute; inset: -8px; border-radius: 50%;
+  border: 2px solid var(--brand); animation: hv-pulse 1.8s ease-out infinite;
+}
+@keyframes hv-pulse { from { transform: scale(0.75); opacity: 0.6; } to { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hv-courier::after { animation: none; } }
