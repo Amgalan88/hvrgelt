@@ -23,7 +23,10 @@ interface LoginPageProps {
     authMethod: "pin" | "pattern";
     authKey: string;
   }) => Promise<string>;
-  skipLanding?: boolean;
+  /** Бүртгэлгүй дугаар оруулбал аль төрлөөр бүртгүүлэхийг урьдчилан сонгоно */
+  initialMode?: LoginMode;
+  /** Нүүр хуудас руу буцах */
+  onBack?: () => void;
 }
 
 /** Нэвтрэх/бүртгүүлэх урсгалыг 2 салгана */
@@ -36,7 +39,7 @@ const VEHICLES: { key: "мотоцикл" | "автомашин" | "дугуй" 
   { key: "дугуй",     emoji: "🚲" },
 ];
 
-type Screen = "landing" | "role" | "phone" | "auth" | "first-setup" | "register";
+type Screen = "phone" | "auth" | "first-setup" | "register";
 type RegStep = "info" | "choose" | "pin" | "pattern";
 type AuthStep = "pin" | "pattern" | "password";
 type SetupStep = "choose" | "pin" | "pattern";
@@ -47,10 +50,10 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, skipLanding }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, initialMode = "customer", onBack }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
-  const [screen, setScreen] = useState<Screen>(skipLanding ? "role" : "landing");
-  const [mode, setMode] = useState<LoginMode>("customer");
+  const [screen, setScreen] = useState<Screen>("phone");
+  const [mode, setMode] = useState<LoginMode>(initialMode);
 
   // Phone input
   const savedPhone = localStorage.getItem(SAVED_PHONE_KEY) ?? "";
@@ -275,176 +278,70 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     return <div className="mb-6"><AppLogo /></div>;
   }
 
-  // ── LANDING ───────────────────────────────────────────────────────
-  if (screen === "landing") {
-    return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-        <div className="relative flex-1 flex flex-col">
-          <img
-            src="https://images.unsplash.com/photo-1765808172074-702dc0371f93?w=800&h=900&fit=crop&auto=format"
-            alt="courier"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(7,9,15,0.2) 0%, rgba(7,9,15,0.92) 60%)" }} />
-
-          <nav className="relative z-10 flex items-center justify-between px-5 pt-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Truck className="w-4 h-4 text-white" />
-              </div>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "1.15rem", color: "#fff", letterSpacing: "-0.02em" }}>
-                hvrgelt<span className="text-primary">.mn</span>
-              </span>
-            </div>
-            <button onClick={() => setScreen("role")} className="text-sm text-white/70 hover:text-white transition-colors">
-              Нэвтрэх
-            </button>
-          </nav>
-
-          <div className="relative z-10 mt-auto px-5 pb-10 space-y-5">
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
-              <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
-                Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
-              </h1>
-              <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ хүргэгчтэй холбогдоорой.</p>
-            </motion.div>
-            <motion.div className="space-y-2.5" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setScreen("role")}
-                className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1rem" }}
-              >
-                Эхлэх <ArrowRight className="w-5 h-5" />
-              </motion.button>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── ROLE CHOICE ───────────────────────────────────────────────────
-  if (screen === "role") {
-    const cards: { mode: LoginMode; icon: typeof User; title: string; desc: string; hint: string }[] = [
-      {
-        mode: "customer",
-        icon: User,
-        title: "Үйлчлүүлэгчээр нэвтрэх",
-        desc: "Хүргэлт захиалах, ачаа илгээх",
-        hint: "30 секундэд захиалга өгнө",
-      },
-      {
-        mode: "courier",
-        icon: Truck,
-        title: "Жолоочоор нэвтрэх",
-        desc: "Хүргэлт хийж орлого олох",
-        hint: "Баримт бичгээ оруулаад эхэлнэ",
-      },
-    ];
-    return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-        {!skipLanding && (
-          <button onClick={() => setScreen("landing")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
-            <ArrowLeft className="w-4 h-4" /> Буцах
-          </button>
-        )}
-        <Logo />
-        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>Хэн бэ?</h2>
-        <p className="text-muted-foreground text-sm mt-1 mb-8">Нэвтрэх хэлбэрээ сонгоно уу</p>
-
-        <div className="space-y-3 flex-1">
-          {cards.map((c, i) => {
-            const Icon = c.icon;
-            return (
-              <motion.button
-                key={c.mode}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08, type: "spring", damping: 20, stiffness: 280 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => { setMode(c.mode); setPhone(""); setPhoneError(""); resetRegister(); setScreen("phone"); }}
-                className="w-full bg-card border border-border rounded-2xl p-5 flex items-center gap-4 text-left hover:border-primary/50 transition-colors group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 group-hover:bg-primary/25 transition-colors">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{c.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{c.desc}</p>
-                  <p className="text-[11px] text-primary mt-1">{c.hint}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-              </motion.button>
-            );
-          })}
-        </div>
-
-        <p className="text-xs text-muted-foreground text-center mt-6">
-          Оператор, админ бол <button onClick={() => { setMode("customer"); setScreen("phone"); }} className="text-primary underline">эндээс нэвтэрнэ</button>
-        </p>
-      </div>
-    );
-  }
-
   // ── PHONE INPUT ───────────────────────────────────────────────────
+  // Дугаараар role автоматаар тодорхойлогдоно (үйлчлүүлэгч, хүргэгч,
+  // оператор, партнёр, админ). Бүртгэлгүй бол шууд бүртгэл рүү шилжинэ.
   if (screen === "phone") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-        <button onClick={() => setScreen("role")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
-          <ArrowLeft className="w-4 h-4" /> Буцах
-        </button>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-6 max-w-sm mx-auto w-full">
+        {onBack ? (
+          <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start -ml-1 py-1">
+            <ArrowLeft className="w-4 h-4" /> Нүүр хуудас
+          </button>
+        ) : <div className="h-6" />}
         <Logo />
 
-        <div className="flex items-center gap-2">
-          {mode === "courier" ? <Truck className="w-5 h-5 text-primary" /> : <User className="w-5 h-5 text-primary" />}
-          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>
-            {mode === "courier" ? "Жолоочоор нэвтрэх" : "Нэвтрэх"}
-          </h2>
-        </div>
-        <p className="text-muted-foreground text-sm mt-1 mb-8">
-          {mode === "courier"
-            ? "Бүртгэлгүй бол дугаараа оруулаад шууд бүртгүүлнэ"
-            : "Утасны дугаараа оруулна уу"}
+        <h2 className="text-[1.75rem] font-extrabold leading-tight">
+          {mode === "courier" ? "Хүргэгчээр нэвтрэх" : "Тавтай морил"}
+        </h2>
+        <p className="text-muted-foreground text-sm mt-1.5 mb-8 leading-relaxed">
+          Утасны дугаараа оруулна уу. Бүртгэлгүй бол шууд бүртгүүлнэ.
         </p>
 
         <div className="space-y-3 flex-1">
           <div>
-            <label className="text-xs text-muted-foreground block mb-1.5">Утасны дугаар</label>
+            <label htmlFor="login-phone" className="text-xs font-medium text-muted-foreground block mb-1.5">Утасны дугаар</label>
             <div className="relative">
-              <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium tabular">+976</span>
               <input
+                id="login-phone"
                 value={phone}
                 onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handlePhoneSubmit()}
-                placeholder={savedPhone || "99000000"}
+                placeholder={savedPhone || "9900 0000"}
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 autoFocus
-                className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full bg-card border border-border rounded-2xl pl-16 pr-4 py-4 text-lg font-semibold tracking-wide tabular focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition"
               />
             </div>
-            {phoneError && <p className="text-xs text-red-400 mt-1.5">{phoneError}</p>}
+            {phoneError && <p className="text-xs text-destructive mt-2">{phoneError}</p>}
             {savedPhone && !phone && (
               <button
                 onClick={() => { setPhone(savedPhone); setPhoneError(""); }}
-                className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                className="mt-3 w-full flex items-center justify-between bg-secondary/60 hover:bg-secondary rounded-xl px-3.5 py-2.5 text-sm transition-colors"
               >
-                <Smartphone className="w-3 h-3" />
-                Сүүлд нэвтэрсэн: <span className="text-foreground font-medium">{savedPhone}</span>
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Smartphone className="w-4 h-4" /> Сүүлд нэвтэрсэн
+                </span>
+                <span className="font-semibold tabular">{savedPhone}</span>
               </button>
             )}
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-3">
           <button
             onClick={handlePhoneSubmit}
             disabled={!isValidPhone(phone) || submitting}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+            className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
           >
             {submitting ? <Spinner className="w-4 h-4" /> : <>Үргэлжлүүлэх <ArrowRight className="w-4 h-4" /></>}
           </button>
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+            Оператор, партнёр, админ бүгд энэ дэлгэцээс өөрийн дугаараар нэвтэрнэ
+          </p>
         </div>
       </div>
     );
@@ -685,15 +582,33 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { resetRegister(); setScreen("phone"); }} />
-        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>
-          {mode === "courier" ? "Жолоочоор бүртгүүлэх" : "Бүртгүүлэх"}
-        </h2>
+        <h2 className="text-[1.75rem] font-extrabold leading-tight">Бүртгүүлэх</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-6">
           {mode === "courier"
             ? "Бүртгүүлсний дараа баримт бичгээ оруулна"
             : "Нэг удаа бүртгүүлж, хурдан захиалаарай"}
         </p>
-        <div className="space-y-3 flex-1">
+        <div className="space-y-4 flex-1">
+          {/* Бүртгэлийн төрөл — шинэ дугаар бол энд л сонгоно */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-secondary rounded-2xl" role="radiogroup" aria-label="Бүртгэлийн төрөл">
+            {([
+              { key: "customer", label: "Үйлчлүүлэгч", icon: User },
+              { key: "courier", label: "Хүргэгч", icon: Truck },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                role="radio"
+                aria-checked={mode === key}
+                onClick={() => setMode(key)}
+                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mode === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </div>
+
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Овог нэр</label>
             <input
