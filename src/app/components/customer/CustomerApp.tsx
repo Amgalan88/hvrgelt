@@ -73,7 +73,6 @@ interface CustomerAppProps {
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
-  onGoHome: () => void;
 }
 
 // Route preview — Google Maps link only (no fake embedded map)
@@ -104,7 +103,7 @@ function RoutePreview({ from, to }: { from: string; to: string }) {
   );
 }
 
-export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onMarkPaid, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, onGoHome }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onMarkPaid, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
@@ -124,6 +123,9 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   const [courierProfileOpen, setCourierProfileOpen] = useState(false);
   const [estimated, setEstimated] = useState<{ price: number; distance: number } | null>(null);
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  // Цуцлахын өмнө асуух — нэг товшилтоор санамсаргүй цуцлагдахаас сэргийлнэ
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   // ── Quick orders (one-tap saved shortcuts) ──
   const [placesCat, setPlacesCat] = useState<PartnerCategory>("Карго");
@@ -155,7 +157,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   }
   const myOrder = orders.find((o) => o.id === myOrderId);
   const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
-  const activeCount = orders.filter((o) => (o.customerId === userId || o.customerId.startsWith("cu-new")) && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
+  const activeCount = orders.filter((o) => o.customerId === userId && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
 
   function handleEstimate() {
     if (!fromAddr.trim() || !toAddr.trim()) return;
@@ -346,107 +348,40 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   <p className="text-muted-foreground text-sm mt-1">30 секундэд захиалаарай</p>
                 </div>
 
-                {/* Services — бидний санал болгож буй үндсэн үйлчилгээнүүд */}
-                <div className="space-y-2.5">
-                  <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Үйлчилгээ сонгох</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SERVICES.map((sv, i) => {
-                      const active = sv.id === serviceId;
-                      return (
-                        <motion.button
-                          key={sv.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.03, type: "spring", damping: 20, stiffness: 300 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => pickService(sv.id)}
-                          className={`flex items-start gap-2 rounded-2xl border p-2.5 text-left transition-colors ${
-                            active ? "bg-primary/10 border-primary" : "bg-card border-border hover:border-primary/40"
-                          }`}
-                        >
-                          <span className="text-xl leading-none shrink-0">{sv.emoji}</span>
-                          <span className="min-w-0">
-                            <span className="block text-[12px] font-semibold leading-tight">{sv.label}</span>
-                            <span className="block text-[10px] text-muted-foreground mt-0.5 leading-snug">{sv.desc}</span>
-                          </span>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Дэд төрөл — үйлчилгээнээс хамаарна */}
-                {service && service.subs.length > 0 && (
+                {/* Хурдан захиалга — нэг товшилтоор давтан захиалах */}
+                {quickOrders.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Төрлөө нарийвчилна уу</p>
-                    <div className="flex flex-wrap gap-2">
-                      {service.subs.map((sub) => {
-                        const on = sub.id === subServiceId;
-                        return (
-                          <button
-                            key={sub.id}
-                            onClick={() => setSubServiceId(on ? null : sub.id)}
-                            title={sub.desc}
-                            className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
-                              on
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                            }`}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Хурдан захиалга</p>
+                      <button onClick={() => setQuickEdit((v) => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        {quickEdit ? "Болсон" : "Засах"}
+                      </button>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pt-1.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {quickOrders.map((qo) => (
+                        <div key={qo.id} className="relative shrink-0">
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
+                            disabled={placingId === qo.id}
+                            className="flex items-center gap-2 bg-card border border-border rounded-2xl pl-2 pr-3.5 py-2 hover:border-primary/50 transition-colors disabled:opacity-50"
                           >
-                            {sub.label}
-                          </button>
-                        );
-                      })}
+                            <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-lg">{placingId === qo.id ? "…" : qo.emoji}</span>
+                            <span className="text-sm font-medium max-w-[8rem] truncate">{qo.label}</span>
+                          </motion.button>
+                          {quickEdit && (
+                            <button onClick={() => deleteQuick(qo.id)} aria-label="Устгах" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow">
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button onClick={openQuickAdd} className="shrink-0 flex items-center gap-1.5 border border-dashed border-border rounded-2xl px-3.5 py-2 text-sm text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                        <Plus className="w-4 h-4" /> Нэмэх
+                      </button>
                     </div>
                   </div>
                 )}
-
-                {/* Quick orders — compact icon tiles */}
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Хурдан захиалга</p>
-                    {quickOrders.length > 0 && (
-                      <button onClick={() => setQuickEdit((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        {quickEdit ? "Болсон" : "Засах"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2.5">
-                    {quickOrders.map((qo, i) => (
-                      <motion.div
-                        key={qo.id}
-                        className="relative"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.04, type: "spring", damping: 20, stiffness: 300 }}
-                      >
-                        <motion.button
-                          whileTap={{ scale: 0.92 }}
-                          onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
-                          disabled={placingId === qo.id}
-                          className="w-full flex flex-col items-center gap-1.5 group disabled:opacity-50"
-                        >
-                          <div className="w-full aspect-square rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl group-hover:bg-primary/15 transition-colors">
-                            {placingId === qo.id ? "…" : qo.emoji}
-                          </div>
-                          <span className="text-[11px] text-center leading-tight truncate w-full">{qo.label}</span>
-                        </motion.button>
-                        {quickEdit && (
-                          <button onClick={() => deleteQuick(qo.id)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow">
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </motion.div>
-                    ))}
-                    <button onClick={openQuickAdd} className="flex flex-col items-center gap-1.5">
-                      <div className="w-full aspect-square rounded-2xl bg-card border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                      <span className="text-[11px] text-center text-muted-foreground">Нэмэх</span>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Address box */}
                 <div className="bg-card border border-border rounded-2xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-border space-y-1.5">
@@ -528,6 +463,46 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   </div>
                 )}
 
+                {/* Үйлчилгээ — сонгосныг нэг мөрөөр харуулж, бүх жагсаалт доороос гарч ирнэ */}
+                {service && (
+                  <button
+                    onClick={() => setServicePickerOpen(true)}
+                    className="w-full flex items-center gap-3 bg-card border border-border rounded-2xl p-3 text-left hover:border-primary/50 transition-colors"
+                  >
+                    <span className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-2xl shrink-0">{service.emoji}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-xs text-muted-foreground">Үйлчилгээ</span>
+                      <span className="block text-sm font-semibold truncate">{service.label}</span>
+                    </span>
+                    <span className="text-xs font-semibold text-primary shrink-0 px-1">Солих</span>
+                  </button>
+                )}
+                {/* Дэд төрөл — үйлчилгээнээс хамаарна */}
+                {service && service.subs.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Төрлөө нарийвчилна уу</p>
+                    <div className="flex flex-wrap gap-2">
+                      {service.subs.map((sub) => {
+                        const on = sub.id === subServiceId;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => setSubServiceId(on ? null : sub.id)}
+                            title={sub.desc}
+                            className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
+                              on
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                            }`}
+                          >
+                            {sub.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Сагс — партнёрын бараа */}
                 {basket.length > 0 && (
                   <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
@@ -582,6 +557,11 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 >
                   Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
                 </button>
+                {quickOrders.length === 0 && (
+                  <button onClick={openQuickAdd} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
+                    <Plus className="w-3.5 h-3.5" /> Байнгын хүргэлтээ хурдан захиалга болгох
+                  </button>
+                )}
               </div>
             )}
 
@@ -764,7 +744,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       <p className="text-xs text-amber-300">Оператор тантай холбогдож үнийг тогтооно...</p>
                     </div>
                     <button
-                      onClick={() => { onCancelOrder(myOrder.id); setMyOrderId(null); setOrderStep("form"); }}
+                      onClick={() => setCancelTarget(myOrder.id)}
                       className="w-full border border-destructive/50 text-destructive py-2.5 rounded-xl text-sm hover:bg-destructive/10 transition-colors"
                     >
                       Захиалга цуцлах
@@ -786,7 +766,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                     </div>
                     <div className="flex gap-3">
                       <button
-                        onClick={() => { onCancelOrder(myOrder.id); setMyOrderId(null); setOrderStep("form"); }}
+                        onClick={() => setCancelTarget(myOrder.id)}
                         className="flex-1 border border-destructive/50 text-destructive py-3 rounded-2xl text-sm hover:bg-destructive/10 transition-colors"
                       >
                         Цуцлах
@@ -1066,18 +1046,89 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
       )}
       </AnimatePresence>
 
+      {/* Үйлчилгээ сонгох — доороос гарах цонх */}
+      <AnimatePresence>
+      {servicePickerOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={() => setServicePickerOpen(false)}
+        >
+          <motion.div
+            className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-4 pb-6 max-h-[85dvh] overflow-y-auto"
+            initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
+            transition={{ type: "spring", damping: 26, stiffness: 320 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-border mx-auto mb-4 sm:hidden" />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold">Үйлчилгээ сонгох</h3>
+              <button onClick={() => setServicePickerOpen(false)} aria-label="Хаах" className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SERVICES.map((sv) => {
+                const active = sv.id === serviceId;
+                return (
+                  <button
+                    key={sv.id}
+                    onClick={() => { pickService(sv.id); setServicePickerOpen(false); }}
+                    className={`flex flex-col items-start gap-2 rounded-2xl border p-3 text-left transition-colors ${
+                      active ? "bg-primary/10 border-primary" : "bg-background border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="text-2xl leading-none">{sv.emoji}</span>
+                    <span className="text-sm font-semibold leading-snug">{sv.label}</span>
+                    <span className="text-xs text-muted-foreground leading-snug">{sv.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* Захиалга цуцлахыг баталгаажуулах */}
+      <AnimatePresence>
+      {cancelTarget && (
+        <motion.div
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center px-6"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={() => setCancelTarget(null)}
+        >
+          <motion.div
+            className="bg-card border border-border rounded-3xl p-5 w-full max-w-xs text-center"
+            initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-lg font-bold">Захиалга цуцлах уу?</p>
+            <p className="text-sm text-muted-foreground mt-1.5">Цуцалсан захиалгыг сэргээх боломжгүй.</p>
+            <div className="flex gap-2.5 mt-5">
+              <button onClick={() => setCancelTarget(null)} className="flex-1 border border-border py-3 rounded-2xl text-sm font-semibold hover:bg-secondary/60 transition-colors">
+                Үгүй
+              </button>
+              <button
+                onClick={() => {
+                  onCancelOrder(cancelTarget);
+                  setCancelTarget(null);
+                  setMyOrderId(null);
+                  setOrderStep("form");
+                }}
+                className="flex-1 bg-destructive text-white py-3 rounded-2xl text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Тийм, цуцлах
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
         <div className="max-w-sm mx-auto flex">
-          {/* Нүүр — landing page руу буцах */}
-          <button
-            onClick={onGoHome}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Home className="w-5 h-5" />
-            <span className="text-xs">Нүүр</span>
-          </button>
-
           {([
             { key: "order" as AppTab, label: "Захиалга", icon: Truck, badge: 0 },
             { key: "places" as AppTab, label: "Газрууд", icon: Store, badge: 0 },

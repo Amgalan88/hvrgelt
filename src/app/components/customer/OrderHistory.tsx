@@ -32,7 +32,7 @@ export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
   });
 
   const myOrders = orders.filter(
-    (o) => (o.customerId === userId || o.customerId.startsWith("cu-new")) && !hidden.has(o.id),
+    (o) => o.customerId === userId && !hidden.has(o.id),
   );
 
   function clearPast(pastOrders: Order[]) {

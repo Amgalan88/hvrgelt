@@ -282,7 +282,6 @@ function Inner() {
           userPhone={session.phone}
           onUpdateAuth={(authMethod, authKey) => store.updateCustomerAuth(session.id, authMethod, authKey)}
           onLogout={requestLogout}
-          onGoHome={() => setLandingDone(false)}
         />
       )}
 

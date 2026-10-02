@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, ChevronRight, X, Lock, Bell, BellOff, CheckCircle } from "lucide-react";
+import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone } from "lucide-react";
+import { PHONES, WORK_HOURS } from "../../lib/contact";
 import { useUser, type SavedAddress, type AccentColor } from "../shared/UserContext";
 import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
@@ -189,12 +190,16 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
           <div className="flex items-center gap-3">
             {theme === "dark" ? <Moon className="w-5 h-5 text-blue-400" /> : <Sun className="w-5 h-5 text-amber-400" />}
             <div>
-              <p className="text-sm font-medium">{theme === "dark" ? "Шөнийн горим" : "Өдрийн горим"}</p>
-              <p className="text-xs text-muted-foreground">{theme === "dark" ? "Харанхуй дэвсгэр" : "Цагаан дэвсгэр"}</p>
+              {/* Шилжүүлэгч асаалттай = харанхуй горим. Нэр нь үргэлж ижил байж төлөв нь ойлгомжтой */}
+              <p className="text-sm font-medium">Харанхуй горим</p>
+              <p className="text-xs text-muted-foreground">{theme === "dark" ? "Асаалттай" : "Унтраалттай — цайвар дэвсгэр"}</p>
             </div>
           </div>
           <button
             onClick={toggleTheme}
+            role="switch"
+            aria-checked={theme === "dark"}
+            aria-label="Харанхуй горим"
             className={`w-12 h-6 rounded-full border transition-all relative ${theme === "dark" ? "bg-primary border-primary" : "bg-secondary border-border"}`}
           >
             <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform absolute top-0.5 ${theme === "dark" ? "translate-x-6" : "translate-x-0.5"}`} />
@@ -370,22 +375,26 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
         </button>
       </div>
 
-      {/* Other settings */}
+      {/* Тусламж — хоосон байсан "Мэдэгдэл", "Хэл" мөрийн оронд */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "0.7rem" }}>Тохиргоо</p>
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "0.7rem" }}>Тусламж</p>
         </div>
-        {[
-          { label: "Мэдэгдэл", sub: "Push notification" },
-          { label: "Хэл", sub: "Монгол" },
-        ].map((item, i, arr) => (
-          <button key={item.label} className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors ${i < arr.length - 1 ? "border-b border-border" : ""}`}>
-            <div>
-              <p className="text-sm text-left">{item.label}</p>
-              {item.sub && <p className="text-xs text-muted-foreground text-left">{item.sub}</p>}
+        {PHONES.map((ph, i, arr) => (
+          <a
+            key={ph.tel}
+            href={`tel:${ph.tel}`}
+            className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors ${i < arr.length - 1 ? "border-b border-border" : ""}`}
+          >
+            <div className="flex items-center gap-3">
+              <Phone className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-sm font-semibold tabular">{ph.label}</p>
+                {i === 0 && <p className="text-xs text-muted-foreground">Өдөр бүр {WORK_HOURS}</p>}
+              </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
+            <span className="text-xs font-semibold text-primary">Залгах</span>
+          </a>
         ))}
       </div>
 
