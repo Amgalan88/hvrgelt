@@ -37,11 +37,11 @@ interface HelpModalProps {
 
 export function HelpModal({ title, subtitle, steps, onClose }: HelpModalProps) {
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ fontFamily: "var(--font-body)" }}>
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
           <div>
-            <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{title}</h3>
+            <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{title}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground shrink-0 ml-3">
@@ -51,7 +51,7 @@ export function HelpModal({ title, subtitle, steps, onClose }: HelpModalProps) {
         <div className="px-5 py-4 space-y-3">
           {steps.map((step, i) => (
             <div key={i} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ fontFamily: "'Roboto Slab', serif" }}>
+              <div className="w-6 h-6 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ fontFamily: "var(--font-display)" }}>
                 {i + 1}
               </div>
               <p className="text-sm leading-relaxed pt-0.5">{step}</p>
@@ -62,7 +62,7 @@ export function HelpModal({ title, subtitle, steps, onClose }: HelpModalProps) {
           <button
             onClick={onClose}
             className="w-full bg-primary text-white py-3 rounded-xl text-sm hover:bg-primary/90 transition-colors"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             Ойлголоо
           </button>

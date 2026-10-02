@@ -139,12 +139,12 @@ export function FlowDiagram() {
   const [activeStep, setActiveStep] = useState<number | null>(null);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif", fontSize: "1.1rem" }}>
+            <h1 className="font-bold" style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem" }}>
               hvrgelt.mn — Системийн урсгал
             </h1>
             <p className="text-xs text-muted-foreground">Хэрэглэгч · Оператор · Куриер</p>
@@ -173,7 +173,7 @@ export function FlowDiagram() {
             return (
               <div key={lane} className={`flex items-center justify-center gap-2 py-3 rounded-xl border ${cfg.bg} ${cfg.border}`}>
                 <Icon className={`w-5 h-5 ${cfg.color}`} />
-                <span className={`font-semibold ${cfg.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{cfg.name}</span>
+                <span className={`font-semibold ${cfg.color}`} style={{ fontFamily: "var(--font-display)" }}>{cfg.name}</span>
               </div>
             );
           })}
@@ -334,7 +334,7 @@ export function FlowDiagram() {
               <div key={lane} className={`${cfg.bg} border ${cfg.border} rounded-xl p-4`}>
                 <div className="flex items-center gap-2 mb-3">
                   <Icon className={`w-4 h-4 ${cfg.color}`} />
-                  <span className={`font-semibold text-sm ${cfg.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{cfg.name}</span>
+                  <span className={`font-semibold text-sm ${cfg.color}`} style={{ fontFamily: "var(--font-display)" }}>{cfg.name}</span>
                 </div>
                 <div className="space-y-1.5 mb-3">
                   {s.map((step, i) => (

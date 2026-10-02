@@ -169,20 +169,20 @@ function Inner() {
     const p = pages[legalPage];
     const Icon = p.icon;
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => setLegalPage(null)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ChevronLeft className="w-4 h-4" /> Буцах
           </button>
           <div className="flex items-center gap-2 ml-1">
             <Icon className="w-4 h-4 text-primary" />
-            <h1 className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{p.title}</h1>
+            <h1 className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>{p.title}</h1>
           </div>
         </header>
         <div className="flex-1 max-w-sm mx-auto w-full px-5 py-6 space-y-6">
           {p.content.map((section) => (
             <div key={section.heading} className="space-y-2">
-              <h2 className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Roboto Slab', serif" }}>{section.heading}</h2>
+              <h2 className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-display)" }}>{section.heading}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{section.body}</p>
             </div>
           ))}
@@ -197,7 +197,7 @@ function Inner() {
   // ── Always show landing page first ──────────────────────────────────
   if (!landingDone) {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         {/* Hero */}
         <div className="relative flex-1 flex flex-col">
           <img
@@ -222,15 +222,15 @@ function Inner() {
               <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/40 rounded-full px-3 py-1 text-xs text-primary mb-3">
                 🎉 Дархан хотын 65 жилийн ойг тохиолдуулан нээгдлээ
               </div>
-              <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
+              <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
               <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 30+ хүргэгчтэй холбогдоорой.</p>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3">
-                <a href="tel:99371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.15rem" }}>
+                <a href="tel:99371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.15rem" }}>
                   <Phone className="w-4 h-4" /> 9937-1961
                 </a>
-                <a href="tel:96371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.15rem" }}>
+                <a href="tel:96371961" className="flex items-center gap-1.5 text-white hover:text-primary transition-colors" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.15rem" }}>
                   <Phone className="w-4 h-4" /> 9637-1961
                 </a>
               </div>
@@ -263,7 +263,7 @@ function Inner() {
                   }
                 }}
                 className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}
+                style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1rem" }}
               >
                 {session ? `Үргэлжлүүлэх` : "Эхлэх"} <ArrowRight className="w-5 h-5" />
               </motion.button>
@@ -272,7 +272,7 @@ function Inner() {
         </div>
 
         {/* Footer */}
-        <footer className="bg-background border-t border-border px-5 py-4" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <footer className="bg-background border-t border-border px-5 py-4" style={{ fontFamily: "var(--font-body)" }}>
           <div className="max-w-sm mx-auto space-y-3">
             {/* Social + copyright */}
             <div className="flex items-center justify-between">
@@ -331,7 +331,7 @@ function Inner() {
   if (session.role === "customer" && hasLock && !pinVerified && !session.viaAdmin) {
     const greeting = `Сайн байна уу, ${session.name.split(".")[0] ?? session.name}!`;
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         <div className="px-5 pt-6">
           <Logo />
         </div>
@@ -502,14 +502,14 @@ function Inner() {
 
       <AnimatePresence>
         {confirmLogout && (
-          <motion.div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" style={{ fontFamily: "'Inter', sans-serif" }}
+          <motion.div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6" style={{ fontFamily: "var(--font-body)" }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <motion.div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center"
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }}>
               <div className="w-12 h-12 rounded-full bg-destructive/15 border border-destructive/30 flex items-center justify-center mx-auto mb-4">
                 <LogOut className="w-5 h-5 text-destructive" />
               </div>
-              <p className="font-bold mb-1" style={{ fontFamily: "'Roboto Slab', serif" }}>Гарахдаа итгэлтэй байна уу?</p>
+              <p className="font-bold mb-1" style={{ fontFamily: "var(--font-display)" }}>Гарахдаа итгэлтэй байна уу?</p>
               <p className="text-sm text-muted-foreground mb-5">Та дахин нэвтрэх шаардлагатай болно.</p>
               <div className="flex gap-3">
                 <button

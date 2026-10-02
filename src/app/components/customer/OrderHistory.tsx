@@ -132,7 +132,7 @@ function OrderCard({ order, onTrack, onHide }: { order: Order; onTrack: (id: str
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            <p className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
               ₮{order.price.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">{order.distance} км</p>

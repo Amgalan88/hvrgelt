@@ -25,7 +25,7 @@ export function SearchingCourier() {
           </div>
         </div>
 
-        <p className="mt-3 font-semibold text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
+        <p className="mt-3 font-semibold text-center" style={{ fontFamily: "var(--font-display)" }}>
           Жолооч хайж байна...
         </p>
         <p className="text-xs text-muted-foreground text-center mt-1 max-w-[16rem]">

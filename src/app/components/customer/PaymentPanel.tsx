@@ -51,7 +51,7 @@ export function PaymentPanel({ order, bankInfo, createPayment, onPaid }: Payment
     <div className="space-y-3">
       <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 text-center">
         <p className="text-xs text-muted-foreground">Төлөх дүн</p>
-        <p className="text-3xl font-bold text-primary mt-0.5" style={{ fontFamily: "'Roboto Slab', serif" }}>
+        <p className="text-3xl font-bold text-primary mt-0.5" style={{ fontFamily: "var(--font-display)" }}>
           ₮{order.price.toLocaleString()}
         </p>
         <p className="text-xs text-muted-foreground mt-1">Төлбөр орсны дараа жолооч хуваарилагдана</p>
@@ -81,7 +81,7 @@ export function PaymentPanel({ order, bankInfo, createPayment, onPaid }: Payment
               target="_blank"
               rel="noreferrer"
               className="block w-full text-center bg-primary text-primary-foreground py-3 rounded-xl text-sm hover:bg-primary/90 transition-colors"
-              style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
             >
               Банкны аппаар төлөх
             </a>
@@ -120,7 +120,7 @@ export function PaymentPanel({ order, bankInfo, createPayment, onPaid }: Payment
             onClick={confirmPaid}
             disabled={confirming}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             <CheckCircle className="w-4 h-4" /> Төлбөр төлсөн
           </motion.button>

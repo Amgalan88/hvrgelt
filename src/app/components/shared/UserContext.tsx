@@ -41,12 +41,20 @@ interface UserContextValue {
 }
 
 const ACCENT_KEY = "hvrgelt_accent";
+const THEME_KEY = "hvrgelt_theme";
 const ACCENT_COLORS: AccentColor[] = ["orange", "blue", "green", "violet"];
 
 const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  // Цайвар горим үндсэн; сонголтыг төхөөрөмж дээр санана
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    try {
+      return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
     const saved = localStorage.getItem(ACCENT_KEY) as AccentColor | null;
     return saved && ACCENT_COLORS.includes(saved) ? saved : "orange";
@@ -75,7 +83,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [accentColor]);
 
   function toggleTheme() {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* хадгалах боломжгүй — энэ удаад л хэрэглэнэ */ }
+      return next;
+    });
   }
 
   function setAccentColor(c: AccentColor) {

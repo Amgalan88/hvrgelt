@@ -305,7 +305,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   }
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <Logo size="sm" />
@@ -316,7 +316,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
               + Шинэ
             </button>
           )}
-          <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-xs" style={{ fontFamily: "'Roboto Slab', serif" }}>
+          <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-xs" style={{ fontFamily: "var(--font-display)" }}>
             {userName[0]}
           </div>
         </div>
@@ -340,7 +340,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
             {orderStep === "form" && (
               <div className="space-y-4">
                 <div>
-                  <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem", lineHeight: 1.2 }}>
+                  <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem", lineHeight: 1.2 }}>
                     Хаашаа<br />хүргэх вэ?
                   </h1>
                   <p className="text-muted-foreground text-sm mt-1">30 секундэд захиалаарай</p>
@@ -348,7 +348,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
 
                 {/* Services — бидний санал болгож буй үндсэн үйлчилгээнүүд */}
                 <div className="space-y-2.5">
-                  <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Үйлчилгээ сонгох</p>
+                  <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Үйлчилгээ сонгох</p>
                   <div className="grid grid-cols-2 gap-2">
                     {SERVICES.map((sv, i) => {
                       const active = sv.id === serviceId;
@@ -404,7 +404,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 {/* Quick orders — compact icon tiles */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Хурдан захиалга</p>
+                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Хурдан захиалга</p>
                     {quickOrders.length > 0 && (
                       <button onClick={() => setQuickEdit((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                         {quickEdit ? "Болсон" : "Засах"}
@@ -532,7 +532,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 {basket.length > 0 && (
                   <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>
                         🛒 {basketPartner?.name ?? "Сагс"}
                       </p>
                       <button
@@ -578,7 +578,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   onClick={handleEstimate}
                   disabled={!fromAddr.trim() || !toAddr.trim()}
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-                  style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                 >
                   Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
                 </button>
@@ -591,7 +591,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 <button onClick={() => setOrderStep("form")} className="text-sm text-muted-foreground flex items-center gap-1 hover:text-foreground">
                   ← Буцах
                 </button>
-                <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.3rem" }}>Баталгаажуулах</h2>
+                <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.3rem" }}>Баталгаажуулах</h2>
 
                 {/* Map */}
                 <RoutePreview from={fromAddr} to={toAddr} />
@@ -665,7 +665,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   onClick={handleConfirm}
                   disabled={placing}
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-primary/90 transition-colors"
-                  style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                 >
                   {placing ? <Spinner className="w-5 h-5" /> : <>Захиалах <ArrowRight className="w-4 h-4" /></>}
                 </button>
@@ -678,11 +678,11 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-mono">#{myOrder.id}</p>
-                    <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>
+                    <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>
                       {myOrder.status === "хүргэгдсэн" ? "Амжилттай!" : "Захиалгын явц"}
                     </h2>
                   </div>
-                  <span className="text-right" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                  <span className="text-right" style={{ fontFamily: "var(--font-display)" }}>
                     {myOrder.price > 0 ? (
                       <span className="text-xl font-bold text-primary">₮{myOrder.price.toLocaleString()}</span>
                     ) : (
@@ -729,7 +729,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       onClick={() => setCourierProfileOpen(true)}
                       className="flex items-center gap-3 text-left group"
                     >
-                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold group-hover:border-primary transition-colors" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold group-hover:border-primary transition-colors" style={{ fontFamily: "var(--font-display)" }}>
                         {myOrder.courierName[0]}
                       </div>
                       <div>
@@ -777,7 +777,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   <div className="space-y-3">
                     <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-2">
                       <p className="text-xs text-muted-foreground">Хүргэлтийн үнэ тогтоогдлоо</p>
-                      <p className="text-3xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                      <p className="text-3xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
                         ₮{myOrder.price.toLocaleString()}
                       </p>
                       {myOrder.courierName && (
@@ -794,7 +794,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       <button
                         onClick={() => onConfirmOrder(myOrder.id)}
                         className="flex-1 bg-primary text-white py-3 rounded-2xl text-sm hover:bg-primary/90 transition-colors"
-                        style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                        style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                       >
                         Зөвшөөрч төлөх
                       </button>
@@ -807,7 +807,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   const shop = partners.find((x) => x.id === myOrder.partnerId);
                   return (
                     <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
-                      <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>
                         🛒 Барааны төлбөр — ₮{(myOrder.basketTotal ?? 0).toLocaleString()}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -855,7 +855,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         {tab === "places" && (
           <div className="space-y-3">
             <div>
-              <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.4rem" }}>Газрууд</h2>
+              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.4rem" }}>Газрууд</h2>
               <p className="text-muted-foreground text-sm mt-0.5">Карго, дэлгүүр, захаас шууд хүргүүл</p>
             </div>
 
@@ -938,7 +938,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         <button
                           onClick={() => openShop(p)}
                           className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
-                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                         >
                           Бараа үзэх <ArrowRight className="w-3.5 h-3.5" />
                         </button>
@@ -946,7 +946,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         <button
                           onClick={() => orderFromPartner(p)}
                           className="shrink-0 text-sm bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
-                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                         >
                           Захиалах <ArrowRight className="w-3.5 h-3.5" />
                         </button>
@@ -963,7 +963,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
 
         {tab === "history" && (
           <div className="space-y-4">
-            <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>Захиалгын түүх</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>Захиалгын түүх</h2>
             <OrderHistory
               orders={orders}
               userId={userId}
@@ -975,7 +975,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         {/* ── SETTINGS TAB ── */}
         {tab === "settings" && (
           <div className="space-y-4">
-            <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
             <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
         )}
@@ -1003,7 +1003,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
           <motion.div className="bg-card border border-border rounded-t-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }}>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{editingId ? "Хурдан захиалга засах" : "Хурдан захиалга нэмэх"}</h3>
+              <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{editingId ? "Хурдан захиалга засах" : "Хурдан захиалга нэмэх"}</h3>
               <button onClick={() => setQuickModal(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
             <p className="text-xs text-muted-foreground">Нэг удаа тохируулснаар дараа нь нэг товшилтоор захиална (жишээ: Карго авах, Тээш авах).</p>
@@ -1037,7 +1037,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
               )}
             </div>
 
-            <button onClick={handleSaveQuick} disabled={!qLabel.trim() || !qFrom.trim() || !qTo.trim()} className="w-full bg-primary text-primary-foreground py-3 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Хадгалах</button>
+            <button onClick={handleSaveQuick} disabled={!qLabel.trim() || !qFrom.trim() || !qTo.trim()} className="w-full bg-primary text-primary-foreground py-3 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>Хадгалах</button>
           </motion.div>
         </motion.div>
       )}
@@ -1051,7 +1051,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
           <motion.div className="bg-card border border-border rounded-2xl w-full max-w-xs p-6 text-center" onClick={(e) => e.stopPropagation()}
             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }}>
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl mx-auto mb-3">{confirmQO.emoji}</div>
-            <p className="font-bold mb-2" style={{ fontFamily: "'Roboto Slab', serif" }}>{confirmQO.label}</p>
+            <p className="font-bold mb-2" style={{ fontFamily: "var(--font-display)" }}>{confirmQO.label}</p>
             <div className="text-xs text-muted-foreground space-y-0.5 mb-3 text-left bg-secondary/40 rounded-xl p-3">
               <p className="leading-relaxed"><span className="text-green-400">●</span> {confirmQO.fromAddress}{confirmQO.fromDetail ? `, ${confirmQO.fromDetail}` : ""}</p>
               <p className="leading-relaxed"><span className="text-primary">◆</span> {confirmQO.toAddress}{confirmQO.toDetail ? `, ${confirmQO.toDetail}` : ""}</p>
@@ -1059,7 +1059,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
             <p className="text-sm text-muted-foreground mb-5">Хурдан захиалга үүсгэхэд итгэлтэй байна уу?</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmQO(null)} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:bg-secondary/50 transition-colors">Болих</button>
-              <button onClick={confirmPlaceQuick} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}>Захиалах</button>
+              <button onClick={confirmPlaceQuick} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>Захиалах</button>
             </div>
           </motion.div>
         </motion.div>

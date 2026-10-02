@@ -44,7 +44,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 overflow-y-auto"
-      style={{ fontFamily: "'Inter', sans-serif" }}
+      style={{ fontFamily: "var(--font-body)" }}
       onClick={onClose}
     >
       <div
@@ -53,7 +53,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>Таны хүргэгч</h3>
+            <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>Таны хүргэгч</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Тойрсон товч дээр дарж мэдээллийг харна</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -112,7 +112,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
 
           {/* Нэр */}
           <div className="text-center">
-            <p className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{name}</p>
+            <p className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {p.vehicle} · {p.experience} жил туршлагатай · {p.deliveries} хүргэлт
             </p>
@@ -178,7 +178,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
                       />
                     ))}
                   </div>
-                  <p className="text-2xl font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{p.rating.toFixed(1)}</p>
+                  <p className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{p.rating.toFixed(1)}</p>
                   <p className="text-xs text-muted-foreground">{p.deliveries} хүргэлтийн үнэлгээ</p>
                 </div>
               )}

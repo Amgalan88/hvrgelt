@@ -43,7 +43,7 @@ export function PartnerShop({ partner, products, initial, onClose, onConfirm }: 
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-      style={{ fontFamily: "'Inter', sans-serif" }}
+      style={{ fontFamily: "var(--font-body)" }}
       onClick={onClose}
     >
       <motion.div
@@ -54,7 +54,7 @@ export function PartnerShop({ partner, products, initial, onClose, onConfirm }: 
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
-            <h3 className="font-bold truncate" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            <h3 className="font-bold truncate" style={{ fontFamily: "var(--font-display)" }}>
               {partner.emoji} {partner.name}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">Барааг сагсандаа нэмнэ үү</p>
@@ -120,7 +120,7 @@ export function PartnerShop({ partner, products, initial, onClose, onConfirm }: 
           )}
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Барааны дүн</span>
-            <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            <span className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
               ₮{total.toLocaleString()}
             </span>
           </div>
@@ -128,7 +128,7 @@ export function PartnerShop({ partner, products, initial, onClose, onConfirm }: 
             onClick={() => onConfirm(items)}
             disabled={items.length === 0}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-40"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             <ShoppingBasket className="w-4 h-4" />
             {items.length > 0 ? `${items.length} бараа · Үргэлжлүүлэх` : "Бараа сонгоно уу"}

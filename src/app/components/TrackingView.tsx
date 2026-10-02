@@ -61,7 +61,7 @@ export function TrackingView() {
                 <span className="text-xs text-muted-foreground font-mono">Захиалга #</span>
                 <span className="text-sm font-mono text-foreground ml-1">{order.id}</span>
               </div>
-              <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+              <span className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
                 ₮{order.price.toLocaleString()}
               </span>
             </div>

@@ -108,7 +108,7 @@ export function PatternLock({ title, subtitle, error, onComplete, onCancel }: Pa
 
   return (
     <div className="flex flex-col items-center w-full px-6 py-4">
-      <h2 className="mb-1 text-center" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.3rem" }}>
+      <h2 className="mb-1 text-center" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.3rem" }}>
         {title}
       </h2>
       {subtitle && <p className="text-sm text-muted-foreground mb-1 text-center">{subtitle}</p>}

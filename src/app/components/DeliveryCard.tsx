@@ -41,7 +41,7 @@ export function DeliveryCard({ delivery, onBook }: DeliveryCardProps) {
           <p className="text-sm text-muted-foreground truncate">{delivery.description}</p>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+          <div className="text-xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
             ₮{delivery.price.toLocaleString()}
           </div>
           <div className="text-xs text-muted-foreground">{delivery.distance}</div>

@@ -15,7 +15,7 @@ export function MockPage() {
   const active = DEMO_COURIERS.find((c) => c.id === open);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="max-w-sm mx-auto flex items-center justify-between">
           <Logo size="sm" />
@@ -30,7 +30,7 @@ export function MockPage() {
 
       <div className="flex-1 max-w-sm mx-auto w-full px-4 py-5 space-y-4">
         <div>
-          <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.4rem", lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.4rem", lineHeight: 1.2 }}>
             Хүргэгчийн профайл
           </h1>
           <p className="text-muted-foreground text-sm mt-1">

@@ -52,7 +52,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
-          <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{title}</h3>
+          <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{title}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <div className="px-5 py-4 space-y-3">{children}</div>
@@ -108,7 +108,7 @@ function OperatorModal({ initial, onSave, onClose }: {
           onClick={() => { if (name && username && password && phone) { onSave({ name, username, password, phone }); onClose(); } }}
           disabled={!name || !username || !password || !phone}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
-          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
         >
           Хадгалах
         </button>
@@ -159,7 +159,7 @@ function CourierModal({ initial, onSave, onClose }: {
           onClick={() => { if (name && username && password && phone) { onSave({ name, username, password, phone, vehicle }); onClose(); } }}
           disabled={!name || !username || !password || !phone}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
-          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
         >
           Хадгалах
         </button>
@@ -285,7 +285,7 @@ function PartnerModal({ initial, onSave, onClose }: {
           onClick={() => { if (name && address) { onSave({ name, category, emoji, address, detail, area, image: image || undefined }); onClose(); } }}
           disabled={!name || !address || uploading}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
-          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
         >
           Хадгалах
         </button>
@@ -403,7 +403,7 @@ export function SuperadminApp({
   const partnerCount = partners.length;
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
@@ -435,7 +435,7 @@ export function SuperadminApp({
             { label: "Газар", value: partnerCount, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} border rounded-xl p-3 text-center`}>
-              <p className={`text-2xl font-bold ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
+              <p className={`text-2xl font-bold ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -475,7 +475,7 @@ export function SuperadminApp({
             {operatorAccounts.map((op) => (
               <div key={op.id} className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold shrink-0" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold shrink-0" style={{ fontFamily: "var(--font-display)" }}>
                     {op.name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -531,7 +531,7 @@ export function SuperadminApp({
             {courierAccounts.map((cr) => (
               <div key={cr.id} className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold shrink-0" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold shrink-0" style={{ fontFamily: "var(--font-display)" }}>
                     {cr.name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -644,7 +644,7 @@ export function SuperadminApp({
               return list.map((cu) => (
                 <div key={cu.id} className="bg-card border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shrink-0" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shrink-0" style={{ fontFamily: "var(--font-display)" }}>
                       {cu.name[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -809,7 +809,7 @@ export function SuperadminApp({
                 <Eye className="w-5 h-5 text-amber-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Role-оор үзэх</p>
+                <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Role-оор үзэх</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Үйлчлүүлэгч, жолооч, оператор, партнёрын дэлгэцийг тэдний нүдээр шалгана
                 </p>
@@ -820,7 +820,7 @@ export function SuperadminApp({
             <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-primary" />
-                <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Банкны мэдээлэл</p>
+                <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Банкны мэдээлэл</p>
               </div>
               <p className="text-xs text-muted-foreground">Хэрэглэгч захиалга батлах үед харагдах гүйлгээний мэдээлэл.</p>
               <textarea
@@ -833,7 +833,7 @@ export function SuperadminApp({
               <button
                 onClick={async () => { await onUpdateBankInfo(bankDraft); setBankSaved(true); setTimeout(() => setBankSaved(false), 2000); }}
                 className="w-full bg-primary text-white py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors"
-                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
               >
                 {bankSaved ? "✓ Хадгалагдлаа" : "Хадгалах"}
               </button>

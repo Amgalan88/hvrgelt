@@ -6,7 +6,7 @@ import { PatternLock } from "../shared/PatternLock";
 import { pushConfigured, pushSupported, notificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribed } from "../../lib/push";
 
 const ACCENT_SWATCHES: { key: AccentColor; label: string; color: string }[] = [
-  { key: "orange", label: "Улбар шар", color: "#ff5a1f" },
+  { key: "orange", label: "Улбар шар", color: "#e8531c" },
   { key: "blue", label: "Хөх", color: "#3b82f6" },
   { key: "green", label: "Ногоон", color: "#10b981" },
   { key: "violet", label: "Ягаан час", color: "#a855f7" },
@@ -34,7 +34,7 @@ function AddAddressModal({ initial, onClose, onSave }: AddAddressModalProps) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{initial ? "Хаяг засах" : "Хаяг нэмэх"}</h3>
+          <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{initial ? "Хаяг засах" : "Хаяг нэмэх"}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
@@ -95,7 +95,7 @@ function AddAddressModal({ initial, onClose, onSave }: AddAddressModalProps) {
             onClick={() => { if (label && address) { onSave({ label, address, detail, icon }); onClose(); } }}
             disabled={!label || !address}
             className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             Хадгалах
           </button>
@@ -168,11 +168,11 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
     <div className="space-y-5 pb-4">
       {/* Profile card */}
       <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary shrink-0" style={{ fontFamily: "'Roboto Slab', serif", fontSize: "1.4rem", fontWeight: 700 }}>
+        <div className="w-14 h-14 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary shrink-0" style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 700 }}>
           {userName[0]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>{userName}</p>
+          <p className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{userName}</p>
           <p className="text-sm text-muted-foreground">{userPhone}</p>
         </div>
         <button className="text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors">

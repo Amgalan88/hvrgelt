@@ -278,7 +278,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // ── LANDING ───────────────────────────────────────────────────────
   if (screen === "landing") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         <div className="relative flex-1 flex flex-col">
           <img
             src="https://images.unsplash.com/photo-1765808172074-702dc0371f93?w=800&h=900&fit=crop&auto=format"
@@ -292,7 +292,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Truck className="w-4 h-4 text-white" />
               </div>
-              <span style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "1.15rem", color: "#fff", letterSpacing: "-0.02em" }}>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "1.15rem", color: "#fff", letterSpacing: "-0.02em" }}>
                 hvrgelt<span className="text-primary">.mn</span>
               </span>
             </div>
@@ -303,7 +303,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
           <div className="relative z-10 mt-auto px-5 pb-10 space-y-5">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
-              <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
+              <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "2.6rem", lineHeight: 1.08, color: "#fff" }}>
                 Хурдан.<br />Найдвартай.<br /><span className="text-primary">Дархандаа.</span>
               </h1>
               <p className="text-white/55 text-sm mt-3">30 секундэд захиалга өгч, 340+ хүргэгчтэй холбогдоорой.</p>
@@ -313,7 +313,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setScreen("role")}
                 className="w-full bg-primary text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1rem" }}
+                style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1rem" }}
               >
                 Эхлэх <ArrowRight className="w-5 h-5" />
               </motion.button>
@@ -343,14 +343,14 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
       },
     ];
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         {!skipLanding && (
           <button onClick={() => setScreen("landing")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
         )}
         <Logo />
-        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Хэн бэ?</h2>
+        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>Хэн бэ?</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-8">Нэвтрэх хэлбэрээ сонгоно уу</p>
 
         <div className="space-y-3 flex-1">
@@ -370,7 +370,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{c.title}</p>
+                  <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{c.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{c.desc}</p>
                   <p className="text-[11px] text-primary mt-1">{c.hint}</p>
                 </div>
@@ -390,7 +390,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // ── PHONE INPUT ───────────────────────────────────────────────────
   if (screen === "phone") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <button onClick={() => setScreen("role")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -398,7 +398,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
         <div className="flex items-center gap-2">
           {mode === "courier" ? <Truck className="w-5 h-5 text-primary" /> : <User className="w-5 h-5 text-primary" />}
-          <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>
             {mode === "courier" ? "Жолоочоор нэвтрэх" : "Нэвтрэх"}
           </h2>
         </div>
@@ -441,7 +441,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
             onClick={handlePhoneSubmit}
             disabled={!isValidPhone(phone) || submitting}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             {submitting ? <Spinner className="w-4 h-4" /> : <>Үргэлжлүүлэх <ArrowRight className="w-4 h-4" /></>}
           </button>
@@ -461,7 +461,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     // Password (superadmin)
     if (authStep === "password") {
       return (
-        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
           <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -472,7 +472,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <Lock className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>{account.name}</div>
+              <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>{account.name}</div>
               <div className="text-xs text-muted-foreground flex items-center gap-1"><Smartphone className="w-3 h-3" />{phone}</div>
             </div>
           </div>
@@ -504,7 +504,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               onClick={() => verifyAuth(password)}
               disabled={!password || locked}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors"
-              style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
             >
               {locked ? `${countdown}с хүлээнэ үү` : "Нэвтрэх"}
             </button>
@@ -516,7 +516,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     // PIN
     if (authStep === "pin") {
       return (
-        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
           <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -526,7 +526,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <Hash className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>{account.name}</div>
+              <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>{account.name}</div>
               <div className="text-xs text-muted-foreground flex items-center gap-1"><Smartphone className="w-3 h-3" />{phone}</div>
             </div>
           </div>
@@ -543,7 +543,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     // Pattern
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -553,7 +553,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
             <Grid3x3 className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>{account.name}</div>
+            <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>{account.name}</div>
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Smartphone className="w-3 h-3" />{phone}</div>
           </div>
         </div>
@@ -574,10 +574,10 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     if (setupStep === "choose") {
       return (
-        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
           <Logo />
           <div className="mb-8">
-            <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.5rem" }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.5rem" }}>
               {account.role === "customer" ? `Сайн байна уу, ${greeting}!` : `Тавтай морил, ${greeting}!`}
             </h2>
             <p className="text-muted-foreground text-sm mt-2">
@@ -595,7 +595,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
                 <Hash className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>4 оронтой PIN</div>
+                <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>4 оронтой PIN</div>
                 <div className="text-xs text-muted-foreground mt-0.5">Тоон код ашиглан нэвтрэх</div>
               </div>
               <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto" />
@@ -608,7 +608,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
                 <Grid3x3 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>Pattern зурах</div>
+                <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>Pattern зурах</div>
                 <div className="text-xs text-muted-foreground mt-0.5">Цэгүүдийг холбож нэвтрэх</div>
               </div>
               <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto" />
@@ -620,7 +620,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
     if (setupStep === "pin") {
       return (
-        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
           <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
@@ -636,7 +636,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
 
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -683,9 +683,9 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "info") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { resetRegister(); setScreen("phone"); }} />
-        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>
+        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>
           {mode === "courier" ? "Жолоочоор бүртгүүлэх" : "Бүртгүүлэх"}
         </h2>
         <p className="text-muted-foreground text-sm mt-1 mb-6">
@@ -748,7 +748,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
             onClick={() => setRegStep("choose")}
             disabled={!rName.trim() || !isValidPhone(rPhone)}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
           </button>
@@ -762,9 +762,9 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "choose") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => setRegStep("info")} />
-        <h2 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.6rem" }}>Нууцлал сонгох</h2>
+        <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>Нууцлал сонгох</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-8">Аппыг хамгаалах аргаа сонгоорой</p>
         <div className="space-y-3 flex-1">
           <button
@@ -775,7 +775,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <Hash className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>4 оронтой PIN</div>
+              <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>4 оронтой PIN</div>
               <div className="text-xs text-muted-foreground mt-0.5">Тоон код ашиглан нэвтрэх</div>
             </div>
             <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto" />
@@ -788,7 +788,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <Grid3x3 className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <div className="font-semibold text-sm" style={{ fontFamily: "'Roboto Slab', serif" }}>Pattern зурах</div>
+              <div className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>Pattern зурах</div>
               <div className="text-xs text-muted-foreground mt-0.5">Цэгүүдийг холбож нэвтрэх</div>
             </div>
             <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto" />
@@ -800,7 +800,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "pin") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { setPinFirst(""); setRegStep("choose"); }} />
         <PinPad
           title={pinFirst ? "PIN баталгаажуулах" : "PIN тохируулах"}
@@ -814,7 +814,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
 
   if (screen === "register" && regStep === "pattern") {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { setPatternFirst(""); setRegStep("choose"); }} />
         <PatternLock
           title={patternFirst ? "Pattern баталгаажуулах" : "Pattern тохируулах"}

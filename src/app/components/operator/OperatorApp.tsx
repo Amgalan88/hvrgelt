@@ -94,7 +94,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
   const cancelledOrders = filter === "дууссан" ? filtered.filter((o) => o.status === "цуцлагдсан") : [];
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
@@ -137,7 +137,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
             { label: "Хүргэгдсэн", value: doneCount, color: "text-green-400", ring: "border-green-500/30 bg-green-500/10" },
           ].map((s) => (
             <div key={s.label} className={`${s.ring} border rounded-xl p-2.5 text-center`}>
-              <p className={`text-xl font-bold font-mono ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
+              <p className={`text-xl font-bold font-mono ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>
               <p className="text-xs text-muted-foreground">{s.label}</p>
             </div>
           ))}
@@ -374,7 +374,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                               }
                             }}
                             className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                           >
                             {assigningId === order.id ? <Spinner className="w-4 h-4" /> : <>Үнэ илгээх <CheckCircle className="w-4 h-4" /></>}
                           </button>
@@ -406,7 +406,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                             }
                           }}
                           className="w-full bg-violet-500 text-white py-2.5 rounded-xl text-sm hover:bg-violet-500/90 transition-colors disabled:opacity-60"
-                          style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                         >
                           Төлбөр орсныг баталгаажуулах
                         </button>

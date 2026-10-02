@@ -39,7 +39,7 @@ export function CargoDetails({ value, onChange }: CargoDetailsProps) {
 
   return (
     <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-      <p className="text-sm font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>Ачааны мэдээлэл</p>
+      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Ачааны мэдээлэл</p>
 
       {/* Зураг */}
       <input

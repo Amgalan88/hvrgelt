@@ -79,7 +79,7 @@ export function RoleSwitcher({
   }
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 max-w-sm mx-auto w-full px-4 py-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -95,7 +95,7 @@ export function RoleSwitcher({
         </div>
 
         <div>
-          <h1 style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.5rem", lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.5rem", lineHeight: 1.2 }}>
             Аль role-оор үзэх вэ?
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -128,7 +128,7 @@ export function RoleSwitcher({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{r.label}</p>
+                      <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{r.label}</p>
                       {isCurrent && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                           одоо
@@ -206,7 +206,7 @@ export function ViewAsBar({ label, onSwitch, onExit }: { label: string; onSwitch
   return (
     <div className="fixed left-1/2 -translate-x-1/2 bottom-20 z-[90] flex items-center gap-1 bg-amber-500 text-black rounded-full shadow-lg pl-3 pr-1 py-1">
       <Eye className="w-3.5 h-3.5 shrink-0" />
-      <span className="text-xs font-semibold truncate max-w-[9rem]" style={{ fontFamily: "'Roboto Slab', serif" }}>{label}</span>
+      <span className="text-xs font-semibold truncate max-w-[9rem]" style={{ fontFamily: "var(--font-display)" }}>{label}</span>
       <button
         onClick={onSwitch}
         className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-black/10 transition-colors"

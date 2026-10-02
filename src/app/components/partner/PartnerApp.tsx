@@ -104,7 +104,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
 
   if (!partner) {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-3 px-6 text-center" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-3 px-6 text-center" style={{ fontFamily: "var(--font-body)" }}>
         <Package className="w-10 h-10 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Таны байгууллагын мэдээлэл олдсонгүй. Админтай холбогдоно уу.</p>
         <button onClick={onLogout} className="text-sm text-primary underline">Гарах</button>
@@ -113,7 +113,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
   }
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="max-w-sm mx-auto flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
@@ -202,7 +202,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
             <button
               onClick={openAdd}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-              style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
             >
               <Plus className="w-4 h-4" /> Бараа нэмэх
             </button>
@@ -251,7 +251,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>
+              <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>
                 {editing ? "Бараа засах" : "Бараа нэмэх"}
               </h3>
               <button onClick={() => setAdding(false)} className="text-muted-foreground hover:text-foreground">
@@ -317,7 +317,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
                 onClick={save}
                 disabled={busy}
                 className="w-full bg-primary text-primary-foreground py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
-                style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Хадгалах
               </button>

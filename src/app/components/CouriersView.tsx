@@ -102,7 +102,7 @@ export function CouriersView() {
         <div key={courier.id} className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-start gap-4 mb-4">
             <div className="relative shrink-0">
-              <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-lg" style={{ fontFamily: "'Roboto Slab', serif" }}>
+              <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-lg" style={{ fontFamily: "var(--font-display)" }}>
                 {courier.avatar}
               </div>
               {courier.available && (
@@ -111,7 +111,7 @@ export function CouriersView() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="font-semibold" style={{ fontFamily: "'Roboto Slab', serif" }}>{courier.name}</h3>
+                <h3 className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{courier.name}</h3>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${courier.available ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-secondary text-muted-foreground border border-border"}`}>
                   {courier.available ? "чөлөөтэй" : "завгүй"}
                 </span>

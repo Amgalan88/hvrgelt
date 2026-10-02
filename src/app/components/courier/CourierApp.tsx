@@ -96,7 +96,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   }
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <header className="bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
@@ -127,7 +127,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
             { label: "Өнөөдрийн орлого", value: `₮${Math.round(todayEarnings / 1000)}K`, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} border rounded-xl p-2.5 text-center`}>
-              <p className={`text-lg font-bold font-mono ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
+              <p className={`text-lg font-bold font-mono ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>
               <p className="text-xs text-muted-foreground leading-tight mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -285,7 +285,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                       {/* Price */}
                       <div className="flex items-center justify-between bg-secondary/50 rounded-xl px-3 py-2">
                         <span className="text-xs text-muted-foreground">Таны орлого</span>
-                        <span className="font-bold text-primary font-mono" style={{ fontFamily: "'Roboto Slab', serif" }}>
+                        <span className="font-bold text-primary font-mono" style={{ fontFamily: "var(--font-display)" }}>
                           ₮{Math.round(order.price * 0.8).toLocaleString()}
                         </span>
                       </div>
@@ -305,7 +305,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                           <button
                             onClick={() => { setConfirmId(order.id); setConfirmAction("авах"); }}
                             className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-medium hover:bg-amber-600 transition-colors flex items-center justify-center gap-2"
-                            style={{ fontFamily: "'Roboto Slab', serif" }}
+                            style={{ fontFamily: "var(--font-display)" }}
                           >
                             <CheckCircle className="w-4 h-4" />
                             Ачаа авлаа
@@ -316,7 +316,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                           <button
                             onClick={() => { setConfirmId(order.id); setConfirmAction("хүргэх"); }}
                             className="flex-1 bg-primary text-white py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                            style={{ fontFamily: "'Roboto Slab', serif" }}
+                            style={{ fontFamily: "var(--font-display)" }}
                           >
                             <CheckCircle className="w-4 h-4" />
                             Хүргэлт дуусгах
@@ -392,7 +392,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
       {confirmId && confirmAction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-5 space-y-4">
-            <h3 className="font-bold text-center" style={{ fontFamily: "'Roboto Slab', serif", fontSize: "1.1rem" }}>
+            <h3 className="font-bold text-center" style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem" }}>
               {confirmAction === "авах" ? "Ачаа авсныг баталгаажуулах" : "Хүргэлт дуусгах"}
             </h3>
             <p className="text-sm text-muted-foreground text-center">
@@ -407,7 +407,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
               <button
                 onClick={handleConfirm}
                 className={`flex-1 py-3 rounded-xl text-white text-sm font-medium transition-colors ${confirmAction === "авах" ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-primary/90"}`}
-                style={{ fontFamily: "'Roboto Slab', serif" }}
+                style={{ fontFamily: "var(--font-display)" }}
               >
                 {confirmAction === "авах" ? "Авлаа" : "Хүргэлээ"}
               </button>

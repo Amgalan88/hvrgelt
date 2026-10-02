@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="mn">
+<html lang="mn" class="light-mode">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>hvrgelt.mn — Дарханы хурдан хүргэлт</title>
     <meta name="description" content="Дарханы хурдан, найдвартай хүргэлтийн үйлчилгээ. 30 секундэд захиалга өгч, хүргэгчтэй холбогдоорой." />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#ff5a1f" />
+    <meta name="theme-color" content="#e8531c" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -22,8 +22,23 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="mn_MN" />
 
+    <!-- Фонт эрт татах -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Хадгалсан горимыг React ачаалахаас өмнө тавьж, анивчилтаас сэргийлнэ -->
+    <script>
+      try {
+        if (localStorage.getItem("hvrgelt_theme") === "dark") {
+          document.documentElement.classList.remove("light-mode");
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
+
     <style>
-      html, body { height: 100%; margin: 0; }
+      html, body { height: 100%; margin: 0; background: #f7f5f2; }
+      html.dark, html.dark body { background: #0b0d12; }
       #root { height: 100%; }
     </style>
   </head>

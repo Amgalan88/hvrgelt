@@ -39,7 +39,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
     if (fired.current) return;
     fired.current = true;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const colors = ["#ff5a1f", "#ffb01f", "#22c55e", "#ffffff"];
+    const colors = ["#e8531c", "#ffb01f", "#12a150", "#ffffff"];
     confetti({ particleCount: 90, spread: 70, origin: { y: 0.35 }, colors });
     const t = setTimeout(() => confetti({ particleCount: 50, spread: 100, origin: { y: 0.3 }, colors }), 350);
     return () => clearTimeout(t);
@@ -90,7 +90,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
           alt="Хүргэгч"
           className="w-32 h-32 object-contain"
         />
-        <h2 className="mt-2" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.4rem" }}>
+        <h2 className="mt-2" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.4rem" }}>
           Баярлалаа! 🎉
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
@@ -100,7 +100,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
 
       {/* Жолоочийн үнэлгээ */}
       <div className="bg-card border border-border rounded-2xl p-5 text-center">
-        <p className="text-sm font-medium" style={{ fontFamily: "'Roboto Slab', serif" }}>
+        <p className="text-sm font-medium" style={{ fontFamily: "var(--font-display)" }}>
           {order.courierName ? `${order.courierName}-г үнэлнэ үү` : "Хүргэлтээ үнэлнэ үү"}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">Таны оноо жолоочийн урамшуулалд нөлөөлнө</p>
@@ -157,7 +157,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
         </button>
       ) : (
         <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-          <p className="text-sm font-medium" style={{ fontFamily: "'Roboto Slab', serif" }}>Санал хүсэлт</p>
+          <p className="text-sm font-medium" style={{ fontFamily: "var(--font-display)" }}>Санал хүсэлт</p>
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Утасны дугаар</label>
             <input
@@ -183,7 +183,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
             onClick={send}
             disabled={sending}
             className="w-full bg-primary text-primary-foreground py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             <Send className="w-4 h-4" /> Илгээх
           </button>

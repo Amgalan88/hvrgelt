@@ -33,7 +33,7 @@ export function PinPad({ title, subtitle, onComplete, onCancel, error }: PinPadP
   return (
     <div className="flex flex-col items-center px-6 py-8 w-full max-w-xs mx-auto">
       {/* Title */}
-      <h2 className="mb-1" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700, fontSize: "1.3rem" }}>
+      <h2 className="mb-1" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.3rem" }}>
         {title}
       </h2>
       {subtitle && <p className="text-sm text-muted-foreground mb-6 text-center">{subtitle}</p>}
@@ -71,7 +71,7 @@ export function PinPad({ title, subtitle, onComplete, onCancel, error }: PinPadP
                   ? "bg-transparent text-muted-foreground hover:text-foreground"
                   : "bg-card border border-border text-foreground hover:bg-secondary hover:border-primary/30"
               }`}
-              style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600, fontSize: key === "⌫" ? "1rem" : "1.4rem" }}
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: key === "⌫" ? "1rem" : "1.4rem" }}
             >
               {key === "⌫" ? <Delete className="w-5 h-5" /> : key}
             </button>

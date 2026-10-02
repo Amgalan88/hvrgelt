@@ -170,7 +170,7 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
         onClick={save}
         disabled={saving}
         className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50"
-        style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+        style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
         {saved ? "Хадгалагдлаа" : "Хадгалах"}

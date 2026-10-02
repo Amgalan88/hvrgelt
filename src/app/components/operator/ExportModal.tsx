@@ -24,13 +24,13 @@ export function ExportModal({ orders, onClose }: ExportModalProps) {
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-      style={{ fontFamily: "'Inter', sans-serif" }}
+      style={{ fontFamily: "var(--font-body)" }}
       onClick={onClose}
     >
       <div className="bg-card border border-border rounded-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h3 className="font-bold" style={{ fontFamily: "'Roboto Slab', serif" }}>Захиалгын тайлан</h3>
+            <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>Захиалгын тайлан</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Өдрөөр шүүж Excel-д татах</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -77,7 +77,7 @@ export function ExportModal({ orders, onClose }: ExportModalProps) {
               { label: "Цуцлагдсан", value: stat.cancelled, color: "text-red-400" },
             ].map((s) => (
               <div key={s.label} className="bg-secondary/50 border border-border rounded-xl p-2.5 text-center">
-                <p className={`text-lg font-bold ${s.color}`} style={{ fontFamily: "'Roboto Slab', serif" }}>{s.value}</p>
+                <p className={`text-lg font-bold ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>
                 <p className="text-[11px] text-muted-foreground">{s.label}</p>
               </div>
             ))}
@@ -85,7 +85,7 @@ export function ExportModal({ orders, onClose }: ExportModalProps) {
 
           <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-xl px-4 py-3">
             <span className="text-sm text-muted-foreground">Нийт дүн</span>
-            <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            <span className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
               ₮{stat.revenue.toLocaleString()}
             </span>
           </div>
@@ -103,7 +103,7 @@ export function ExportModal({ orders, onClose }: ExportModalProps) {
             onClick={() => downloadOrdersCsv(dayOrders, date)}
             disabled={stat.total === 0}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-            style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             <Download className="w-4 h-4" /> Excel татах
           </button>

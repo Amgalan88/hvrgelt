@@ -1,114 +1,143 @@
 @custom-variant dark (&:is(.dark *));
 
-:root {
+/*
+ * Дархан хүргэлт — брэндийн токенууд.
+ * Цайвар горим үндсэн (:root ба .light-mode), харанхуй нь .dark.
+ * Өнгө солих бол зөвхөн энд солино — компонентууд эдгээр токеныг ашигладаг.
+ */
+:root,
+.light-mode {
   --font-size: 16px;
-  --background: #07090f;
-  --foreground: #f0f2f8;
-  --card: #111623;
-  --card-foreground: #f0f2f8;
-  --popover: #111623;
-  --popover-foreground: #f0f2f8;
-  --primary: #ff5a1f;
+  --font-body: 'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-code: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --brand: #e8531c;
+  --brand-strong: #c9430f;
+
+  --background: #f7f5f2;
+  --foreground: #16181d;
+  --card: #ffffff;
+  --card-foreground: #16181d;
+  --popover: #ffffff;
+  --popover-foreground: #16181d;
+  --primary: #e8531c;
   --primary-foreground: #ffffff;
-  --secondary: #1a2035;
-  --secondary-foreground: #f0f2f8;
-  --muted: #1a2035;
-  --muted-foreground: #7b8aaa;
-  --accent: #ff5a1f;
+  --secondary: #efece7;
+  --secondary-foreground: #16181d;
+  --muted: #efece7;
+  --muted-foreground: #646976;
+  --accent: #e8531c;
   --accent-foreground: #ffffff;
-  --destructive: #d4183d;
+  --destructive: #d92d20;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.08);
+  --success: #12a150;
+  --border: rgba(22, 24, 29, 0.09);
   --input: transparent;
-  --input-background: #1a2035;
-  --switch-background: #2a3550;
+  --input-background: #f3f1ed;
+  --switch-background: #d9d5ce;
   --font-weight-medium: 600;
   --font-weight-normal: 400;
-  --ring: #ff5a1f;
-  --radius: 0.5rem;
-  --map-filter: invert(1) hue-rotate(180deg) brightness(0.85);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.light-mode {
-  --background: #f8f4ee;
-  --foreground: #1a1614;
-  --card: #ffffff;
-  --card-foreground: #1a1614;
-  --popover: #ffffff;
-  --popover-foreground: #1a1614;
-  --primary: #ff5a1f;
-  --primary-foreground: #ffffff;
-  --secondary: #f3e9dd;
-  --secondary-foreground: #1a1614;
-  --muted: #f3e9dd;
-  --muted-foreground: #7d7364;
-  --accent: #ff5a1f;
-  --accent-foreground: #ffffff;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: rgba(26, 22, 20, 0.11);
-  --input: transparent;
-  --input-background: #f3e9dd;
-  --switch-background: #ddd0bd;
-  --ring: #ff5a1f;
+  --ring: #e8531c;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(22, 24, 29, 0.04), 0 4px 14px rgba(22, 24, 29, 0.05);
   --map-filter: none;
-}
 
-/* Цагаан карт дэвсгэрээс тод ялгарч тодрол өгнө — day mode дээр flat/уйтгартай харагдахгүй байхын тулд */
-.light-mode .bg-card {
-  box-shadow: 0 1px 2px rgba(26, 22, 20, 0.05), 0 6px 16px rgba(26, 22, 20, 0.06);
+  --chart-1: #e8531c;
+  --chart-2: #12a150;
+  --chart-3: #2563eb;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16181d;
+  --sidebar-primary: #e8531c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efece7;
+  --sidebar-accent-foreground: #16181d;
+  --sidebar-border: rgba(22, 24, 29, 0.09);
+  --sidebar-ring: #e8531c;
 }
 
 .dark {
-  --background: #07090f;
-  --foreground: #f0f2f8;
-  --card: #111623;
-  --card-foreground: #f0f2f8;
-  --popover: #111623;
-  --popover-foreground: #f0f2f8;
-  --primary: #ff5a1f;
+  --brand: #ff6a33;
+  --brand-strong: #ff8a5c;
+
+  --background: #0b0d12;
+  --foreground: #f2f3f5;
+  --card: #14171f;
+  --card-foreground: #f2f3f5;
+  --popover: #14171f;
+  --popover-foreground: #f2f3f5;
+  --primary: #ff6a33;
   --primary-foreground: #ffffff;
-  --secondary: #1a2035;
-  --secondary-foreground: #f0f2f8;
-  --muted: #1a2035;
-  --muted-foreground: #7b8aaa;
-  --accent: #ff5a1f;
+  --secondary: #1c2029;
+  --secondary-foreground: #f2f3f5;
+  --muted: #1c2029;
+  --muted-foreground: #8b91a1;
+  --accent: #ff6a33;
   --accent-foreground: #ffffff;
-  --destructive: #d4183d;
+  --destructive: #f04438;
   --destructive-foreground: #ffffff;
+  --success: #32d583;
   --border: rgba(255, 255, 255, 0.08);
   --input: transparent;
-  --input-background: #1a2035;
-  --switch-background: #2a3550;
-  --ring: #ff5a1f;
+  --input-background: #1c2029;
+  --switch-background: #2c3240;
+  --ring: #ff6a33;
+  --shadow-card: none;
   --map-filter: invert(1) hue-rotate(180deg) brightness(0.85);
+  --sidebar: #14171f;
+  --sidebar-foreground: #f2f3f5;
+  --sidebar-accent: #1c2029;
+  --sidebar-accent-foreground: #f2f3f5;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Цайвар горимд картууд дэвсгэрээс зөөлөн тодорно */
+:root:not(.dark) .bg-card {
+  box-shadow: var(--shadow-card);
+}
+
+/*
+ * Код дотор харанхуй дэвсгэрт тааруулсан тод өнгөнүүд (text-amber-400 г.м.)
+ * олон байдаг. Цайвар горимд эдгээр нь цагаан дээр бүдэг харагдах тул
+ * ижил өнгөний бараан хувилбар руу шилжүүлнэ. Дэвсгэрийн (bg-*-500/10)
+ * өнгөнүүд хэвээр үлдэнэ.
+ */
+:root:not(.dark) {
+  --color-amber-300: oklch(55.5% 0.163 48.998);
+  --color-amber-400: oklch(55.5% 0.163 48.998);
+  --color-yellow-400: oklch(55.4% 0.135 66.442);
+  --color-orange-300: oklch(55.3% 0.195 38.402);
+  --color-orange-400: oklch(55.3% 0.195 38.402);
+  --color-green-300: oklch(52.7% 0.154 150.069);
+  --color-green-400: oklch(52.7% 0.154 150.069);
+  --color-emerald-400: oklch(50.8% 0.118 165.612);
+  --color-red-300: oklch(50.5% 0.213 27.518);
+  --color-red-400: oklch(50.5% 0.213 27.518);
+  --color-blue-300: oklch(48.8% 0.243 264.376);
+  --color-blue-400: oklch(48.8% 0.243 264.376);
+  --color-purple-300: oklch(49.6% 0.265 301.924);
+  --color-purple-400: oklch(49.6% 0.265 301.924);
+  --color-violet-300: oklch(49.1% 0.27 292.581);
+  --color-violet-400: oklch(49.1% 0.27 292.581);
 }
 
 /* ── Accent color themes — сонголттой брэнд өнгө (Тохиргоо хуудаснаас сонгоно) ── */
-.light-mode.accent-blue   { --primary: #2563eb; --accent: #2563eb; --ring: #2563eb; --primary-foreground: #ffffff; }
-.dark.accent-blue         { --primary: #3b82f6; --accent: #3b82f6; --ring: #3b82f6; --primary-foreground: #ffffff; }
+:root.accent-blue,  .light-mode.accent-blue   { --primary: #2563eb; --accent: #2563eb; --ring: #2563eb; }
+.dark.accent-blue                              { --primary: #3b82f6; --accent: #3b82f6; --ring: #3b82f6; }
 
-.light-mode.accent-green  { --primary: #059669; --accent: #059669; --ring: #059669; --primary-foreground: #ffffff; }
-.dark.accent-green        { --primary: #10b981; --accent: #10b981; --ring: #10b981; --primary-foreground: #ffffff; }
+:root.accent-green, .light-mode.accent-green  { --primary: #0e9f6e; --accent: #0e9f6e; --ring: #0e9f6e; }
+.dark.accent-green                             { --primary: #10b981; --accent: #10b981; --ring: #10b981; }
 
-.light-mode.accent-violet { --primary: #9333ea; --accent: #9333ea; --ring: #9333ea; --primary-foreground: #ffffff; }
-.dark.accent-violet       { --primary: #a855f7; --accent: #a855f7; --ring: #a855f7; --primary-foreground: #ffffff; }
+:root.accent-violet, .light-mode.accent-violet { --primary: #7c3aed; --accent: #7c3aed; --ring: #7c3aed; }
+.dark.accent-violet                             { --primary: #a78bfa; --accent: #a78bfa; --ring: #a78bfa; }
 
 @theme inline {
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-code);
+  --color-success: var(--success);
+  --color-brand: var(--brand);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -156,7 +185,21 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Тоо, үнэ, хугацаа баганаараа тэгшрэнэ */
+  .font-mono, .tabular { font-variant-numeric: tabular-nums; }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  ::selection { background: color-mix(in oklab, var(--primary) 25%, transparent); }
 
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).

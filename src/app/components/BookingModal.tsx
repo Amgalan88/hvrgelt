@@ -20,7 +20,7 @@ export function BookingModal({ delivery, onClose, onConfirm }: BookingModalProps
           <div className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-          <h3 className="text-xl mb-2" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700 }}>
+          <h3 className="text-xl mb-2" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
             Амжилттай захиалагдлаа!
           </h3>
           <p className="text-muted-foreground text-sm mb-1">Захиалгын дугаар</p>
@@ -43,7 +43,7 @@ export function BookingModal({ delivery, onClose, onConfirm }: BookingModalProps
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-2xl max-w-md w-full">
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h3 className="text-lg" style={{ fontFamily: "'Roboto Slab', serif", fontWeight: 700 }}>
+          <h3 className="text-lg" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
             Хүргэлт авах
           </h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -94,7 +94,7 @@ export function BookingModal({ delivery, onClose, onConfirm }: BookingModalProps
 
           <div className="flex items-center justify-between px-1">
             <span className="text-muted-foreground text-sm">Хүргэлтийн үнэ</span>
-            <span className="text-2xl font-bold text-primary" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            <span className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
               ₮{delivery.price.toLocaleString()}
             </span>
           </div>
