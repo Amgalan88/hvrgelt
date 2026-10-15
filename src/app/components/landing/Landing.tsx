@@ -1,6 +1,9 @@
 import { motion } from "motion/react";
-import { ArrowRight, Phone, Clock, MapPin, Truck, Zap, Users, ShieldCheck } from "lucide-react";
-import { Logo } from "../shared/Logo";
+import {
+  ArrowRight, Phone, Clock, MapPin, Truck, Package, Luggage, Container, Baby, Construction,
+  Droplets, Tractor, Forklift, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
+} from "lucide-react";
+import { Logo, LogoMark } from "../shared/Logo";
 import { SERVICES } from "../customer/services";
 import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE } from "../../lib/contact";
 
@@ -9,22 +12,45 @@ export type LegalKey = "terms" | "privacy" | "about" | "contact";
 interface LandingProps {
   /** Нэвтэрсэн session байгаа эсэх — товчны бичиг өөрчлөгдөнө */
   hasSession: boolean;
-  /** Захиалагчаар эсвэл жолоочоор эхлэх */
+  /** Захиалагчаар эсвэл хүргэгчээр эхлэх */
   onStart: (mode: "customer" | "courier") => void;
   onLegal: (page: LegalKey) => void;
 }
 
-const STATS = [
-  { icon: Zap, value: "30 сек", label: "захиалга өгөх" },
-  { icon: Clock, value: "30 мин", label: "дунджаар хүргэнэ" },
-  { icon: Users, value: "30+", label: "хүргэгч" },
+/** Үйлчилгээ бүрийн icon — апп доторх emoji-ийн оронд нэг хэв маягийн дүрс */
+const SERVICE_ICON: Record<string, LucideIcon> = {
+  goods: Package,
+  "goods-heavy": Luggage,
+  "truck-2t": Truck,
+  "truck-big": Container,
+  kids: Baby,
+  crane: Construction,
+  vacuum: Droplets,
+  excavator: Tractor,
+  bobcat: Forklift,
+};
+
+/** Хүргэгчийн авах хувь — CourierApp-д price * 0.8 гэж тооцогддог */
+const COURIER_SHARE = "80%";
+
+const FACTS: { icon: LucideIcon; title: string; body: string }[] = [
+  { icon: Zap, title: "30 секунд", body: "захиалга өгөхөд" },
+  { icon: Clock, title: "~30 минут", body: "хотын дотор хүргэлт" },
+  { icon: Navigation, title: "Бодит цагт", body: "хүргэгчээ газрын зураг дээр" },
+  { icon: BadgeCheck, title: "Шалгагдсан", body: "хүргэгч бүр баримттай" },
 ];
 
 const STEPS = [
-  { title: "Хаягаа оруулна", body: "Авах, хүргэх хаяг болон үйлчилгээгээ сонгоно." },
-  { title: "Үнээ батална", body: "Оператор үнийг тогтоож, та апп дээрээ зөвшөөрнө." },
-  { title: "Хүргэгч ирнэ", body: "Хамгийн ойр байгаа хүргэгч томилогдож ачааг авна." },
-  { title: "Явцыг харна", body: "Ачаа хаана явааг бодит цагт апп дээрээ хянана." },
+  { title: "Хаягаа оруулна", body: "Юу, хаанаас, хаашаа хүргэхээ гурван асуултаар хэлнэ. Газрын зураг дээр цэгээ заавал хүргэгч шууд олно." },
+  { title: "Үнээ зөвшөөрнө", body: "Оператор үнийг тогтооно. Та апп дээрээ зөвшөөрч төлбөрөө хийнэ." },
+  { title: "Хүргэгч ирнэ", body: "Чөлөөтэй хүргэгч томилогдож ачааг авна. Хаана явааг газрын зураг дээр харна." },
+  { title: "Хүлээн авна", body: "Хүргэгдсэний дараа хүргэгчээ үнэлж, санал хүсэлтээ үлдээнэ." },
+];
+
+const COURIER_NEEDS: { icon: LucideIcon; text: string }[] = [
+  { icon: Bike, text: "Машин, мотоцикл, мопед эсвэл дугуй" },
+  { icon: Smartphone, text: "Интернэттэй ухаалаг утас" },
+  { icon: IdCard, text: "Жолооны үнэмлэх, тээврийн хэрэгслийн зураг" },
 ];
 
 function FacebookIcon() {
@@ -43,6 +69,54 @@ function InstagramIcon() {
   );
 }
 
+/** Апп-ын жинхэнэ эхний дэлгэцийн жижигрүүлсэн загвар — hero-д бүтээгдэхүүнээ харуулна */
+function PhonePreview() {
+  const rows = SERVICES.slice(0, 5);
+  return (
+    <div className="relative mx-auto w-[280px] rounded-[2.6rem] bg-[#0b0d12] p-[10px] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10" aria-hidden>
+      <div className="rounded-[2rem] overflow-hidden bg-[#f7f5f2] text-[#16181d]">
+        <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[10px] font-semibold">
+          <span>9:41</span>
+          <span className="w-16 h-4 rounded-full bg-[#0b0d12]" />
+          <span>5G</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-4 py-2">
+          <LogoMark size={20} />
+          <span className="text-[11px] font-extrabold tracking-tight">Дархан <span style={{ color: "#e8531c" }}>хүргэлт</span></span>
+        </div>
+        <div className="mx-3 rounded-2xl bg-[#16181d] text-white p-3.5">
+          <p className="text-[9px] text-white/55 text-right">Алхам 1/4</p>
+          <p className="text-[17px] font-extrabold leading-tight mt-0.5">Юу хүргүүлэх вэ?</p>
+          <p className="text-[9.5px] text-white/60 mt-1">Үйлчилгээгээ сонгоно уу</p>
+          <div className="grid grid-cols-4 gap-1 mt-2.5">
+            <span className="h-[3px] rounded-full bg-[#e8531c]" />
+            <span className="h-[3px] rounded-full bg-white/15" />
+            <span className="h-[3px] rounded-full bg-white/15" />
+            <span className="h-[3px] rounded-full bg-white/15" />
+          </div>
+        </div>
+        <div className="mx-3 mt-2.5 mb-4 rounded-2xl bg-white border border-black/[0.06] divide-y divide-black/[0.06]">
+          {rows.map((sv, i) => {
+            const Icon = SERVICE_ICON[sv.id] ?? Package;
+            return (
+              <div key={sv.id} className={`flex items-center gap-2 px-2.5 py-2 ${i === 0 ? "bg-[#e8531c]/[0.06]" : ""}`}>
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${i === 0 ? "bg-[#e8531c]/15 text-[#e8531c]" : "bg-[#efece7] text-[#16181d]"}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[10px] font-semibold leading-tight truncate">{sv.label}</span>
+                  <span className="block text-[8.5px] text-[#646976] truncate">{sv.desc}</span>
+                </span>
+                <ArrowRight className="w-3 h-3 text-[#646976]" />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Нийтэд нээлттэй нүүр хуудас — нэвтрээгүй зочинд харагдана */
 export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
   const year = new Date().getFullYear();
@@ -50,196 +124,303 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden rounded-b-[2rem] bg-[#0b0d12]">
-        <img src="/banner.jpg" alt="Дархан хот" className="absolute inset-0 w-full h-full object-cover opacity-90" />
+      <section className="relative overflow-hidden bg-[#0b0d12] text-white">
+        <img src="/banner.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(180deg, rgba(11,13,18,0.35) 0%, rgba(11,13,18,0.55) 40%, rgba(11,13,18,0.96) 100%)" }}
+          style={{ background: "linear-gradient(180deg, rgba(11,13,18,0.45) 0%, rgba(11,13,18,0.6) 45%, rgba(11,13,18,0.97) 100%)" }}
         />
+        <div className="absolute inset-0 hidden md:block" style={{ background: "linear-gradient(90deg, rgba(11,13,18,0.92) 0%, rgba(11,13,18,0.55) 60%, rgba(11,13,18,0.35) 100%)" }} />
 
-        <div className="relative z-10 max-w-xl mx-auto px-5 pt-5 pb-8 min-h-[min(88dvh,760px)] flex flex-col">
-          <nav className="flex items-center justify-between">
+        <div className="relative max-w-6xl mx-auto px-5 md:px-8">
+          <nav className="flex items-center justify-between py-5">
             <Logo textColor="#fff" />
-            <button
-              onClick={() => onStart("customer")}
-              className="text-sm font-semibold text-white bg-white/12 hover:bg-white/20 border border-white/20 backdrop-blur px-4 py-1.5 rounded-full transition-colors"
-            >
-              {hasSession ? "Апп руу" : "Нэвтрэх"}
-            </button>
+            <div className="flex items-center gap-2 md:gap-6">
+              <a href="#services" className="hidden md:inline text-sm text-white/75 hover:text-white">Үйлчилгээ</a>
+              <a href="#how" className="hidden md:inline text-sm text-white/75 hover:text-white">Хэрхэн ажилладаг</a>
+              <a href="#couriers" className="hidden md:inline text-sm text-white/75 hover:text-white">Хүргэгч болох</a>
+              <button
+                onClick={() => onStart("customer")}
+                className="text-sm font-semibold bg-white text-[#16181d] hover:bg-white/90 px-4 py-2 rounded-full transition-colors"
+              >
+                {hasSession ? "Апп руу" : "Нэвтрэх"}
+              </button>
+            </div>
           </nav>
 
-          <motion.div
-            className="mt-auto space-y-5"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs text-white/85">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)]" />
-              Дархан хотын 65 жилийн ойд зориулав
-            </span>
+          <div className="grid md:grid-cols-[1.15fr_1fr] gap-10 items-center pt-16 pb-10 md:pt-14 md:pb-20">
+            <motion.div
+              className="space-y-6"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+            >
+              <p className="text-sm text-white/70">Дархан хотын 65 жилийн ойд зориулав</p>
+              <h1 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(2.5rem, 7vw, 4.4rem)", lineHeight: 0.98, letterSpacing: "-0.04em" }}>
+                Хурдан.<br />Найдвартай.<br />
+                <span style={{ color: "var(--brand)" }}>Дархандаа.</span>
+              </h1>
+              <p className="text-white/75 text-base md:text-lg leading-relaxed max-w-md">
+                Илгээмжээс эхлээд крантай машин хүртэл — нэг апп-аас захиалж, хүргэгчээ газрын зураг дээр хянаарай.
+              </p>
 
-            <h1 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(2.4rem, 11vw, 3.4rem)", lineHeight: 1.02, letterSpacing: "-0.035em" }}>
-              Хурдан.<br />Найдвартай.<br />
-              <span style={{ color: "var(--brand)" }}>Дархандаа.</span>
-            </h1>
-
-            <p className="text-white/70 text-[15px] leading-relaxed max-w-sm">
-              Илгээмж, хүнд ачаа, крантай машин хүртэл — нэг апп-аас 30 секундэд захиалж, хүргэлтээ бодит цагт хянаарай.
-            </p>
-
-            <div className="space-y-2.5 pt-1">
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => onStart("customer")}
-                className="w-full bg-[var(--brand)] text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-bold text-base shadow-[0_8px_24px_-8px_rgba(232,83,28,0.7)] hover:brightness-105 transition"
-              >
-                {hasSession ? "Үргэлжлүүлэх" : "Захиалга өгөх"} <ArrowRight className="w-5 h-5" />
-              </motion.button>
-              {!hasSession && (
-                <button
-                  onClick={() => onStart("courier")}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-white/20 text-white/90 hover:bg-white/10 transition-colors text-sm font-semibold"
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onStart("customer")}
+                  className="bg-[var(--brand)] text-white px-7 py-4 rounded-2xl flex items-center justify-center gap-2 font-bold text-base hover:brightness-105 transition"
                 >
-                  <Truck className="w-4 h-4" /> Хүргэгч болж орлого олох
-                </button>
-              )}
-            </div>
+                  {hasSession ? "Үргэлжлүүлэх" : "Захиалга өгөх"} <ArrowRight className="w-5 h-5" />
+                </motion.button>
+                {!hasSession && (
+                  <button
+                    onClick={() => onStart("courier")}
+                    className="flex items-center justify-center gap-2 px-7 py-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold transition-colors"
+                  >
+                    <Truck className="w-4 h-4" /> Хүргэгч болох
+                  </button>
+                )}
+              </div>
 
-            <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-1">
-              {PHONES.slice(0, 2).map((p) => (
-                <a key={p.tel} href={`tel:${p.tel}`} className="flex items-center gap-1.5 text-white font-bold tabular hover:text-[var(--brand)] transition-colors">
-                  <Phone className="w-4 h-4" /> {p.label}
-                </a>
-              ))}
-            </div>
-          </motion.div>
+              {/* Утсаар захиалах — гурван дугаар бүгд */}
+              <div className="pt-2">
+                <p className="text-xs text-white/55 mb-2">Утсаар захиалах · {WORK_HOURS}</p>
+                <div className="flex flex-wrap gap-2">
+                  {PHONES.map((p) => (
+                    <a
+                      key={p.tel}
+                      href={`tel:${p.tel}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-2 text-sm font-bold tabular transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-[var(--brand)]" /> {p.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="hidden md:block"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.1, ease: "easeOut" }}
+            >
+              <PhonePreview />
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      <main className="max-w-xl mx-auto px-5 space-y-12 py-10">
-        {/* ── Тоон үзүүлэлт ── */}
-        <section className="grid grid-cols-3 gap-2.5">
-          {STATS.map(({ icon: Icon, value, label }) => (
-            <div key={label} className="bg-card border border-border rounded-2xl px-3 py-4 text-center">
-              <Icon className="w-4 h-4 text-primary mx-auto" />
-              <p className="mt-2 font-extrabold text-xl tracking-tight tabular">{value}</p>
-              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{label}</p>
+      {/* ── Давуу тал ── */}
+      <section className="border-b border-border bg-card">
+        <div className="max-w-6xl mx-auto px-5 md:px-8 grid grid-cols-2 md:grid-cols-4">
+          {FACTS.map(({ icon: Icon, title, body }, i) => (
+            <div
+              key={title}
+              className={`flex items-start gap-3 py-5 md:py-7 ${i % 2 === 1 ? "pl-4 md:pl-6" : "pr-4"} ${i >= 2 ? "border-t md:border-t-0 border-border" : ""} ${i > 0 ? "md:border-l md:border-border md:pl-6" : ""}`}
+            >
+              <Icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-bold text-[15px] leading-tight">{title}</p>
+                <p className="text-sm text-muted-foreground leading-snug mt-0.5">{body}</p>
+              </div>
             </div>
           ))}
-        </section>
+        </div>
+      </section>
 
+      <main className="max-w-6xl mx-auto px-5 md:px-8">
         {/* ── Үйлчилгээ ── */}
-        <section className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Үйлчилгээ</p>
-            <h2 className="text-2xl font-extrabold mt-1">Юу хүргэх вэ?</h2>
+        <section id="services" className="py-16 md:py-24 scroll-mt-4">
+          <div className="max-w-2xl">
+            <h2 style={{ fontWeight: 800, fontSize: "clamp(1.8rem, 4.5vw, 2.6rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
+              Жижиг илгээмжээс хүнд техник хүртэл
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg mt-3 leading-relaxed">
+              Есөн төрлийн үйлчилгээ нэг дор. Сонгосон үйлчилгээндээ тохирох хүргэгч эсвэл техник томилогдоно.
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {SERVICES.map((sv) => (
-              <button
-                key={sv.id}
-                onClick={() => onStart("customer")}
-                className="bg-card border border-border rounded-2xl p-3.5 text-left hover:border-primary/50 transition-colors"
-              >
-                <span className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-xl">{sv.emoji}</span>
-                <span className="block mt-2.5 text-sm font-semibold leading-snug">{sv.label}</span>
-                <span className="block mt-0.5 text-xs text-muted-foreground leading-snug">{sv.desc}</span>
-              </button>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-10">
+            {SERVICES.map((sv) => {
+              const Icon = SERVICE_ICON[sv.id] ?? Package;
+              return (
+                <button
+                  key={sv.id}
+                  onClick={() => onStart("customer")}
+                  className="group flex items-center gap-4 bg-card border border-border rounded-2xl p-4 text-left hover:border-primary/50 hover:shadow-md transition-all"
+                >
+                  <span className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-semibold leading-snug">{sv.label}</span>
+                    <span className="block text-sm text-muted-foreground mt-0.5 leading-snug">{sv.desc}</span>
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        {/* ── Хэрхэн ажилладаг ── */}
-        <section className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Хэрхэн ажилладаг</p>
-            <h2 className="text-2xl font-extrabold mt-1">Дөрвөн алхам</h2>
+        {/* ── Хэрхэн ажилладаг — логоны маршрутын зураасаар ── */}
+        <section id="how" className="py-16 md:py-24 border-t border-border scroll-mt-4">
+          <div className="max-w-2xl">
+            <h2 style={{ fontWeight: 800, fontSize: "clamp(1.8rem, 4.5vw, 2.6rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
+              Авах цэгээс хүргэх цэг хүртэл
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg mt-3 leading-relaxed">
+              Захиалга бүр дөрвөн шатаар явна. Аль шатанд явааг апп дээрээ шууд харна.
+            </p>
           </div>
-          <ol className="bg-card border border-border rounded-2xl p-2">
-            {STEPS.map((s, i) => (
-              <li key={s.title} className="flex gap-3.5 p-3">
-                <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shrink-0 tabular">
-                  {i + 1}
-                </span>
-                <div className="pt-0.5">
-                  <p className="font-semibold text-[15px]">{s.title}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{s.body}</p>
-                </div>
-              </li>
-            ))}
+
+          <ol className="relative mt-12 grid gap-8 md:grid-cols-4 md:gap-6">
+            {/* Цэгэн зам — утсан дээр босоо, компьютер дээр хэвтээ */}
+            <span aria-hidden className="absolute left-[9px] top-3 bottom-8 border-l-2 border-dotted border-primary/40 md:hidden" />
+            <span aria-hidden className="absolute hidden md:block left-3 right-8 top-[9px] border-t-2 border-dotted border-primary/40" />
+            {STEPS.map((s, i) => {
+              const last = i === STEPS.length - 1;
+              return (
+                <li key={s.title} className="relative pl-10 md:pl-0 md:pt-10">
+                  <span className="absolute left-0 top-0 md:left-0 flex items-center justify-center w-5 h-5">
+                    {i === 0 ? (
+                      <span className="w-5 h-5 rounded-full bg-[#12a150] ring-4 ring-background" />
+                    ) : last ? (
+                      <MapPin className="w-6 h-6 text-primary fill-primary/15 bg-background" />
+                    ) : (
+                      <span className="w-3.5 h-3.5 rounded-full bg-background border-[3px] border-primary" />
+                    )}
+                  </span>
+                  <p className="font-bold text-lg leading-tight">{s.title}</p>
+                  <p className="text-muted-foreground mt-2 leading-relaxed text-[15px]">{s.body}</p>
+                </li>
+              );
+            })}
           </ol>
         </section>
 
         {/* ── Хүргэгч болох ── */}
         {!hasSession && (
-          <section className="relative overflow-hidden rounded-2xl bg-[#16181d] text-white p-6">
-            <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-[var(--brand)]/25 blur-2xl" />
-            <div className="relative space-y-3">
-              <ShieldCheck className="w-6 h-6 text-[var(--brand)]" />
-              <h2 className="text-xl font-extrabold">Хүргэгч болох уу?</h2>
-              <p className="text-sm text-white/70 leading-relaxed">
-                Өөрийн машин, мотоцикл, дугуйгаараа чөлөөт цагтаа хүргэлт хийж орлого олоорой. Бүртгүүлээд баримт бичгээ оруулахад л болно.
-              </p>
-              <button
-                onClick={() => onStart("courier")}
-                className="inline-flex items-center gap-2 bg-white text-[#16181d] font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-white/90 transition-colors"
-              >
-                Бүртгүүлэх <ArrowRight className="w-4 h-4" />
-              </button>
+          <section id="couriers" className="py-4 md:py-8 scroll-mt-4">
+            <div className="rounded-3xl bg-[#16181d] text-white overflow-hidden grid md:grid-cols-[1.4fr_1fr]">
+              <div className="p-7 md:p-12 space-y-6">
+                <h2 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(1.7rem, 4vw, 2.4rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
+                  Чөлөөт цагаараа хүргэлт хийж орлого ол
+                </h2>
+                <ul className="space-y-3">
+                  {COURIER_NEEDS.map(({ icon: Icon, text }) => (
+                    <li key={text} className="flex items-center gap-3 text-white/85">
+                      <span className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4" />
+                      </span>
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => onStart("courier")}
+                  className="inline-flex items-center gap-2 bg-white text-[#16181d] font-bold px-6 py-3.5 rounded-2xl hover:bg-white/90 transition-colors"
+                >
+                  Хүргэгчээр бүртгүүлэх <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="border-t md:border-t-0 md:border-l border-white/10 p-7 md:p-12 flex flex-col justify-center bg-white/[0.03]">
+                <p className="font-extrabold tabular" style={{ fontSize: "clamp(3.5rem, 9vw, 5.5rem)", lineHeight: 1, color: "var(--brand)", letterSpacing: "-0.04em" }}>
+                  {COURIER_SHARE}
+                </p>
+                <p className="text-lg font-semibold mt-3">хүргэлтийн төлбөр танд</p>
+                <p className="text-white/60 text-sm mt-2 leading-relaxed">
+                  Захиалга бүрийн орлогоо апп дээрээ шууд харна. Баримт бичиг баталгаажсаны дараа захиалга авч эхэлнэ.
+                </p>
+              </div>
             </div>
           </section>
         )}
 
         {/* ── Холбоо барих ── */}
-        <section className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Холбоо барих</p>
-            <h2 className="text-2xl font-extrabold mt-1">Утсаар ч захиалж болно</h2>
-          </div>
-          <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-            {PHONES.map((p) => (
-              <a key={p.tel} href={`tel:${p.tel}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-secondary/50 transition-colors first:rounded-t-2xl">
-                <span className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+        <section className="py-16 md:py-24">
+          <div className="grid md:grid-cols-[1fr_1.3fr] gap-8 md:gap-12 items-start">
+            <div>
+              <h2 style={{ fontWeight: 800, fontSize: "clamp(1.8rem, 4.5vw, 2.6rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
+                Утсаар ч захиалж болно
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg mt-3 leading-relaxed">
+                Оператор утсаар захиалгыг тань хүлээн авч, апп-д бүртгэнэ.
+              </p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> Өдөр бүр {WORK_HOURS}</span>
+                <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {CITY}</span>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {PHONES.map((p) => (
+                <a
+                  key={p.tel}
+                  href={`tel:${p.tel}`}
+                  className="group flex sm:flex-col items-center sm:items-start justify-between gap-3 bg-card border border-border rounded-2xl p-5 hover:border-primary/50 hover:shadow-md transition-all"
+                >
+                  <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                     <Phone className="w-4 h-4" />
                   </span>
-                  <span className="font-bold text-[15px] tabular">{p.label}</span>
-                </span>
-                <span className="text-xs font-semibold text-primary">Залгах</span>
-              </a>
-            ))}
-            <div className="flex items-center gap-4 px-4 py-3.5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {WORK_HOURS}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {CITY}</span>
+                  <span className="flex-1 sm:flex-none font-extrabold text-xl tabular tracking-tight">{p.label}</span>
+                  <span className="text-sm font-semibold text-primary">Залгах</span>
+                </a>
+              ))}
             </div>
           </div>
         </section>
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-border">
-        <div className="max-w-xl mx-auto px-5 py-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <Logo size="sm" />
+      <footer className="bg-[#0b0d12] text-white/70">
+        <div className="max-w-6xl mx-auto px-5 md:px-8 py-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="space-y-4">
+            <Logo textColor="#fff" />
+            <p className="text-sm leading-relaxed max-w-xs">Дархан хотын хүргэлтийн платформ. Үйлчлүүлэгч, хүргэгч, дэлгүүрүүдийг нэг дор холбоно.</p>
             <div className="flex items-center gap-2">
               <a href={SOCIAL.facebook} target="_blank" rel="noreferrer" aria-label="Facebook"
-                className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
                 <FacebookIcon />
               </a>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" aria-label="Instagram"
-                className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
                 <InstagramIcon />
               </a>
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <button onClick={() => onLegal("about")} className="hover:text-foreground transition-colors">Бидний тухай</button>
-            <button onClick={() => onLegal("contact")} className="hover:text-foreground transition-colors">Холбоо барих</button>
-            <button onClick={() => onLegal("terms")} className="hover:text-foreground transition-colors">Үйлчилгээний нөхцөл</button>
-            <button onClick={() => onLegal("privacy")} className="hover:text-foreground transition-colors">Нууцлал</button>
+          <div>
+            <p className="text-white font-semibold mb-3">Үйлчилгээ</p>
+            <ul className="space-y-2 text-sm">
+              {SERVICES.slice(0, 5).map((sv) => (
+                <li key={sv.id}><button onClick={() => onStart("customer")} className="hover:text-white text-left">{sv.label}</button></li>
+              ))}
+            </ul>
           </div>
-          <p className="text-xs text-muted-foreground/70">© {year} {SITE}</p>
+          <div>
+            <p className="text-white font-semibold mb-3">Компани</p>
+            <ul className="space-y-2 text-sm">
+              <li><button onClick={() => onLegal("about")} className="hover:text-white">Бидний тухай</button></li>
+              <li><button onClick={() => onStart("courier")} className="hover:text-white">Хүргэгч болох</button></li>
+              <li><button onClick={() => onLegal("terms")} className="hover:text-white">Үйлчилгээний нөхцөл</button></li>
+              <li><button onClick={() => onLegal("privacy")} className="hover:text-white">Нууцлалын бодлого</button></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-white font-semibold mb-3">Холбоо барих</p>
+            <ul className="space-y-2 text-sm">
+              {PHONES.map((p) => (
+                <li key={p.tel}><a href={`tel:${p.tel}`} className="hover:text-white tabular">{p.label}</a></li>
+              ))}
+              <li className="pt-1">Өдөр бүр {WORK_HOURS}</li>
+              <li>{CITY}</li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-white/10">
+          <div className="max-w-6xl mx-auto px-5 md:px-8 py-5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+            <span>© {year} {SITE}. Бүх эрх хуулиар хамгаалагдсан.</span>
+            <button onClick={() => onLegal("contact")} className="hover:text-white">Холбоо барих</button>
+          </div>
         </div>
       </footer>
     </div>
