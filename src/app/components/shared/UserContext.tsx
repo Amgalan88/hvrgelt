@@ -7,6 +7,8 @@ export interface SavedAddress {
   address: string;
   detail: string;
   icon: "home" | "work" | "other";
+  /** Газрын байршил — байвал хаяг хайлтад сонгоход үнэ шууд гарна */
+  pos?: { lat: number; lng: number };
 }
 
 export interface QuickOrder {

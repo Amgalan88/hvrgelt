@@ -1,3 +1,5 @@
+import { AnimatePresence } from "motion/react";
+import { LocationPicker } from "../customer/LocationPicker";
 import { TariffSettings } from "./TariffSettings";
 import type { Tariff } from "../../lib/pricing";
 import { RoleHeader } from "../shared/RoleHeader";
@@ -39,6 +41,8 @@ interface SuperadminAppProps {
   feedback: FeedbackItem[];
   onHandleFeedback: (id: string, handled: boolean) => void | Promise<void>;
   onUpdatePartner: (id: string, data: Partial<Omit<Partner, "id">>) => void;
+  /** Газрын байршлыг газрын зураг дээр заана — хаяг хайлтад байршилтай гарна */
+  onSetPartnerLocation: (id: string, pos: { lat: number; lng: number } | null) => Promise<void>;
   onDeletePartner: (id: string) => void;
   bankInfo: string;
   onUpdateBankInfo: (value: string) => void;
@@ -381,13 +385,15 @@ export function SuperadminApp({
   onAddOperator, onUpdateOperator, onDeleteOperator,
   onAddCourier, onUpdateCourier, onDeleteCourier,
   onResetCustomerAuth,
-  onAddPartner, onUpdatePartner, onDeletePartner,
+  onAddPartner, onUpdatePartner, onDeletePartner, onSetPartnerLocation,
   onVerifyCourier, onUpdatePartnerAccess, feedback, onHandleFeedback,
   bankInfo, onUpdateBankInfo, tariff, onUpdateTariff,
   onViewAs, onLogout,
 }: SuperadminAppProps) {
   const { theme, toggleTheme } = useUser();
   const [bankDraft, setBankDraft] = useState(bankInfo);
+  const [locPartner, setLocPartner] = useState<Partner | null>(null);
+  const [locError, setLocError] = useState("");
   const [bankSaved, setBankSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("operators");
   const [partnerCat, setPartnerCat] = useState<string>("бүгд");
@@ -683,7 +689,11 @@ export function SuperadminApp({
           <div className="space-y-3">
             {/* Header */}
             <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">{partners.length} газар</p>
+              <p className="text-xs text-muted-foreground">
+                {partners.length} газар · <span className={partners.some((p) => p.lat == null) ? "text-amber-600 dark:text-amber-400 font-semibold" : ""}>
+                  {partners.filter((p) => p.lat != null).length} нь байршилтай
+                </span>
+              </p>
               <button onClick={() => setModal({ type: "add-partner" })}
                 className="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Нэмэх
@@ -746,6 +756,14 @@ export function SuperadminApp({
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => { setLocError(""); setLocPartner(p); }}
+                      title={p.lat != null ? "Байршил засах" : "Байршил заах — хаяг хайлтад байршилтай гарна"}
+                      aria-label="Байршил"
+                      className={`p-1.5 rounded-lg transition-colors ${p.lat != null ? "text-green-600 hover:bg-green-500/10" : "text-amber-600 bg-amber-500/10 hover:bg-amber-500/20"}`}
+                    >
+                      <MapPin className="w-4 h-4" />
+                    </button>
                     <button onClick={() => setModal({ type: "edit-partner", item: p })}
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                       <Pencil className="w-4 h-4" />
@@ -852,6 +870,28 @@ export function SuperadminApp({
           </div>
         )}
       </div>
+
+      {/* Газрын байршил заах */}
+      <AnimatePresence>
+        {locPartner && (
+          <LocationPicker
+            target="from"
+            title={`${locPartner.name} — байршил`}
+            initial={locPartner.lat != null && locPartner.lng != null ? { lat: locPartner.lat, lng: locPartner.lng } : null}
+            initialQuery={locPartner.name}
+            error={locError}
+            onPick={async (pos) => {
+              try {
+                await onSetPartnerLocation(locPartner.id, pos);
+                setLocPartner(null);
+              } catch (e) {
+                setLocError(e instanceof Error ? e.message : "Хадгалж чадсангүй.");
+              }
+            }}
+            onClose={() => setLocPartner(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Modals */}
       {modal?.type === "add-operator" && (

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import type { LatLng } from "../../lib/geo";
+import { GOOGLE_KEY, googleFailed } from "../../lib/googleMaps";
 
 // Газрын зураг — эх үүсвэрийг автоматаар сонгоно:
 //   • VITE_GOOGLE_MAPS_API_KEY тохируулсан бол Google Maps
@@ -46,19 +47,18 @@ export const MARKER_SVG: Record<MarkerKind, { svg: string; size: [number, number
   },
 };
 
-const GOOGLE_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim();
 
 const LeafletMapView = lazy(() => import("./LeafletMapView"));
 const GoogleMapView = lazy(() => import("./GoogleMapView"));
 
 export default function MapView(props: MapViewProps) {
   // Google ачаалагдахгүй бол (түлхүүр буруу, billing идэвхгүй) OSM руу шилжинэ
-  const [googleFailed, setGoogleFailed] = useState(false);
-  const useGoogle = !!GOOGLE_KEY && !googleFailed;
+  const [googleFailedHere, setGoogleFailed] = useState(false);
+  const useGoogle = !!GOOGLE_KEY && !googleFailedHere && !googleFailed();
   return (
     <Suspense fallback={<div className={`${props.className ?? ""} bg-secondary animate-pulse`} />}>
       {useGoogle ? (
-        <GoogleMapView {...props} apiKey={GOOGLE_KEY!} onFail={() => setGoogleFailed(true)} />
+        <GoogleMapView {...props} onFail={() => setGoogleFailed(true)} />
       ) : (
         <LeafletMapView {...props} />
       )}

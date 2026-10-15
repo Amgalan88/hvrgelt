@@ -2,7 +2,7 @@ import { InstallButton } from "../shared/InstallApp";
 import { NotifyCard } from "../shared/NotifyCard";
 import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
-import { useEffect, useState, lazy, Suspense, type ReactNode } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown, User as UserIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
@@ -24,6 +24,8 @@ import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { LocationPicker } from "./LocationPicker";
+import { AddressSearch } from "./AddressSearch";
+import type { PlaceResult } from "../../lib/places";
 import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, currentPosition, geoErrorText, type GeoError, type LatLng, type CourierLocation } from "../../lib/geo";
 import type { MapMarker } from "../shared/MapView";
 
@@ -440,6 +442,39 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   }
   const myOrder = orders.find((o) => o.id === myOrderId);
 
+  // Хаяг хайлтын эх үүсвэр — апп-ын газрууд (байршилтай нь эхэнд), хадгалсан
+  // хаягууд, өөрийн өмнөх захиалгын цэгүүд. Бусдын хаягийг хэзээ ч санал болгохгүй.
+  const placeCandidates = useMemo<PlaceResult[]>(() => {
+    const list: PlaceResult[] = [];
+    for (const p of partners) {
+      list.push({
+        id: `p-${p.id}`,
+        name: p.name,
+        subtitle: [p.category, p.address].filter(Boolean).join(" · "),
+        source: "partner",
+        pos: p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : undefined,
+      });
+    }
+    for (const a of savedAddresses) {
+      list.push({ id: `s-${a.id}`, name: a.label, subtitle: [a.address, a.detail].filter(Boolean).join(", "), source: "saved", pos: a.pos });
+    }
+    const seen = new Set(list.map((x) => x.name.toLowerCase()));
+    for (const o of orders) {
+      if (o.customerId !== userId) continue;
+      const pts = [
+        { name: o.fromAddress, lat: o.fromLat, lng: o.fromLng },
+        { name: o.toAddress, lat: o.toLat, lng: o.toLng },
+      ];
+      for (const pt of pts) {
+        const key = pt.name?.toLowerCase();
+        if (!key || seen.has(key) || pt.name === "Газрын зураг дээр заасан цэг" || pt.name === "Миний байршил") continue;
+        seen.add(key);
+        list.push({ id: `r-${o.id}-${key}`, name: pt.name, source: "recent", pos: pt.lat != null && pt.lng != null ? { lat: pt.lat, lng: pt.lng! } : undefined });
+      }
+    }
+    return list;
+  }, [partners, savedAddresses, orders, userId]);
+
   // Байршлаар шууд үнэ — тариф асаалттай, үйлчилгээ дэмжигдсэн, хоёр цэг заасан үед
   const quote = quoteDelivery(tariff, serviceId, fromPos, toPos, {
     urgent: cargo.urgent,
@@ -837,90 +872,21 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         )}
                       </div>
 
-                      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                          {target === "from"
-                            ? <span className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
-                            : <MapPin className="w-4 h-4 text-primary shrink-0" />}
-                          <input
-                            key={target}
-                            value={addr}
-                            onChange={(e) => setAddr(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter" && addr.trim()) goStep((formStep + 1) as FormStep); }}
-                            placeholder={target === "from" ? "Жишээ: Номин супермаркет" : "Жишээ: 14-р хороо, Найрамдал хотхон"}
-                            autoFocus
-                            className="flex-1 min-w-0 bg-transparent text-base font-medium placeholder:text-muted-foreground/70 placeholder:font-normal focus:outline-none"
-                          />
-                          {addr && (
-                            <button aria-label="Арилгах" onClick={() => clearAddress(target)} className="shrink-0 text-muted-foreground hover:text-foreground">
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          value={detail}
-                          onChange={(e) => setDetail(e.target.value)}
-                          placeholder="Байр, орц, давхар, тоот (заавал биш)"
-                          className="w-full bg-secondary/60 rounded-xl px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => setPickerFor(target)}
-                            className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${pos ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
-                          >
-                            <MapIcon className="w-4 h-4" /> {pos ? "Цэг заасан ✓" : "Газрын зураг"}
-                          </button>
-                          <button
-                            onClick={() => locateMe(target)}
-                            disabled={locating}
-                            className="flex items-center justify-center gap-1.5 rounded-xl border border-border py-2.5 text-sm font-semibold hover:border-primary/40 transition-colors disabled:opacity-60"
-                          >
-                            {locating ? <Spinner className="w-4 h-4" /> : <LocateFixed className="w-4 h-4 text-primary" />} Миний байршил
-                          </button>
-                        </div>
-                        {autoPriceService && !pos && (
-                          <p className="text-xs text-green-700 dark:text-green-300 font-medium">
-                            Газрын зураг дээр цэгээ заавал үнэ шууд гарна — оператор хүлээхгүй.
-                          </p>
-                        )}
-                        {pos && (
-                          <button onClick={() => setPos(null)} className="text-xs text-muted-foreground hover:text-foreground">
-                            Газрын зураг дээрх цэгийг арилгах
-                          </button>
-                        )}
-                        {geoErr && <p className="text-xs text-destructive">{geoErr}</p>}
-                      </div>
-
-                      {savedAddresses.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold">Хадгалсан хаягууд</p>
-                          <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
-                            {savedAddresses.map((sa) => {
-                              const cfg = ICON_MAP[sa.icon];
-                              const Icon = cfg.icon;
-                              return (
-                                <button
-                                  key={sa.id}
-                                  onClick={() => {
-                                    fillAddress(target, sa.label, [sa.address, sa.detail].filter(Boolean).join(", "));
-                                    goStep((formStep + 1) as FormStep);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors text-left"
-                                >
-                                  <span className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                                    <Icon className={`w-4 h-4 ${cfg.color}`} />
-                                  </span>
-                                  <span className="flex-1 min-w-0">
-                                    <span className="block text-sm font-semibold">{sa.label}</span>
-                                    <span className="block text-xs text-muted-foreground truncate">{sa.address}{sa.detail ? `, ${sa.detail}` : ""}</span>
-                                  </span>
-                                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      <AddressSearch
+                        target={target}
+                        value={{ addr, detail, pos }}
+                        onChange={(v) => {
+                          if (v.addr !== undefined) setAddr(v.addr);
+                          if (v.detail !== undefined) setDetail(v.detail);
+                          if (v.pos !== undefined) setPos(v.pos);
+                        }}
+                        candidates={placeCandidates}
+                        onOpenMap={() => setPickerFor(target)}
+                        onMyLocation={() => locateMe(target)}
+                        locating={locating}
+                        geoErr={geoErr}
+                        autoPriceHint={autoPriceService}
+                      />
 
                       <BottomBar>
                         <button

@@ -14,6 +14,9 @@ export interface Partner {
   image?: string;  // Cloudinary URL
   phone?: string;         // партнёр өөрөө нэвтрэх дугаар
   paymentQrUrl?: string;  // газартаа төлөх QR (migration 17)
+  /** Газрын байршил — хайлтад байршилтай гарч, шууд үнэ бодогдоно (migration 20) */
+  lat?: number;
+  lng?: number;
 }
 
 export const PARTNER_CATEGORIES: { key: PartnerCategory; emoji: string }[] = [

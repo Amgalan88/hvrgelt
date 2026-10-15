@@ -2,36 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DARKHAN_CENTER } from "../../lib/geo";
 import { MARKER_SVG, type MapViewProps, type MarkerKind } from "./MapView";
-
-declare global {
-  interface Window {
-    /** Google түлхүүр буруу эсвэл billing идэвхгүй үед Google өөрөө дууддаг */
-    gm_authFailure?: () => void;
-    __hvGoogleMapsReady?: () => void;
-  }
-}
-
-let loading: Promise<typeof google> | null = null;
-
-/** Google Maps JavaScript API-г нэг л удаа ачаална */
-function loadGoogleMaps(key: string): Promise<typeof google> {
-  if (window.google?.maps?.Map) return Promise.resolve(window.google);
-  if (loading) return loading;
-  loading = new Promise((resolve, reject) => {
-    window.__hvGoogleMapsReady = () => resolve(window.google);
-    const s = document.createElement("script");
-    s.src =
-      `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}` +
-      `&v=weekly&loading=async&language=mn&region=MN&callback=__hvGoogleMapsReady`;
-    s.async = true;
-    s.onerror = () => {
-      loading = null;
-      reject(new Error("Google Maps ачаалагдсангүй"));
-    };
-    document.head.appendChild(s);
-  });
-  return loading;
-}
+import { loadGoogleMaps, onGoogleFail } from "../../lib/googleMaps";
 
 const svgUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
@@ -57,13 +28,12 @@ const DARK_STYLE: google.maps.MapTypeStyle[] = [
 ];
 
 interface Props extends MapViewProps {
-  apiKey: string;
   /** Ачаалж чадаагүй бол — MapView OpenStreetMap руу шилжинэ */
   onFail: () => void;
 }
 
 /** Google Maps дээрх газрын зураг. MapView-ээс VITE_GOOGLE_MAPS_API_KEY байвал сонгогдоно. */
-export default function GoogleMapView({ markers = [], center, zoom = 15, pick, onCenterChange, fit = false, className = "", apiKey, onFail }: Props) {
+export default function GoogleMapView({ markers = [], center, zoom = 15, pick, onCenterChange, fit = false, className = "", onFail }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const pins = useRef<google.maps.Marker[]>([]);
@@ -74,8 +44,8 @@ export default function GoogleMapView({ markers = [], center, zoom = 15, pick, o
   // Нэг удаа үүсгэнэ
   useEffect(() => {
     let alive = true;
-    window.gm_authFailure = onFail;
-    loadGoogleMaps(apiKey)
+    const offFail = onGoogleFail(onFail);
+    loadGoogleMaps()
       .then((g) => {
         if (!alive || !el.current) return;
         const start = center ?? markers[0]?.pos ?? DARKHAN_CENTER;
@@ -100,6 +70,7 @@ export default function GoogleMapView({ markers = [], center, zoom = 15, pick, o
       .catch(() => alive && onFail());
     return () => {
       alive = false;
+      offFail();
       pins.current.forEach((p) => p.setMap(null));
       pins.current = [];
       map.current = null;

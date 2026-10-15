@@ -284,6 +284,7 @@ function Inner() {
           onHandleFeedback={store.setFeedbackHandled}
           onAddPartner={store.addPartner}
           onUpdatePartner={store.updatePartner}
+          onSetPartnerLocation={store.setPartnerLocation}
           onDeletePartner={store.deletePartner}
           onUpdateBankInfo={store.updateBankInfo}
           tariff={store.tariff}

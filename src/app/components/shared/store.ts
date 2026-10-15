@@ -234,6 +234,8 @@ function rowToPartner(r: any): Partner {
     image: r.image ?? undefined,
     phone: r.phone ?? undefined,
     paymentQrUrl: r.payment_qr_url ?? undefined,
+    lat: r.lat ?? undefined,
+    lng: r.lng ?? undefined,
   };
 }
 
@@ -1091,6 +1093,16 @@ export function useStore() {
     [refreshPartners],
   );
 
+  /** Газрын байршлыг газрын зураг дээр заана (migration 20) */
+  const setPartnerLocation = useCallback(
+    async (id: string, pos: { lat: number; lng: number } | null) => {
+      const { error } = await supabase.from("partners").update({ lat: pos?.lat ?? null, lng: pos?.lng ?? null }).eq("id", id);
+      if (error) throw new Error(isMissingColumn(error) ? "Эхлээд supabase_migration_20.sql-ийг ажиллуулна уу." : error.message);
+      await refreshPartners();
+    },
+    [refreshPartners],
+  );
+
   const deletePartner = useCallback(
     async (id: string) => {
       await supabase.from("partners").delete().eq("id", id);
@@ -1141,6 +1153,7 @@ export function useStore() {
     deleteCourier,
     addPartner,
     updatePartner,
+    setPartnerLocation,
     deletePartner,
     resolveByPhone,
     addCustomer,
