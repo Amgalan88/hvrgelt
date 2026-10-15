@@ -19,7 +19,7 @@ hvrgelt.mn-д орсон хэн ч уншина. Byl-ийн токэн тэнд 
 - **API токэн** → шинэ токэн үүсгэж хуулна
 - **Project ID** — хөтчийн хаягийн мөрөнд `.../projects/<тоо>/...`
 - **Webhook → Endpoint нэмэх**
-  - URL: `https://hvrgelt.mn/api/payments?action=webhook`
+  - URL: `https://www.hvrgelt.mn/api/payments?action=webhook`
   - Event: `invoice.paid`
   - Хадгалсны дараа **Signing secret**-ийг хуулна
 
