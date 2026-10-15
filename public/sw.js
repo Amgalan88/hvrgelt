@@ -20,8 +20,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/favicon.svg",
-      badge: "/favicon.svg",
+      // Android мэдэгдэлд SVG харагддаггүй тул PNG
+      icon: "/icon-192.png",
+      badge: "/badge-72.png",
       data: { orderId: data.orderId ?? null, url: data.url ?? "/" },
       tag: data.orderId ? `order-${data.orderId}` : undefined,
       // Жолоочид ачаа томилогдоход чичиргээ + мэдэгдэл автоматаар арилахгүй

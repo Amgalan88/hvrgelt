@@ -1,3 +1,4 @@
+import { InstallButton } from "../shared/InstallApp";
 import { motion } from "motion/react";
 import {
   ArrowRight, Phone, Clock, MapPin, Truck, Package, Luggage, Container, Baby, Construction,
@@ -196,6 +197,7 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
                     </a>
                   ))}
                 </div>
+                <InstallButton variant="hero" className="mt-4" />
               </div>
             </motion.div>
 

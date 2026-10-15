@@ -1,3 +1,5 @@
+import { InstallButton } from "../shared/InstallApp";
+import { NotifyCard } from "../shared/NotifyCard";
 import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -152,6 +154,8 @@ interface CustomerAppProps {
   onMarkPaid: (orderId: string, method: string) => Promise<void>;
   /** Туршилтын QPay харуулах эсэх (супер админ role-оор үзэж байх үед) */
   testPayments?: boolean;
+  /** Супер админ role-оор үзэж байна — мэдэгдлийг өөрийн утсанд бүртгэхгүй */
+  viewAs?: boolean;
   onRate: (orderId: string, score: number, comment?: string) => Promise<void>;
   onFeedback: (data: { phone: string; message: string; orderId?: string }) => Promise<void>;
   myOrderId: string | null;
@@ -220,7 +224,7 @@ function RoutePreview({
   );
 }
 
-export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
@@ -1071,6 +1075,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   </div>
                 )}
 
+                {!viewAs && (view.tone === "wait" || view.tone === "action") && (
+                  <NotifyCard role="customer" userId={userId} />
+                )}
+
                 {/* 3. Хийх ёстой зүйл — төлбөр */}
                 {myOrder.status === "төлбөр хүлээж байна" && (
                   <PaymentPanel
@@ -1322,6 +1330,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         {tab === "settings" && (
           <div className="space-y-4">
             <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
+            <InstallButton variant="card" />
             <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
         )}

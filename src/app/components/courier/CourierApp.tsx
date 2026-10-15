@@ -1,3 +1,4 @@
+import { NotifyCard } from "../shared/NotifyCard";
 import { RoleHeader } from "../shared/RoleHeader";
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronRight, Navigation, Sun, Moon, IdCard, Lock, ShieldAlert } from "lucide-react";
@@ -169,6 +170,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
         {/* Active orders — PRIMARY FOCUS */}
         {tab === "active" && (
           <div className="space-y-3">
+            {shareLocation && <NotifyCard role="courier" userId={courierId} />}
             {activeOrders.length > 0 && shareLocation && (
               <div
                 className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs border ${

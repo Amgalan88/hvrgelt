@@ -1,3 +1,4 @@
+import { NotifyCard } from "../shared/NotifyCard";
 import { routeUrl, distanceKm } from "../../lib/geo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { RoleHeader, HeaderIconButton } from "../shared/RoleHeader";
@@ -31,6 +32,8 @@ interface OperatorAppProps {
   onCancelOrder: (orderId: string) => void | Promise<void>;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onLogout: () => void;
+  /** Мэдэгдэл асаах карт харуулах эсэх (role-оор үзэж байхад үгүй) */
+  notify?: boolean;
 }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -59,7 +62,7 @@ const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", ав
 
 type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан";
 
-export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetPrice, onAssign, onMarkPaid, onCancelOrder, onUpdateStatus, onLogout }: OperatorAppProps) {
+export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetPrice, onAssign, onMarkPaid, onCancelOrder, onUpdateStatus, onLogout, notify = true }: OperatorAppProps) {
   const [filter, setFilter] = useState<FilterTab>("шинэ");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -115,6 +118,8 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
       </RoleHeader>
 
       <div className="max-w-2xl mx-auto w-full px-4 py-4 space-y-4">
+        {notify && <NotifyCard role="operator" userId={operatorId} />}
+
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
           {[

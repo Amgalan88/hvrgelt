@@ -319,6 +319,7 @@ function Inner() {
           onCheckPayment={store.checkPayment}
           onMarkPaid={store.markOrderPaid}
           testPayments={!!session.viaAdmin || import.meta.env.VITE_PAYMENT_PROVIDER === "mock"}
+          viewAs={!!session.viaAdmin}
           onRate={store.rateOrder}
           onFeedback={store.submitFeedback}
           myOrderId={myOrderId}
@@ -342,6 +343,7 @@ function Inner() {
           onMarkPaid={store.markOrderPaid}
           onCancelOrder={store.cancelOrder}
           onUpdateStatus={() => { }}
+          notify={!session.viaAdmin}
           onLogout={requestLogout}
         />
       )}
