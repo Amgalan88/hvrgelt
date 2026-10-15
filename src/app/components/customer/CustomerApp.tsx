@@ -2,7 +2,7 @@ import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed } from "lucide-react";
+import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent } from "../shared/store";
 import { useUser, type QuickOrder } from "../shared/UserContext";
@@ -14,7 +14,6 @@ import { SERVICES, serviceById, subServiceById } from "./services";
 import { CourierProfileModal } from "./CourierProfileModal";
 import { CargoDetails, type CargoInfo } from "./CargoDetails";
 import { PaymentPanel } from "./PaymentPanel";
-import { SearchingCourier } from "./SearchingCourier";
 import { DeliveredCelebration } from "./DeliveredCelebration";
 import { PartnerShop } from "./PartnerShop";
 import { cloudinaryUrl } from "../../lib/cloudinary";
@@ -47,15 +46,60 @@ const WIZARD_STEPS: { q: string; hint: string }[] = [
 ];
 type OrderStep = "form" | "confirm" | "tracking";
 
-const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
-  { key: "шинэ",                 label: "Захиалга хүлээгдэж байна",  sub: "Оператор тантай холбогдож үнийг тогтооно..." },
-  { key: "үнэ батлах",           label: "Үнэ батлахыг хүлээж байна", sub: "Та доорх товчоор үнийг батлана уу" },
-  { key: "төлбөр хүлээж байна",  label: "Төлбөр хүлээгдэж байна",    sub: "QR-аар төлбөрөө төлнө үү" },
-  { key: "жолооч хайж байна",    label: "Хүргэгч хайж байна",         sub: "Танд хүргэгч хуваарилаад мэдээлэл илгээнэ" },
-  { key: "томилогдсон",          label: "Хүргэгч томилогдлоо",       sub: "Хүргэгч таны ачааг авахаар явна" },
-  { key: "авсан",                label: "Ачааг авлаа",               sub: "Хүргэгч таны захиалгыг хүргэж байна" },
-  { key: "хүргэгдсэн",          label: "Амжилттай хүргэгдлээ! 🎉",  sub: "" },
-];
+/**
+ * Захиалгын төлөв бүрийг үйлчлүүлэгчийн хэлээр:
+ *  - action: үйлчлүүлэгч ямар нэг зүйл хийх ёстой ("Таны ээлж")
+ *  - wait:   бусад хүн ажиллаж байна, хүлээнэ
+ */
+type StatusTone = "action" | "wait" | "done" | "cancelled";
+interface StatusView {
+  tone: StatusTone;
+  /** Одоо хэн юу хийж байгаа — жижиг мөр */
+  who: string;
+  title: string;
+  body: string;
+}
+
+function statusView(o: Order): StatusView {
+  switch (o.status) {
+    case "шинэ":
+      return { tone: "wait", who: "Оператор ажиллаж байна", title: "Үнийг тогтоож байна", body: "Оператор таны захиалгыг харж хүргэлтийн үнийг тогтооно. Ихэвчлэн хэдэн минут болно." };
+    case "үнэ батлах":
+      return { tone: "action", who: "Таны ээлж", title: "Үнийг зөвшөөрнө үү", body: "Хүргэлтийн үнэ тогтоогдлоо. Зөвшөөрсний дараа төлбөрөө хийнэ." };
+    case "төлбөр хүлээж байна":
+      return { tone: "action", who: "Таны ээлж", title: "Төлбөрөө хийнэ үү", body: `Доорх аргаар ₮${o.price.toLocaleString()} төлөхөд хүргэгч хуваарилагдана.` };
+    case "жолооч хайж байна":
+      return { tone: "wait", who: "Төлбөр орлоо", title: "Хүргэгч хайж байна", body: "Ойр байгаа чөлөөтэй хүргэгчийг томилж байна." };
+    case "томилогдсон":
+      return { tone: "wait", who: "Хүргэгч томилогдлоо", title: "Ачааг авахаар явж байна", body: `${o.courierName ?? "Хүргэгч"} таны ачааг авахаар явж байна.` };
+    case "авсан":
+      return { tone: "wait", who: "Ачаа хүргэгчийн гарт", title: "Замдаа явж байна", body: "Хүргэгч ирэхэд утсаа авахад бэлэн байгаарай." };
+    case "хүргэгдсэн":
+      return { tone: "done", who: "Дууссан", title: "Хүргэгдлээ", body: "" };
+    default:
+      return { tone: "cancelled", who: "Цуцлагдсан", title: "Захиалга цуцлагдсан", body: "Дахин захиалах бол доорх товчийг дарна уу." };
+  }
+}
+
+/** Үйлчлүүлэгчид харагдах 4 шат */
+const MILESTONES = ["Үнэ", "Төлбөр", "Хүргэлт", "Хүлээн авсан"];
+function milestoneIdx(status: OrderStatus): number {
+  switch (status) {
+    case "шинэ":
+    case "үнэ батлах":
+      return 0;
+    case "төлбөр хүлээж байна":
+      return 1;
+    case "жолооч хайж байна":
+    case "томилогдсон":
+    case "авсан":
+      return 2;
+    case "хүргэгдсэн":
+      return 4; // бүгд дууссан
+    default:
+      return -1;
+  }
+}
 
 // ── Захиалгын ноорог ─────────────────────────────────────────────────
 // Хуудас дахин ачаалах, апп хаагдахад бичсэн маягт алдагдахгүй.
@@ -84,10 +128,6 @@ function writeDraft(userId: string, d: OrderDraft) {
   } catch {
     /* хадгалах боломжгүй — энэ удаад л санана */
   }
-}
-
-function getStatusIdx(status: OrderStatus) {
-  return STATUS_STEPS.findIndex((s) => s.key === status);
 }
 
 const ICON_MAP = {
@@ -327,7 +367,6 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     if (!trackCourierId) return;
     return watchCourierLocation(trackCourierId, setCourierLoc);
   }, [trackCourierId]);
-  const statusIdx = myOrder ? getStatusIdx(myOrder.status) : 0;
   const activeCount = orders.filter((o) => o.customerId === userId && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
 
   function handleEstimate() {
@@ -952,82 +991,145 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
               </div>
             )}
 
-            {/* TRACKING */}
-            {orderStep === "tracking" && myOrder && (
+            {/* TRACKING — эхлээд "одоо юу болж байна", дараа нь дэлгэрэнгүй */}
+            {orderStep === "tracking" && myOrder && (() => {
+              const view = statusView(myOrder);
+              const ms = milestoneIdx(myOrder.status);
+              const canCancel = myOrder.status === "шинэ" || myOrder.status === "үнэ батлах";
+              const onTheWay = myOrder.status === "томилогдсон" || myOrder.status === "авсан";
+              const svc = serviceById(myOrder.serviceId);
+              return (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-mono">#{myOrder.id}</p>
-                    <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>
-                      {myOrder.status === "хүргэгдсэн" ? "Амжилттай!" : "Захиалгын явц"}
-                    </h2>
-                  </div>
-                  <span className="text-right" style={{ fontFamily: "var(--font-display)" }}>
-                    {myOrder.price > 0 ? (
-                      <span className="text-xl font-bold text-primary">₮{myOrder.price.toLocaleString()}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Үнэ тогтоогдож байна</span>
+                {/* 1. Одоогийн төлөв — "Таны ээлж" бол тод өнгөөр */}
+                {view.tone !== "done" && (
+                  <div
+                    className={`rounded-3xl p-5 ${
+                      view.tone === "action"
+                        ? "bg-primary text-primary-foreground"
+                        : view.tone === "cancelled"
+                          ? "bg-card border border-border"
+                          : "bg-[#16181d] text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-85">
+                      {view.tone === "action" ? (
+                        <Hand className="w-4 h-4" />
+                      ) : view.tone === "cancelled" ? (
+                        <CircleX className="w-4 h-4 text-destructive" />
+                      ) : (
+                        <span className="relative flex w-2.5 h-2.5">
+                          <span className="absolute inset-0 rounded-full bg-[var(--brand)] animate-ping opacity-70" />
+                          <span className="relative w-2.5 h-2.5 rounded-full bg-[var(--brand)]" />
+                        </span>
+                      )}
+                      {view.who}
+                    </div>
+                    <h2 className="mt-2" style={{ fontWeight: 800, fontSize: "1.65rem", lineHeight: 1.12 }}>{view.title}</h2>
+                    <p className={`text-sm mt-1.5 leading-relaxed ${view.tone === "cancelled" ? "text-muted-foreground" : "opacity-80"}`}>{view.body}</p>
+
+                    {onTheWay && myOrder.eta && (
+                      <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
+                        <Clock className="w-4 h-4" /> Ойролцоогоор {myOrder.eta}-д
+                      </p>
                     )}
-                  </span>
-                </div>
 
-                {/* Map */}
-                <RoutePreview
-                  from={myOrder.fromDetail || myOrder.fromAddress}
-                  to={myOrder.toDetail || myOrder.toAddress}
-                  fromPos={myOrder.fromLat != null ? { lat: myOrder.fromLat, lng: myOrder.fromLng! } : null}
-                  toPos={myOrder.toLat != null ? { lat: myOrder.toLat, lng: myOrder.toLng! } : null}
-                  courier={courierLoc}
-                />
-
-                {/* Progress steps */}
-                <div className="bg-card border border-border rounded-2xl p-4">
-                  {STATUS_STEPS.map((s, i) => {
-                    const done = i <= statusIdx;
-                    const active = i === statusIdx;
-                    const isLast = i === STATUS_STEPS.length - 1;
-                    return (
-                      <div key={s.key} className="flex gap-3">
-                        <div className="flex flex-col items-center shrink-0">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${done ? "bg-primary border-primary" : "bg-secondary border-border"}`}>
-                            {done && !active ? <CheckCircle className="w-3.5 h-3.5 text-white" />
-                              : active ? <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-                              : <Circle className="w-3 h-3 text-muted-foreground" />}
-                          </div>
-                          {!isLast && <div className={`w-0.5 h-6 ${i < statusIdx ? "bg-primary" : "bg-border"}`} />}
+                    {myOrder.status === "үнэ батлах" && (
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm opacity-80">Хүргэлтийн үнэ</span>
+                          <span className="text-4xl font-extrabold tabular">₮{myOrder.price.toLocaleString()}</span>
                         </div>
-                        <div className={`pb-5 ${isLast ? "pb-0" : ""} pt-0.5`}>
-                          <p className={`text-sm ${done ? "text-foreground" : "text-muted-foreground"} ${active ? "font-medium" : ""}`}>{s.label}</p>
-                          {active && s.sub && <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>}
-                          {active && myOrder.eta && myOrder.status !== "шинэ" && (
-                            <p className="text-xs text-primary font-mono mt-0.5">~ {myOrder.eta}</p>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => onConfirmOrder(myOrder.id)}
+                          className="w-full bg-white text-[#16181d] py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
+                        >
+                          Зөвшөөрөөд төлөх <ArrowRight className="w-4 h-4" />
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
 
-                {/* Courier */}
-                {myOrder.courierName && ["томилогдсон", "авсан", "хүргэгдсэн"].includes(myOrder.status) && (
-                  <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
-                    <button
-                      onClick={() => setCourierProfileOpen(true)}
-                      className="flex items-center gap-3 text-left group"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold group-hover:border-primary transition-colors" style={{ fontFamily: "var(--font-display)" }}>
+                    {view.tone === "cancelled" && (
+                      <button
+                        onClick={handleNewOrder}
+                        className="mt-4 w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-bold hover:bg-primary/90 transition-colors"
+                      >
+                        Шинэ захиалга өгөх
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. Дөрвөн шат — хаана явааг нэг харцаар */}
+                {ms >= 0 && view.tone !== "done" && (
+                  <div className="grid grid-cols-4 gap-1.5" aria-label="Захиалгын шат">
+                    {MILESTONES.map((m, i) => (
+                      <div key={m} className="space-y-1.5">
+                        <span className={`block h-1.5 rounded-full ${i < ms ? "bg-primary" : i === ms ? "bg-primary/50 animate-pulse" : "bg-border"}`} />
+                        <span className={`block text-[11px] leading-tight ${i <= ms ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{m}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 3. Хийх ёстой зүйл — төлбөр */}
+                {myOrder.status === "төлбөр хүлээж байна" && (
+                  <PaymentPanel
+                    order={myOrder}
+                    bankInfo={bankInfo}
+                    createPayment={onCreatePayment}
+                    checkPayment={onCheckPayment}
+                    test={testPayments}
+                    onPaid={(method) => onMarkPaid(myOrder.id, method)}
+                  />
+                )}
+
+                {/* Барааны төлбөрийн QR — тухайн газарт төлнө */}
+                {(myOrder.basket?.length ?? 0) > 0 && onTheWay && (() => {
+                  const shop = partners.find((x) => x.id === myOrder.partnerId);
+                  return (
+                    <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
+                      <p className="text-sm font-bold">Барааны төлбөр — ₮{(myOrder.basketTotal ?? 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {shop?.name ?? "Тухайн газар"}-т доорх QR-аар төлнө үү. Хүргэлтийн төлбөр аль хэдийн төлөгдсөн.
+                      </p>
+                      {shop?.paymentQrUrl ? (
+                        <img src={shop.paymentQrUrl} alt="Газрын төлбөрийн QR" className="w-40 h-40 mx-auto rounded-xl bg-white p-2 border border-border" />
+                      ) : (
+                        <p className="text-xs text-amber-500">Энэ газар QR-аа байршуулаагүй байна — бэлнээр төлнө.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Хүргэгдлээ — баяр хүргэе, үнэлгээ, санал */}
+                {myOrder.status === "хүргэгдсэн" && (
+                  <DeliveredCelebration
+                    order={myOrder}
+                    userPhone={userPhone}
+                    onRate={onRate}
+                    onFeedback={onFeedback}
+                    onDone={handleNewOrder}
+                  />
+                )}
+
+                {/* 4. Хүргэгч */}
+                {myOrder.courierName && onTheWay && (
+                  <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between gap-3">
+                    <button onClick={() => setCourierProfileOpen(true)} className="flex items-center gap-3 text-left group min-w-0">
+                      <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold shrink-0">
                         {myOrder.courierName[0]}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{myOrder.courierName}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> Мэдээлэл харах
-                          <ArrowRight className="w-3 h-3" />
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Таны хүргэгч</p>
+                        <p className="font-semibold truncate group-hover:text-primary transition-colors">{myOrder.courierName}</p>
+                        <p className="text-xs text-primary flex items-center gap-1">Мэдээлэл харах <ArrowRight className="w-3 h-3" /></p>
                       </div>
                     </button>
-                    <a href={`tel:${myOrder.courierPhone}`} className="flex items-center gap-1.5 border border-border px-3 py-1.5 rounded-xl text-sm hover:border-primary/50 hover:text-primary transition-colors">
-                      <Phone className="w-3.5 h-3.5" /> Залгах
+                    <a
+                      href={`tel:${myOrder.courierPhone}`}
+                      className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      <Phone className="w-4 h-4" /> Залгах
                     </a>
                   </div>
                 )}
@@ -1042,99 +1144,55 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   />
                 )}
 
-                {/* Cancel before assignment */}
-                {myOrder.status === "шинэ" && (
-                  <div className="space-y-2">
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                      <p className="text-xs text-amber-300">Оператор тантай холбогдож үнийг тогтооно...</p>
-                    </div>
-                    <button
-                      onClick={() => setCancelTarget(myOrder.id)}
-                      className="w-full border border-destructive/50 text-destructive py-2.5 rounded-xl text-sm hover:bg-destructive/10 transition-colors"
-                    >
-                      Захиалга цуцлах
-                    </button>
-                  </div>
-                )}
-
-                {/* Price approval */}
-                {myOrder.status === "үнэ батлах" && (
-                  <div className="space-y-3">
-                    <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 space-y-2">
-                      <p className="text-xs text-muted-foreground">Хүргэлтийн үнэ тогтоогдлоо</p>
-                      <p className="text-3xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
-                        ₮{myOrder.price.toLocaleString()}
-                      </p>
-                      {myOrder.courierName && (
-                        <p className="text-xs text-muted-foreground">Хүргэгч: {myOrder.courierName}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setCancelTarget(myOrder.id)}
-                        className="flex-1 border border-destructive/50 text-destructive py-3 rounded-2xl text-sm hover:bg-destructive/10 transition-colors"
-                      >
-                        Цуцлах
-                      </button>
-                      <button
-                        onClick={() => onConfirmOrder(myOrder.id)}
-                        className="flex-1 bg-primary text-white py-3 rounded-2xl text-sm hover:bg-primary/90 transition-colors"
-                        style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-                      >
-                        Зөвшөөрч төлөх
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Барааны төлбөрийн QR — тухайн газарт төлнө */}
-                {(myOrder.basket?.length ?? 0) > 0 && ["томилогдсон", "авсан"].includes(myOrder.status) && (() => {
-                  const shop = partners.find((x) => x.id === myOrder.partnerId);
-                  return (
-                    <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
-                      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                        🛒 Барааны төлбөр — ₮{(myOrder.basketTotal ?? 0).toLocaleString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {shop?.name ?? "Тухайн газар"}-т доорх QR-аар төлнө үү. Хүргэлтийн төлбөр аль хэдийн төлөгдсөн.
-                      </p>
-                      {shop?.paymentQrUrl ? (
-                        <img src={shop.paymentQrUrl} alt="Газрын төлбөрийн QR" className="w-40 h-40 mx-auto rounded-xl bg-white p-2 border border-border" />
-                      ) : (
-                        <p className="text-xs text-amber-500">Энэ газар QR-аа байршуулаагүй байна — бэлнээр төлнө.</p>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Төлбөр */}
-                {myOrder.status === "төлбөр хүлээж байна" && (
-                  <PaymentPanel
-                    order={myOrder}
-                    bankInfo={bankInfo}
-                    createPayment={onCreatePayment}
-                    checkPayment={onCheckPayment}
-                    test={testPayments}
-                    onPaid={(method) => onMarkPaid(myOrder.id, method)}
+                {/* 5. Маршрут */}
+                {view.tone !== "cancelled" && (
+                  <RoutePreview
+                    from={myOrder.fromDetail || myOrder.fromAddress}
+                    to={myOrder.toDetail || myOrder.toAddress}
+                    fromPos={myOrder.fromLat != null ? { lat: myOrder.fromLat, lng: myOrder.fromLng! } : null}
+                    toPos={myOrder.toLat != null ? { lat: myOrder.toLat, lng: myOrder.toLng! } : null}
+                    courier={courierLoc}
                   />
                 )}
 
-                {/* Жолооч хайж байна */}
-                {myOrder.status === "жолооч хайж байна" && <SearchingCourier />}
+                {/* 6. Дэлгэрэнгүй — хэрэгтэй үед л нээнэ */}
+                <details className="group bg-card border border-border rounded-2xl">
+                  <summary className="flex items-center justify-between px-4 py-3.5 cursor-pointer list-none text-sm font-semibold">
+                    Захиалгын дэлгэрэнгүй
+                    <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <dl className="px-4 pb-4 space-y-2.5 text-sm border-t border-border pt-3">
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Дугаар</dt><dd className="font-mono">#{myOrder.id}</dd></div>
+                    {svc && <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Үйлчилгээ</dt><dd className="text-right">{svc.label}</dd></div>}
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground shrink-0">Авах</dt><dd className="text-right">{myOrder.fromDetail || myOrder.fromAddress}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground shrink-0">Хүргэх</dt><dd className="text-right">{myOrder.toDetail || myOrder.toAddress}</dd></div>
+                    {myOrder.packageNote && myOrder.packageNote !== "Тэмдэглэлгүй" && (
+                      <div className="flex justify-between gap-4"><dt className="text-muted-foreground shrink-0">Тэмдэглэл</dt><dd className="text-right">{myOrder.packageNote}</dd></div>
+                    )}
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-muted-foreground">Хүргэлтийн үнэ</dt>
+                      <dd className="font-semibold tabular">{myOrder.price > 0 ? `₮${myOrder.price.toLocaleString()}` : "Тогтоогдоогүй"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Захиалсан</dt><dd className="tabular">{myOrder.createdAt}</dd></div>
+                  </dl>
+                </details>
 
-                {/* Хүргэгдлээ — баяр хүргэе, үнэлгээ, санал */}
-                {myOrder.status === "хүргэгдсэн" && (
-                  <DeliveredCelebration
-                    order={myOrder}
-                    userPhone={userPhone}
-                    onRate={onRate}
-                    onFeedback={onFeedback}
-                    onDone={handleNewOrder}
-                  />
+                {/* Цуцлах — туслах үйлдэл, анхаарал татахгүй */}
+                {canCancel && (
+                  <button
+                    onClick={() => setCancelTarget(myOrder.id)}
+                    className="w-full text-sm text-muted-foreground hover:text-destructive py-2 transition-colors"
+                  >
+                    Захиалга цуцлах
+                  </button>
+                )}
+
+                {(view.tone === "wait") && (
+                  <p className="text-xs text-muted-foreground text-center">Энэ дэлгэц өөрөө шинэчлэгдэнэ — хүлээж суух шаардлагагүй.</p>
                 )}
               </div>
-            )}
+              );
+            })()}
           </>
         )}
 
