@@ -107,23 +107,11 @@ npm run dev
 
 ---
 
-## Онлайн төлбөр холбох (QPay / Bonum)
+## Онлайн төлбөр холбох (Byl / QPay)
 
-Төлбөрийн түлхүүр **client талд орохгүй** — Edge Function дотор л байна.
-
-```bash
-supabase functions deploy create-payment --no-verify-jwt
-supabase functions deploy payment-webhook --no-verify-jwt
-
-# QPay
-supabase secrets set PAYMENT_PROVIDER=qpay   QPAY_USERNAME=... QPAY_PASSWORD=... QPAY_INVOICE_CODE=...   PUBLIC_CALLBACK_URL=https://<project>.functions.supabase.co/payment-webhook
-```
-
-Дараа нь `.env`-д `VITE_PAYMENT_PROVIDER=qpay` гэж бичнэ.
-
-**Bonum** ашиглах бол merchant эрхээ авсны дараа
-`supabase/functions/create-payment/index.ts` доторх `createBonumInvoice()`-ыг
-өөрийн доктой тулгаж эндпойнт/талбарын нэрийг тааруулна.
+Төлбөрийн сервер нь Supabase биш, Vercel Function ([api/payments.ts](api/payments.ts))
+— push хийхэд автоматаар deploy болно. Түлхүүрүүдийг Vercel-ийн Environment
+Variables-д **VITE_ угтваргүй** нэмнэ. Дэлгэрэнгүй: [BYL_SETUP.md](BYL_SETUP.md).
 
 Хоосон орхивол апп **гарын авлагын горимд** ажиллана: үйлчлүүлэгчид
 дансны мэдээлэл харуулж, оператор төлбөрийг гараар баталгаажуулна.

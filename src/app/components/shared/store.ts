@@ -565,7 +565,7 @@ export function useStore() {
 
   /**
    * Төлбөр баталгаажлаа → жолооч хайж эхэлнэ.
-   * Жинхэнэ төлбөрийг payment-webhook Edge Function баталгаажуулж энэ
+   * Онлайн төлбөрийг api/payments.ts (Byl webhook) баталгаажуулж энэ
    * талбаруудыг шинэчилнэ; энд аппын талын төлөвийг зөөнө.
    */
   const markOrderPaid = useCallback(
@@ -586,18 +586,25 @@ export function useStore() {
   );
 
   /**
-   * "Төлбөрөө шалгах" — QPay-д төлбөр орсон эсэхийг СЕРВЕР дээр шалгуулна
-   * (payment-webhook нь QPay /payment/check-ээр баталгаажуулдаг). Өмнө нь
-   * энэ товч шалгалгүйгээр шууд "төлөгдсөн" гэж тэмдэглэдэг байв.
+   * "Төлбөрөө шалгах" — төлбөр орсон эсэхийг СЕРВЕР (api/payments.ts) нь
+   * Byl/QPay-ээс өөрөө лавлаж шалгана. Апп өөрөө "төлөгдсөн" гэж тэмдэглэхгүй.
    */
   const checkPayment = useCallback(
     async (paymentId: string, opts?: { test?: boolean }): Promise<boolean> => {
-      // Туршилтын нэхэмжлэхийг жинхэнэ QPay руу шалгуулахгүй — DB-ээс л уншина
+      // Туршилтын нэхэмжлэхийг жинхэнэ провайдер руу шалгуулахгүй — DB-ээс л уншина
       if (!opts?.test) {
         try {
-          await supabase.functions.invoke("payment-webhook", { body: { payment_id: paymentId } });
+          const res = await fetch("/api/payments?action=check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId }),
+          });
+          if (res.ok && (await res.json())?.paid) {
+            await refreshOrders();
+            return true;
+          }
         } catch {
-          /* 402 = хараахан төлөгдөөгүй — доор DB-ээс уншина */
+          /* сервер хүрэхгүй — доор DB-ээс уншина */
         }
       }
       const { data } = await supabase.from("payments").select("status").eq("id", paymentId).single();
@@ -721,9 +728,10 @@ export function useStore() {
 
   // ── Төлбөр ──────────────────────────────────────────────────────────
   /**
-   * Нэхэмжлэх үүсгэнэ. VITE_PAYMENT_PROVIDER тохируулсан бол
-   * create-payment Edge Function QR-ыг буцаана; тохируулаагүй үед гарын
-   * авлагын горимд шилжиж, оператор төлбөрийг баталгаажуулна.
+   * Нэхэмжлэх үүсгэнэ. Сервер (api/payments.ts, Vercel) дээр Byl эсвэл
+   * QPay-ийн түлхүүр тохируулсан бол онлайн төлбөр; тохируулаагүй (501),
+   * эсвэл сервер хүрэхгүй бол дансаар шилжүүлэх горим.
+   * VITE_PAYMENT_PROVIDER=manual — онлайн төлбөрийг албаар унтраана.
    */
   const createPayment = useCallback(
     async (orderId: string, amount: number, opts?: { test?: boolean }): Promise<PaymentIntent> => {
@@ -756,24 +764,30 @@ export function useStore() {
         };
       }
 
-      if (provider) {
+      if (provider !== "manual") {
         try {
-          const { data, error } = await supabase.functions.invoke("create-payment", {
-            body: { orderId, amount, provider },
+          const res = await fetch("/api/payments?action=create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
           });
-          if (error) throw error;
-          await refreshOrders();
-          return {
-            provider,
-            manual: false,
-            paymentId: data?.paymentId,
-            qrText: data?.qrText,
-            qrImage: data?.qrImage,
-            checkoutUrl: data?.checkoutUrl,
-            banks: data?.banks,
-          };
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.checkoutUrl || data?.qrImage) {
+              return {
+                provider: data.provider,
+                manual: false,
+                paymentId: data.paymentId,
+                qrText: data.qrText,
+                qrImage: data.qrImage,
+                checkoutUrl: data.checkoutUrl,
+                banks: data.banks,
+              };
+            }
+          }
+          // 501 = онлайн төлбөр тохируулаагүй → дансаар
         } catch {
-          // Edge Function бэлэн биш — гарын авлагын горимд шилжинэ
+          // Сервер хүрэхгүй (локал dev г.м.) → дансаар
         }
       }
 
@@ -788,13 +802,13 @@ export function useStore() {
         await supabase.from("payments").insert({
           id: "pay-" + newId(),
           order_id: orderId,
-          provider: provider ?? "manual",
+          provider: "manual",
           amount,
           status: "pending",
           created_at: new Date().toISOString(),
         });
       }
-      return { provider: provider ?? "manual", manual: true };
+      return { provider: "manual", manual: true };
     },
     [refreshOrders],
   );

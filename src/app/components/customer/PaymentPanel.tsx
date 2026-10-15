@@ -19,8 +19,8 @@ interface PaymentPanelProps {
 /**
  * Үнэ батлагдсаны дараах төлбөрийн алхам.
  *
- * - QPay/Bonum (VITE_PAYMENT_PROVIDER): create-payment Edge Function QR болон
- *   банкуудын жагсаалтыг буцаана. Төлбөрийг payment-webhook баталгаажуулна.
+ * - Byl / QPay: api/payments.ts (Vercel) нэхэмжлэх үүсгэж url эсвэл QR
+ *   буцаана. Төлбөрийг Byl webhook, эсвэл сервер провайдероос лавлаж баталгаажуулна.
  * - Туршилтын QPay (test): бүтэц нь жинхэнэтэй ижил, банкны апп-ын оронд
  *   туршилтын цонх нээгдэнэ.
  * - Гарын авлага: дансны мэдээлэл харуулна.

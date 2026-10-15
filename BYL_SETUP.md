@@ -1,66 +1,67 @@
-# Byl-ээр онлайн төлбөр (QPay, карт) холбох
+# Онлайн төлбөр (Byl — QPay, карт) холбох
 
-[Byl](https://byl.mn) нь QPay болон банкны картыг нэг төлбөрийн хуудсанд
-нэгтгэдэг. QPay-тэй шууд merchant гэрээ хийх шаардлагагүй.
+Төлбөрийн сервер код нь [api/payments.ts](api/payments.ts) — Vercel Function.
+GitHub руу push хийхэд Vercel өөрөө deploy хийнэ. **Supabase CLI, deploy
+команд шаардлагагүй.**
 
-## Урсгал
+## Яагаад VITE_ биш вэ
 
-1. Захиалга "Төлбөрөө хийнэ үү" шатанд ирэхэд апп `create-payment` функцийг
-   дуудна → функц Byl дээр нэхэмжлэх үүсгэнэ (дүнг DB-ээс уншина, апп-аас биш).
-2. Үйлчлүүлэгч **"₮7,000 төлөх"** товч дарж Byl-ийн хуудсанд QPay эсвэл
-   картаар төлнө.
-3. Byl `invoice.paid` webhook-ийг `payment-webhook` руу илгээнэ. Функц
-   `Byl-Signature` гарын үсгийг шалгаад захиалгыг "Хүргэгч хайж байна"
-   болгоно. Апп-ын дэлгэц өөрөө шинэчлэгдэнэ.
-4. Webhook хоцорсон ч үйлчлүүлэгч апп руу буцаж ирэхэд (эсвэл "Төлбөрөө
-   шалгах" дарахад) сервер Byl-ээс нэхэмжлэхийн төлөвийг өөрөө асууж
-   баталгаажуулна.
+`VITE_` гэж эхэлсэн хувьсагч хөтчийн JavaScript дотор ил бичигддэг —
+hvrgelt.mn-д орсон хэн ч уншина. Byl-ийн токэн тэнд байвал хүн бүр танай
+нэрээр нэхэмжлэх үүсгэж, Signing secret байвал хуурамч "төлөгдлөө"
+мэдэгдэл илгээж үнэгүй хүргэлт авч чадна. Доорх 4 хувьсагчийг **VITE_
+угтваргүй** нэрлэвэл Vercel зөвхөн серверт өгнө, хөтөч рүү хэзээ ч очихгүй.
 
-Нэг захиалгад 23 цагийн дотор ижил дүнтэй нэхэмжлэх дахин үүсгэхгүй.
-
-## Тохируулах
+## Тохируулах — 3 алхам
 
 ### 1. Byl dashboard
 
-- **API токэн** → шинэ токэн үүсгээд хуулж авна.
-- **Project ID** — хөтчийн хаягийн мөрөнд `byl.mn/.../projects/<ID>/...`
-  гэж харагдах тоо.
-- **Webhook → Endpoint нэмэх**:
-  - URL: `https://vjxpgjzlcryzlfwzrpwx.supabase.co/functions/v1/payment-webhook`
+- **API токэн** → шинэ токэн үүсгэж хуулна
+- **Project ID** — хөтчийн хаягийн мөрөнд `.../projects/<тоо>/...`
+- **Webhook → Endpoint нэмэх**
+  - URL: `https://hvrgelt.mn/api/payments?action=webhook`
   - Event: `invoice.paid`
-  - Хадгалсны дараа endpoint-ийн хуудаснаас **Signing secret**-ийг хуулна.
+  - Хадгалсны дараа **Signing secret**-ийг хуулна
 
-### 2. Supabase secrets
+### 2. Vercel → Settings → Environment Variables
 
-```
-supabase secrets set PAYMENT_PROVIDER=byl
-supabase secrets set BYL_API_TOKEN=<API токэн>
-supabase secrets set BYL_PROJECT_ID=<Project ID>
-supabase secrets set BYL_WEBHOOK_SECRET=<Signing secret>
-```
+| Key | Value |
+|---|---|
+| `BYL_API_TOKEN` | Byl-ийн API токэн |
+| `BYL_PROJECT_ID` | Byl-ийн Project ID |
+| `BYL_WEBHOOK_SECRET` | Webhook-ийн Signing secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` |
 
-> ⚠️ Эдгээрийг кодонд, энэ файлд, чатанд **бүү бичээрэй** — repo нийтэд нээлттэй.
+Environments: **Production** (туршихдаа Preview-д ч нэмж болно).
 
-### 3. Функцуудыг deploy хийх
+> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` нь DB-ийн бүх эрхтэй түлхүүр — нэрийг нь
+> яг ингэж (VITE_-гүй) бичнэ. Эдгээрийг кодонд, чатанд бүү бичээрэй.
 
-```
-supabase functions deploy create-payment --no-verify-jwt
-supabase functions deploy payment-webhook --no-verify-jwt
-```
+### 3. Redeploy
 
-### 4. Vercel
-
-Settings → Environment Variables → `VITE_PAYMENT_PROVIDER` = `byl` →
-Deployments → Redeploy.
+Deployments → сүүлийн deployment → `···` → **Redeploy**.
 
 ## Шалгах
 
-1. Бага дүнтэй (Byl-ийн доод хэмжээ ₮10) жинхэнэ захиалга хийнэ.
-2. "₮... төлөх" → Byl хуудсанд төлнө → апп руу буцна.
-3. Захиалга "Хүргэгч хайж байна" болох ёстой.
-4. Byl dashboard → Webhook → endpoint-ийн хуудсанд хүргэлт **2xx** гэж
-   харагдах ёстой. **401** бол Signing secret буруу.
+1. Энгийн үйлчлүүлэгчийн бүртгэлээр хамгийн бага үнэтэй захиалга хийнэ.
+2. Төлбөрийн шатанд **"₮… төлөх"** товч гарах ёстой. Дансны мэдээлэл
+   гарсаар байвал 4 хувьсагчийн аль нэг дутуу эсвэл redeploy хийгээгүй.
+3. Byl хуудсанд QPay-ээр төлөөд апп руу буцна → "Хүргэгч хайж байна".
+4. Byl → Webhook → endpoint-ийн хуудсанд **2xx** гарвал зөв. **401** бол
+   `BYL_WEBHOOK_SECRET` буруу.
 
-Туршилт хийхдээ супер админ "Role-оор үзэх"-ээр үйлчлүүлэгч болж орвол
-жинхэнэ Byl биш **туршилтын QPay** гарна — жинхэнэ төлбөрийг шалгахын тулд
-ердийн үйлчлүүлэгчийн бүртгэлээр нэвтэрнэ.
+## Урсгал
+
+1. Апп `/api/payments?action=create` дуудна → сервер дүнг DB-ээс уншиж
+   Byl дээр нэхэмжлэх үүсгэнэ (нэг захиалгад 23 цагт нэг нэхэмжлэх).
+2. Үйлчлүүлэгч Byl-ийн хуудсанд QPay эсвэл картаар төлнө.
+3. Byl `invoice.paid` webhook илгээнэ → сервер `Byl-Signature`-ийг шалгаж
+   захиалгыг "Хүргэгч хайж байна" болгоно → ойрын 4 хүргэгчид санал очно.
+4. Webhook хоцорсон ч апп руу буцаж ирэхэд сервер Byl-ээс өөрөө асууна.
+
+## QPay шууд (Byl-гүй) бол
+
+Byl-ийн 3 хувьсагчийн оронд `QPAY_USERNAME`, `QPAY_PASSWORD`,
+`QPAY_INVOICE_CODE` нэмнэ (+ `SUPABASE_SERVICE_ROLE_KEY`). Апп QR ба
+банкуудын товчийг харуулна. Аль нэгийг нь тохируулаагүй бол апп дансаар
+шилжүүлэх горимд ажиллана.
