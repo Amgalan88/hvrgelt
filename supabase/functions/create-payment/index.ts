@@ -1,4 +1,4 @@
-// hvrgelt — Төлбөрийн нэхэмжлэх үүсгэх (QPay / Bonum)
+// hvrgelt — Төлбөрийн нэхэмжлэх үүсгэх (Byl / QPay / Bonum)
 //
 // Апп энэ функцийг дуудаж QR-аа авна. Төлбөрийн API түлхүүр зөвхөн
 // энд байна — client талд хэзээ ч гарахгүй.
@@ -10,6 +10,11 @@
 //   supabase secrets set PAYMENT_PROVIDER=qpay \
 //     QPAY_USERNAME=... QPAY_PASSWORD=... QPAY_INVOICE_CODE=... \
 //     PUBLIC_CALLBACK_URL=https://<project>.functions.supabase.co/payment-webhook
+//
+// Byl (byl.mn — QPay, карт нэг хуудсанд; QPay-тэй шууд гэрээ шаардахгүй):
+//   supabase secrets set PAYMENT_PROVIDER=byl \
+//     BYL_API_TOKEN=... BYL_PROJECT_ID=... BYL_WEBHOOK_SECRET=...
+//   Byl dashboard → Webhook → Endpoint: https://<project>.supabase.co/functions/v1/payment-webhook
 //
 // Bonum (merchant эрх авсны дараа):
 //   supabase secrets set PAYMENT_PROVIDER=bonum \
@@ -81,6 +86,33 @@ async function createQpayInvoice(orderId: string, amount: number, paymentId: str
   };
 }
 
+// ── Byl ───────────────────────────────────────────────────────────────
+// https://byl.mn/docs/en/api/invoices.html — нэхэмжлэхийн url руу
+// үйлчлүүлэгчийг илгээхэд Byl өөрөө QPay/карт сонгуулж төлүүлнэ.
+async function createBylInvoice(orderId: string, amount: number) {
+  const token = Deno.env.get("BYL_API_TOKEN");
+  const project = Deno.env.get("BYL_PROJECT_ID");
+  if (!token || !project) throw new Error("BYL_API_TOKEN / BYL_PROJECT_ID тохируулаагүй байна");
+
+  const res = await fetch(`https://byl.mn/api/v1/projects/${encodeURIComponent(project)}/invoices`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount,
+      description: `Дархан хүргэлт — захиалга #${orderId}`.slice(0, 255),
+    }),
+  });
+  if (!res.ok) throw new Error(`Byl invoice failed: ${res.status} ${await res.text()}`);
+  const { data } = await res.json();
+  return {
+    invoiceId: String(data.id),
+    qrText: undefined as string | undefined,
+    qrImage: undefined as string | undefined,
+    checkoutUrl: data.url as string,
+    raw: data,
+  };
+}
+
 // ── Bonum ─────────────────────────────────────────────────────────────
 // Merchant портал: https://merchant.bonum.mn/ — эндпойнт/талбарын нэрийг
 // өөрсдийн доктой тулгаж энэ функцийг тааруулна.
@@ -129,11 +161,40 @@ Deno.serve(async (req) => {
     const finalAmount = order.price > 0 ? order.price : Math.max(0, Number(amount) || 0);
     if (finalAmount <= 0) return json({ error: "Үнэ тогтоогдоогүй байна" }, 400);
 
+    if (order.status !== "төлбөр хүлээж байна") return json({ error: "Энэ захиалга төлбөрийн шатанд байхгүй" }, 409);
+
+    // Апп-ыг нээх бүрт шинэ нэхэмжлэх үүсгэхгүй — ижил дүнтэй хүлээгдэж буй
+    // нэхэмжлэх (23 цагийн дотор) байвал түүнийг буцаана
+    const since = new Date(Date.now() - 23 * 3600_000).toISOString();
+    const { data: existing } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("order_id", orderId)
+      .eq("provider", PROVIDER)
+      .eq("status", "pending")
+      .eq("amount", finalAmount)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (existing?.length && (existing[0].checkout_url || existing[0].qr_image)) {
+      const p = existing[0];
+      return json({
+        paymentId: p.id,
+        provider: PROVIDER,
+        qrText: p.qr_text ?? undefined,
+        qrImage: p.qr_image ?? undefined,
+        checkoutUrl: p.checkout_url ?? undefined,
+        banks: (p.raw as { urls?: unknown[] } | null)?.urls ?? [],
+      });
+    }
+
     const paymentId = `pay-${orderId}-${Date.now()}`;
     const invoice =
-      PROVIDER === "bonum"
-        ? await createBonumInvoice(orderId, finalAmount, paymentId)
-        : await createQpayInvoice(orderId, finalAmount, paymentId);
+      PROVIDER === "byl"
+        ? await createBylInvoice(orderId, finalAmount)
+        : PROVIDER === "bonum"
+          ? await createBonumInvoice(orderId, finalAmount, paymentId)
+          : await createQpayInvoice(orderId, finalAmount, paymentId);
 
     await supabase.from("payments").insert({
       id: paymentId,

@@ -70,6 +70,17 @@ export function PaymentPanel({ order, bankInfo, createPayment, checkPayment, tes
     }
   }
 
+  // Төлбөрийн хуудаснаас апп руу буцаж ирэхэд автоматаар шалгана
+  useEffect(() => {
+    if (!intent || intent.manual || intent.test || !intent.paymentId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void checkQpay();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent?.paymentId]);
+
   function openBank(bank: QpayBank) {
     if (intent?.test) setTestBank(bank);
     else window.location.href = bank.link;
@@ -97,7 +108,7 @@ export function PaymentPanel({ order, bankInfo, createPayment, checkPayment, tes
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <QrCode className="w-4 h-4 text-primary" />
-              <p className="text-sm font-semibold">{intent.provider.toUpperCase()}-ээр төлөх</p>
+              <p className="text-sm font-semibold">{intent.provider === "byl" ? "Онлайн төлөх — QPay, карт" : `${intent.provider.toUpperCase()}-ээр төлөх`}</p>
             </div>
             {intent.test && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
@@ -139,14 +150,21 @@ export function PaymentPanel({ order, bankInfo, createPayment, checkPayment, tes
               </div>
             </div>
           ) : intent.checkoutUrl ? (
-            <a
-              href={intent.checkoutUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full text-center bg-primary text-primary-foreground py-3 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
-            >
-              Банкны апп-аар төлөх
-            </a>
+            <div className="space-y-2">
+              <a
+                href={intent.checkoutUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold hover:bg-primary/90 transition-colors"
+              >
+                ₮{order.price.toLocaleString()} төлөх
+              </a>
+              <p className="text-xs text-muted-foreground text-center">
+                {intent.provider === "byl"
+                  ? "Byl-ийн аюулгүй хуудас нээгдэнэ — QPay эсвэл банкны картаар төлнө. Төлсний дараа энэ апп руу буцаарай."
+                  : "Банкны хуудас нээгдэнэ. Төлсний дараа энэ апп руу буцаарай."}
+              </p>
+            </div>
           ) : null}
 
           <button
