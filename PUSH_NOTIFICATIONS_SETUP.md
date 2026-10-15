@@ -41,16 +41,27 @@ supabase link --project-ref <таны-project-ref>
 
 ## 4. Нууц түлхүүрүүдийг тохируулах
 
+Түлхүүрээ **өөрийн компьютер дээр** шинээр үүсгэнэ:
+
 ```
-supabase secrets set VAPID_PUBLIC_KEY=BEEW8WbGPam7qgeP-aMEkRvPGxdTsgJk6IA13rW_r2tPnA9InCpHvETTZAlfE8RSKzVKnWr3dn-5zPPHpakPlDY
-supabase secrets set VAPID_PRIVATE_KEY=lte6MUKdeVfD_ZzbXFUWa9BAtAN7TBi_huiKsVikE_k
-supabase secrets set VAPID_SUBJECT=mailto:88371961@hvrgelt.mn
-supabase secrets set WEBHOOK_SECRET=5f3838a199359058cccfd656b3101599fb7caf31b3c50a03
+npx web-push generate-vapid-keys
 ```
 
-> ⚠️ `VAPID_PRIVATE_KEY` болон `WEBHOOK_SECRET`-г хэнтэй ч бүү хуваалц. Дээрх
-> утгууд энэ session дээр зөвхөн танд зориулж үүсгэсэн (эсвэл өөрөө шинээр
-> `npx web-push generate-vapid-keys` ажиллуулж солиж болно).
+Гарсан хоёр түлхүүрийн **Public Key** нь `.env`-ийн `VITE_VAPID_PUBLIC_KEY`
+болон Vercel-ийн Environment Variables-д, **Private Key** нь зөвхөн
+Supabase secrets-д орно. `WEBHOOK_SECRET`-д санамсаргүй урт текст өгнө
+(жишээ нь `npx -y uuid` эсвэл нууц үг үүсгэгч).
+
+```
+supabase secrets set VAPID_PUBLIC_KEY=<Public Key>
+supabase secrets set VAPID_PRIVATE_KEY=<Private Key>
+supabase secrets set VAPID_SUBJECT=mailto:info@hvrgelt.mn
+supabase secrets set WEBHOOK_SECRET=<санамсаргүй урт текст>
+```
+
+> ⚠️ Private Key болон `WEBHOOK_SECRET`-ийг энэ файлд, кодонд, чатанд
+> **бүү бичээрэй** — repo нийтэд нээлттэй. Өмнө нь энд бичигдсэн байсан
+> түлхүүрүүдийг ашиглахгүй, заавал шинээр үүсгэнэ.
 
 `SUPABASE_URL` болон `SUPABASE_SERVICE_ROLE_KEY`-г supabase secrets-ээр
 тохируулах шаардлагагүй — Edge Function дотор автоматаар бэлэн байдаг.
