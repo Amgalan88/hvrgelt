@@ -2,7 +2,7 @@ import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon } from "lucide-react";
+import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent } from "../shared/store";
 import { useUser, type QuickOrder } from "../shared/UserContext";
@@ -21,7 +21,7 @@ import { cloudinaryUrl } from "../../lib/cloudinary";
 import { Logo } from "../shared/Logo";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { LocationPicker } from "./LocationPicker";
-import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, type LatLng, type CourierLocation } from "../../lib/geo";
+import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, currentPosition, geoErrorText, type GeoError, type LatLng, type CourierLocation } from "../../lib/geo";
 import type { MapMarker } from "../shared/MapView";
 
 const MapView = lazy(() => import("../shared/MapView"));
@@ -36,6 +36,15 @@ const CUSTOMER_HELP_STEPS = [
 ];
 
 type AppTab = "order" | "places" | "history" | "settings";
+
+/** Захиалгын асуултууд — нэг дэлгэцэнд нэг асуулт */
+type FormStep = 0 | 1 | 2 | 3;
+const WIZARD_STEPS: { q: string; hint: string }[] = [
+  { q: "Юу хүргүүлэх вэ?", hint: "Үйлчилгээгээ сонгоно уу" },
+  { q: "Хаанаас авах вэ?", hint: "Ачааг авах газрын хаяг" },
+  { q: "Хаашаа хүргэх вэ?", hint: "Хүргэж өгөх газрын хаяг" },
+  { q: "Нэмэлт мэдээлэл", hint: "Хүргэгч зөв бэлдэхэд тусална. Заавал биш." },
+];
 type OrderStep = "form" | "confirm" | "tracking";
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
@@ -205,6 +214,35 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     writeDraft(userId, { fromAddr, fromDetail, toAddr, toDetail, note, serviceId, subServiceId, fromPos, toPos });
   }, [userId, fromAddr, fromDetail, toAddr, toDetail, note, serviceId, subServiceId, fromPos, toPos]);
   const [pickerFor, setPickerFor] = useState<"from" | "to" | null>(null);
+  // Ноорогтой бол хаана хүрснээс нь үргэлжлүүлнэ
+  const [formStep, setFormStep] = useState<FormStep>(() => (draft.toAddr ? 3 : draft.fromAddr ? 2 : 0));
+  const [locating, setLocating] = useState(false);
+  const [geoErr, setGeoErr] = useState("");
+
+  function goStep(n: FormStep) {
+    setGeoErr("");
+    setFormStep(n);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function locateMe(target: "from" | "to") {
+    setLocating(true);
+    setGeoErr("");
+    try {
+      const p = await currentPosition();
+      if (target === "from") {
+        setFromPos(p);
+        if (!fromAddr.trim()) setFromAddr("Миний байршил");
+      } else {
+        setToPos(p);
+        if (!toAddr.trim()) setToAddr("Миний байршил");
+      }
+    } catch (e) {
+      setGeoErr(geoErrorText(e as GeoError));
+    } finally {
+      setLocating(false);
+    }
+  }
   // Цуцлахын өмнө асуух — нэг товшилтоор санамсаргүй цуцлагдахаас сэргийлнэ
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
@@ -323,6 +361,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
       setOrderStep("tracking");
       setFromAddr(""); setFromDetail(""); setToAddr(""); setToDetail(""); setNote("");
       setFromPos(null); setToPos(null); setSubServiceId(null);
+      setFormStep(0);
       setCargo({ fragile: false, urgent: false });
       setBasket([]); setBasketPartnerId(null);
     } finally {
@@ -421,6 +460,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setSubServiceId(SUB_BY_CATEGORY[shopPartner.category] ?? "shop");
     setShopPartner(null);
     setOrderStep("form");
+    setFormStep(2);
     setAppTab("order");
   }
 
@@ -432,6 +472,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setNote("");
     setToAddr(""); setToDetail("");
     setOrderStep("form");
+    setFormStep(2);
     setAppTab("order");
   }
 
@@ -442,6 +483,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setFromAddr(""); setFromDetail(""); setToAddr(""); setToDetail(""); setNote("");
     setFromPos(null); setToPos(null);
     setEstimated(null);
+    setFormStep(0);
     setOrderStep("form");
   }
 
@@ -494,259 +536,332 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         {/* ── ORDER TAB ── */}
         {tab === "order" && (
           <>
-            {/* FORM */}
+            {/* FORM — алхам алхмаар асуулт */}
             {orderStep === "form" && (
               <div className="space-y-4">
-                <div>
-                  <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem", lineHeight: 1.2 }}>
-                    Хаашаа<br />хүргэх вэ?
-                  </h1>
-                  <p className="text-muted-foreground text-sm mt-1">30 секундэд захиалаарай</p>
-                </div>
-
-                {/* Хурдан захиалга — нэг товшилтоор давтан захиалах */}
-                {quickOrders.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Хурдан захиалга</p>
-                      <button onClick={() => setQuickEdit((v) => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                        {quickEdit ? "Болсон" : "Засах"}
-                      </button>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pt-1.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {quickOrders.map((qo) => (
-                        <div key={qo.id} className="relative shrink-0">
-                          <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
-                            disabled={placingId === qo.id}
-                            className="flex items-center gap-2 bg-card border border-border rounded-2xl pl-2 pr-3.5 py-2 hover:border-primary/50 transition-colors disabled:opacity-50"
-                          >
-                            <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-lg">{placingId === qo.id ? "…" : qo.emoji}</span>
-                            <span className="text-sm font-medium max-w-[8rem] truncate">{qo.label}</span>
-                          </motion.button>
-                          {quickEdit && (
-                            <button onClick={() => deleteQuick(qo.id)} aria-label="Устгах" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow">
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button onClick={openQuickAdd} className="shrink-0 flex items-center gap-1.5 border border-dashed border-border rounded-2xl px-3.5 py-2 text-sm text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
-                        <Plus className="w-4 h-4" /> Нэмэх
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {/* Address box */}
-                <div className="bg-card border border-border rounded-2xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border space-y-1.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0" />
-                      <input
-                        value={fromAddr}
-                        onChange={(e) => setFromAddr(e.target.value)}
-                        onFocus={() => setAddrTarget("from")}
-                        placeholder="Авах хаяг — дүүрэг, хороо"
-                        className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                      />
-                      {fromAddr && <button aria-label="Арилгах" onClick={() => clearAddress("from")}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                {/* Асуултын баннер */}
+                <div className="relative overflow-hidden rounded-3xl bg-[#16181d] text-white p-5 border border-white/5">
+                  <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-[var(--brand)]/30 blur-2xl pointer-events-none" />
+                  <div className="relative flex items-center justify-between h-8">
+                    {formStep > 0 ? (
                       <button
-                        onClick={() => setPickerFor("from")}
-                        aria-label="Авах цэгийг газрын зураг дээр заах"
-                        className={`shrink-0 w-8 h-8 -mr-1 rounded-lg flex items-center justify-center transition-colors ${fromPos ? "bg-green-500/15 text-green-600" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+                        onClick={() => goStep((formStep - 1) as FormStep)}
+                        className="flex items-center gap-1 text-sm text-white/70 hover:text-white -ml-1 pr-2 py-1"
                       >
-                        <MapIcon className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" /> Буцах
                       </button>
-                    </div>
-                    {fromPos && (
-                      <p className="text-[11px] text-green-600 pl-6 font-medium">Газрын зураг дээр заасан ✓</p>
-                    )}
-                    {(fromDetail || addrTarget === "from") && fromAddr && (
-                      <input
-                        value={fromDetail}
-                        onChange={(e) => setFromDetail(e.target.value)}
-                        placeholder="Хаяг, байр, тоот..."
-                        className="w-full bg-transparent text-xs text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none pl-6"
-                      />
-                    )}
+                    ) : <span />}
+                    <span className="text-xs font-semibold text-white/60 tabular">Алхам {formStep + 1}/{WIZARD_STEPS.length}</span>
                   </div>
-                  <div className="px-4 py-3 space-y-1.5">
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <input
-                        value={toAddr}
-                        onChange={(e) => setToAddr(e.target.value)}
-                        onFocus={() => setAddrTarget("to")}
-                        placeholder="Хүргэх хаяг — дүүрэг, хороо"
-                        className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                      />
-                      {toAddr && <button aria-label="Арилгах" onClick={() => clearAddress("to")}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
-                      <button
-                        onClick={() => setPickerFor("to")}
-                        aria-label="Хүргэх цэгийг газрын зураг дээр заах"
-                        className={`shrink-0 w-8 h-8 -mr-1 rounded-lg flex items-center justify-center transition-colors ${toPos ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
-                      >
-                        <MapIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {toPos && (
-                      <p className="text-[11px] text-primary pl-6 font-medium">Газрын зураг дээр заасан ✓</p>
-                    )}
-                    {(toDetail || addrTarget === "to") && toAddr && (
-                      <input
-                        value={toDetail}
-                        onChange={(e) => setToDetail(e.target.value)}
-                        placeholder="Хаяг, байр, тоот..."
-                        className="w-full bg-transparent text-xs text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none pl-6"
-                      />
-                    )}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={formStep}
+                      className="relative mt-2"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      <h1 className="text-white" style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.12 }}>
+                        {WIZARD_STEPS[formStep].q}
+                      </h1>
+                      <p className="text-white/65 text-sm mt-1.5">{WIZARD_STEPS[formStep].hint}</p>
+                    </motion.div>
+                  </AnimatePresence>
+                  <div className="relative grid gap-1.5 mt-4" style={{ gridTemplateColumns: `repeat(${WIZARD_STEPS.length}, 1fr)` }}>
+                    {WIZARD_STEPS.map((_, i) => (
+                      <span key={i} className={`h-1 rounded-full transition-colors ${i <= formStep ? "bg-[var(--brand)]" : "bg-white/15"}`} />
+                    ))}
                   </div>
                 </div>
 
-                {/* Saved address quick-select */}
-                {addrTarget && savedAddresses.length > 0 && (
-                  <div className="bg-card border border-primary/30 rounded-2xl overflow-hidden">
-                    <div className="px-4 py-2 border-b border-border flex items-center gap-2">
-                      <Search className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {addrTarget === "from" ? "Авах хаяг сонгох" : "Хүргэх хаяг сонгох"}
-                      </span>
-                    </div>
-                    {savedAddresses.map((addr, i) => {
-                      const cfg = ICON_MAP[addr.icon];
-                      const Icon = cfg.icon;
-                      return (
-                        <button
-                          key={addr.id}
-                          onPointerDown={(e) => {
-                            e.preventDefault();
-                            const addrFull = [addr.address, addr.detail].filter(Boolean).join(", ");
-                            fillAddress(addrTarget, addr.label, addrFull);
-                          }}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/40 transition-colors text-left ${i < savedAddresses.length - 1 ? "border-b border-border" : ""}`}
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                            <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium leading-none">{addr.label}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{addr.address}{addr.detail ? `, ${addr.detail}` : ""}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Үйлчилгээ — сонгосныг нэг мөрөөр харуулж, бүх жагсаалт доороос гарч ирнэ */}
-                {service && (
-                  <button
-                    onClick={() => setServicePickerOpen(true)}
-                    className="w-full flex items-center gap-3 bg-card border border-border rounded-2xl p-3 text-left hover:border-primary/50 transition-colors"
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={formStep}
+                    className="space-y-4"
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                   >
-                    <span className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-2xl shrink-0">{service.emoji}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-xs text-muted-foreground">Үйлчилгээ</span>
-                      <span className="block text-sm font-semibold truncate">{service.label}</span>
-                    </span>
-                    <span className="text-xs font-semibold text-primary shrink-0 px-1">Солих</span>
-                  </button>
-                )}
-                {/* Дэд төрөл — үйлчилгээнээс хамаарна */}
-                {service && service.subs.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Төрлөө нарийвчилна уу</p>
-                    <div className="flex flex-wrap gap-2">
-                      {service.subs.map((sub) => {
-                        const on = sub.id === subServiceId;
+                {/* ── 1. Юу хүргүүлэх вэ? ── */}
+                {formStep === 0 && (
+                  <>
+                    {quickOrders.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">Давтан захиалах</p>
+                          <button onClick={() => setQuickEdit((v) => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                            {quickEdit ? "Болсон" : "Засах"}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pt-1.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {quickOrders.map((qo) => (
+                            <div key={qo.id} className="relative shrink-0">
+                              <motion.button
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => (quickEdit ? openQuickEdit(qo) : setConfirmQO(qo))}
+                                disabled={placingId === qo.id}
+                                className="flex items-center gap-2 bg-card border border-border rounded-2xl pl-2 pr-3.5 py-2 hover:border-primary/50 transition-colors disabled:opacity-50"
+                              >
+                                <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-lg">{placingId === qo.id ? "…" : qo.emoji}</span>
+                                <span className="text-sm font-medium max-w-[8rem] truncate">{qo.label}</span>
+                              </motion.button>
+                              {quickEdit && (
+                                <button onClick={() => deleteQuick(qo.id)} aria-label="Устгах" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button onClick={openQuickAdd} className="shrink-0 flex items-center gap-1.5 border border-dashed border-border rounded-2xl px-3.5 py-2 text-sm text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                            <Plus className="w-4 h-4" /> Нэмэх
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                      {SERVICES.map((sv) => {
+                        const active = sv.id === serviceId;
                         return (
                           <button
-                            key={sub.id}
-                            onClick={() => setSubServiceId(on ? null : sub.id)}
-                            title={sub.desc}
-                            className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${
-                              on
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                            }`}
+                            key={sv.id}
+                            onClick={() => { pickService(sv.id); goStep(1); }}
+                            className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${active ? "bg-primary/[0.07]" : "hover:bg-secondary/50"}`}
                           >
-                            {sub.label}
+                            <span className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 ${active ? "bg-primary/15" : "bg-secondary"}`}>{sv.emoji}</span>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-[15px] font-semibold leading-snug">{sv.label}</span>
+                              <span className="block text-xs text-muted-foreground mt-0.5">{sv.desc}</span>
+                            </span>
+                            {active
+                              ? <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                              : <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                           </button>
                         );
                       })}
                     </div>
-                  </div>
+
+                    {quickOrders.length === 0 && (
+                      <button onClick={openQuickAdd} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
+                        <Plus className="w-3.5 h-3.5" /> Байнгын хүргэлтээ хурдан захиалга болгох
+                      </button>
+                    )}
+                  </>
                 )}
 
-                {/* Сагс — партнёрын бараа */}
-                {basket.length > 0 && (
-                  <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                        🛒 {basketPartner?.name ?? "Сагс"}
-                      </p>
+                {/* ── 2–3. Хаанаас / Хаашаа ── */}
+                {(formStep === 1 || formStep === 2) && (() => {
+                  const target = formStep === 1 ? "from" : "to";
+                  const addr = target === "from" ? fromAddr : toAddr;
+                  const setAddr = target === "from" ? setFromAddr : setToAddr;
+                  const detail = target === "from" ? fromDetail : toDetail;
+                  const setDetail = target === "from" ? setFromDetail : setToDetail;
+                  const pos = target === "from" ? fromPos : toPos;
+                  const setPos = target === "from" ? setFromPos : setToPos;
+                  return (
+                    <>
+                      {/* Өмнөх хариултууд — дарж засна */}
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => goStep(0)} className="inline-flex items-center gap-1.5 bg-card border border-border rounded-full pl-2 pr-3 py-1 text-xs hover:border-primary/40">
+                          <span>{service?.emoji}</span> <span className="font-medium max-w-[11rem] truncate">{service?.label}</span>
+                        </button>
+                        {target === "to" && fromAddr && (
+                          <button onClick={() => goStep(1)} className="inline-flex items-center gap-1.5 bg-card border border-border rounded-full pl-2.5 pr-3 py-1 text-xs hover:border-primary/40">
+                            <span className="w-2 h-2 rounded-full bg-green-500" /> <span className="font-medium max-w-[11rem] truncate">{fromAddr}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          {target === "from"
+                            ? <span className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
+                            : <MapPin className="w-4 h-4 text-primary shrink-0" />}
+                          <input
+                            key={target}
+                            value={addr}
+                            onChange={(e) => setAddr(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter" && addr.trim()) goStep((formStep + 1) as FormStep); }}
+                            placeholder={target === "from" ? "Жишээ: Номин супермаркет" : "Жишээ: 14-р хороо, Найрамдал хотхон"}
+                            autoFocus
+                            className="flex-1 min-w-0 bg-transparent text-base font-medium placeholder:text-muted-foreground/70 placeholder:font-normal focus:outline-none"
+                          />
+                          {addr && (
+                            <button aria-label="Арилгах" onClick={() => clearAddress(target)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          value={detail}
+                          onChange={(e) => setDetail(e.target.value)}
+                          placeholder="Байр, орц, давхар, тоот (заавал биш)"
+                          className="w-full bg-secondary/60 rounded-xl px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setPickerFor(target)}
+                            className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${pos ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                          >
+                            <MapIcon className="w-4 h-4" /> {pos ? "Цэг заасан ✓" : "Газрын зураг"}
+                          </button>
+                          <button
+                            onClick={() => locateMe(target)}
+                            disabled={locating}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border border-border py-2.5 text-sm font-semibold hover:border-primary/40 transition-colors disabled:opacity-60"
+                          >
+                            {locating ? <Spinner className="w-4 h-4" /> : <LocateFixed className="w-4 h-4 text-primary" />} Миний байршил
+                          </button>
+                        </div>
+                        {pos && (
+                          <button onClick={() => setPos(null)} className="text-xs text-muted-foreground hover:text-foreground">
+                            Газрын зураг дээрх цэгийг арилгах
+                          </button>
+                        )}
+                        {geoErr && <p className="text-xs text-destructive">{geoErr}</p>}
+                      </div>
+
+                      {savedAddresses.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold">Хадгалсан хаягууд</p>
+                          <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                            {savedAddresses.map((sa) => {
+                              const cfg = ICON_MAP[sa.icon];
+                              const Icon = cfg.icon;
+                              return (
+                                <button
+                                  key={sa.id}
+                                  onClick={() => {
+                                    fillAddress(target, sa.label, [sa.address, sa.detail].filter(Boolean).join(", "));
+                                    goStep((formStep + 1) as FormStep);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors text-left"
+                                >
+                                  <span className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                                    <Icon className={`w-4 h-4 ${cfg.color}`} />
+                                  </span>
+                                  <span className="flex-1 min-w-0">
+                                    <span className="block text-sm font-semibold">{sa.label}</span>
+                                    <span className="block text-xs text-muted-foreground truncate">{sa.address}{sa.detail ? `, ${sa.detail}` : ""}</span>
+                                  </span>
+                                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <button
-                        onClick={clearBasket}
-                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => goStep((formStep + 1) as FormStep)}
+                        disabled={!addr.trim()}
+                        className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                       >
-                        Цэвэрлэх
+                        Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  );
+                })()}
+
+                {/* ── 4. Нэмэлт мэдээлэл ── */}
+                {formStep === 3 && (
+                  <>
+                    {/* Хураангуй — мөр бүрийг дарж засна */}
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                      <button onClick={() => goStep(0)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/40">
+                        <span className="text-xl">{service?.emoji}</span>
+                        <span className="flex-1 min-w-0 text-sm font-semibold truncate">{service?.label}</span>
+                        <span className="text-xs font-semibold text-primary">Засах</span>
+                      </button>
+                      <button onClick={() => goStep(1)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/40">
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0 mx-1" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-xs text-muted-foreground">Авах</span>
+                          <span className="block text-sm font-medium truncate">{fromAddr || "—"}{fromPos ? " 📍" : ""}</span>
+                        </span>
+                        <span className="text-xs font-semibold text-primary">Засах</span>
+                      </button>
+                      <button onClick={() => goStep(2)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/40">
+                        <MapPin className="w-4 h-4 text-primary shrink-0 mx-0.5" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-xs text-muted-foreground">Хүргэх</span>
+                          <span className="block text-sm font-medium truncate">{toAddr || "—"}{toPos ? " 📍" : ""}</span>
+                        </span>
+                        <span className="text-xs font-semibold text-primary">Засах</span>
                       </button>
                     </div>
-                    <div className="space-y-1">
-                      {basket.map((i) => (
-                        <div key={i.productId} className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground truncate">{i.name} × {i.qty}</span>
-                          <span className="font-mono shrink-0 ml-2">₮{(i.price * i.qty).toLocaleString()}</span>
+
+                    {service && service.subs.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Төрөл</p>
+                        <div className="flex flex-wrap gap-2">
+                          {service.subs.map((sub) => {
+                            const on = sub.id === subServiceId;
+                            return (
+                              <button
+                                key={sub.id}
+                                onClick={() => setSubServiceId(on ? null : sub.id)}
+                                title={sub.desc}
+                                className={`px-3.5 py-2 rounded-full border text-sm transition-colors ${
+                                  on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                                }`}
+                              >
+                                {sub.label}
+                              </button>
+                            );
+                          })}
                         </div>
-                      ))}
+                      </div>
+                    )}
+
+                    {basket.length > 0 && (
+                      <div className="bg-card border border-primary/30 rounded-2xl p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">🛒 {basketPartner?.name ?? "Сагс"}</p>
+                          <button onClick={clearBasket} className="text-xs text-muted-foreground hover:text-destructive transition-colors">Цэвэрлэх</button>
+                        </div>
+                        <div className="space-y-1">
+                          {basket.map((i) => (
+                            <div key={i.productId} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground truncate">{i.name} × {i.qty}</span>
+                              <span className="font-mono shrink-0 ml-2">₮{(i.price * i.qty).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <span className="text-xs text-muted-foreground">Барааны дүн</span>
+                          <span className="text-sm font-bold text-primary font-mono">₮{basketTotal.toLocaleString()}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">Барааны төлбөрийг газарт нь төлнө. Хүргэлтийн үнийг оператор тогтооно.</p>
+                      </div>
+                    )}
+
+                    {service?.needsCargo && <CargoDetails value={cargo} onChange={setCargo} />}
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Хүргэгчид хэлэх зүйл</p>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        rows={3}
+                        placeholder={service?.notePlaceholder ?? "Тэмдэглэл — эмзэг эд зүйл, утасдаж ирэх г.м."}
+                        className="w-full bg-card border border-border rounded-2xl px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 resize-none"
+                      />
                     </div>
-                    <div className="flex items-center justify-between border-t border-border pt-2">
-                      <span className="text-xs text-muted-foreground">Барааны дүн</span>
-                      <span className="text-sm font-bold text-primary font-mono">₮{basketTotal.toLocaleString()}</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Барааны төлбөрийг газарт нь төлнө. Хүргэлтийн үнийг оператор тогтооно.
-                    </p>
-                  </div>
-                )}
 
-                {/* Ачааны мэдээлэл — зураг, жин, хагарах, яаралтай */}
-                {service?.needsCargo && <CargoDetails value={cargo} onChange={setCargo} />}
-
-                {/* Note */}
-                <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
-                  <Package className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <input
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder={service?.notePlaceholder ?? "Тэмдэглэл — нугалж болохгүй, эмзэг эд зүйл..."}
-                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleEstimate}
-                  disabled={!fromAddr.trim() || !toAddr.trim()}
-                  className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-                  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-                >
-                  Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
-                </button>
-                {(!fromAddr.trim() || !toAddr.trim()) && (
-                  <p className="text-xs text-muted-foreground text-center -mt-1">
-                    {!fromAddr.trim() && !toAddr.trim()
-                      ? "Авах болон хүргэх хаягаа бичнэ үү"
-                      : !fromAddr.trim()
-                        ? "Авах хаягаа бичнэ үү"
-                        : "Хүргэх хаягаа бичнэ үү"}
-                  </p>
+                    <button
+                      onClick={handleEstimate}
+                      disabled={!fromAddr.trim() || !toAddr.trim()}
+                      className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+                    >
+                      Шалгаад захиалах <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
-                {quickOrders.length === 0 && (
-                  <button onClick={openQuickAdd} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
-                    <Plus className="w-3.5 h-3.5" /> Байнгын хүргэлтээ хурдан захиалга болгох
-                  </button>
-                )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             )}
 
