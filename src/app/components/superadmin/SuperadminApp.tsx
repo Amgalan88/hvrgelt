@@ -1,3 +1,5 @@
+import { TariffSettings } from "./TariffSettings";
+import type { Tariff } from "../../lib/pricing";
 import { RoleHeader } from "../shared/RoleHeader";
 import { useUser } from "../shared/UserContext";
 import { useState, useRef } from "react";
@@ -40,6 +42,9 @@ interface SuperadminAppProps {
   onDeletePartner: (id: string) => void;
   bankInfo: string;
   onUpdateBankInfo: (value: string) => void;
+  /** Байршлаар шууд үнэ бодох тариф */
+  tariff: Tariff;
+  onUpdateTariff: (t: Tariff) => Promise<void>;
   /** Бусад role-ын дэлгэцийг шалгах сонгогчийг нээнэ */
   onViewAs: () => void;
   onLogout: () => void;
@@ -378,7 +383,7 @@ export function SuperadminApp({
   onResetCustomerAuth,
   onAddPartner, onUpdatePartner, onDeletePartner,
   onVerifyCourier, onUpdatePartnerAccess, feedback, onHandleFeedback,
-  bankInfo, onUpdateBankInfo,
+  bankInfo, onUpdateBankInfo, tariff, onUpdateTariff,
   onViewAs, onLogout,
 }: SuperadminAppProps) {
   const { theme, toggleTheme } = useUser();
@@ -814,6 +819,8 @@ export function SuperadminApp({
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </button>
+
+            <TariffSettings tariff={tariff} onSave={onUpdateTariff} />
 
             <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">

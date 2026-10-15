@@ -286,6 +286,8 @@ function Inner() {
           onUpdatePartner={store.updatePartner}
           onDeletePartner={store.deletePartner}
           onUpdateBankInfo={store.updateBankInfo}
+          tariff={store.tariff}
+          onUpdateTariff={store.updateTariff}
           onViewAs={() => setSwitcherOpen(true)}
           onLogout={requestLogout}
         />
@@ -296,6 +298,7 @@ function Inner() {
           orders={store.orders}
           partners={store.partners}
           products={store.products}
+          tariff={store.tariff}
           bankInfo={store.bankInfo}
           courierDocs={(courierId) => {
             const c = store.courierAccounts.find((x) => x.id === courierId);

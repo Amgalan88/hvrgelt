@@ -6,7 +6,8 @@ import { useEffect, useState, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown, User as UserIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
-import type { PaymentIntent } from "../shared/store";
+import type { PaymentIntent, NewOrder } from "../shared/store";
+import { quoteDelivery, roadKm, AUTO_PRICE_SERVICES, type Tariff } from "../../lib/pricing";
 import { useUser, type QuickOrder } from "../shared/UserContext";
 import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
@@ -148,7 +149,9 @@ interface CustomerAppProps {
   products: PartnerProduct[];
   bankInfo: string;
   courierDocs: (courierId?: string) => CourierDocs | undefined;
-  onAddOrder: (order: Omit<Order, "id" | "createdAt" | "status">) => Promise<string>;
+  onAddOrder: (order: NewOrder) => Promise<string>;
+  /** Байршлаар шууд үнэ бодох тариф */
+  tariff: Tariff;
   onCancelOrder: (orderId: string) => void;
   onConfirmOrder: (orderId: string) => void;
   onCreatePayment: (orderId: string, amount: number, opts?: { test?: boolean }) => Promise<PaymentIntent>;
@@ -173,6 +176,43 @@ interface CustomerAppProps {
 function SvcIcon({ id, className = "w-5 h-5" }: { id?: string; className?: string }) {
   const I = serviceIcon(id);
   return <I className={className} />;
+}
+
+/** 4-р алхам: шууд үнэ, эсвэл үнэ гаргахад юу дутууг хэлнэ */
+function PriceCard({
+  quote, autoPriceService, hasFrom, hasTo, onPick,
+}: {
+  quote: { price: number; km: number } | null;
+  autoPriceService: boolean;
+  hasFrom: boolean;
+  hasTo: boolean;
+  onPick: (t: "from" | "to") => void;
+}) {
+  if (quote) {
+    return (
+      <div className="flex items-center justify-between gap-3 bg-card border-2 border-primary rounded-2xl px-4 py-3.5">
+        <div>
+          <p className="text-xs text-muted-foreground">Хүргэлтийн үнэ · ≈ {quote.km.toFixed(1)} км</p>
+          <p className="text-2xl font-extrabold tabular text-primary leading-tight">₮{quote.price.toLocaleString()}</p>
+        </div>
+        <span className="text-[11px] font-bold text-green-700 dark:text-green-300 bg-green-500/15 px-2 py-1 rounded-lg">Шууд үнэ</span>
+      </div>
+    );
+  }
+  if (!autoPriceService) return null;
+  // Цэг дутуу — заавал үнэ шууд гарна
+  return (
+    <div className="bg-green-500/10 border border-green-500/25 rounded-2xl p-4 space-y-2.5">
+      <p className="text-sm font-semibold">Үнийг шууд мэдэх үү?</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        {!hasFrom && !hasTo ? "Авах, хүргэх цэгээ" : !hasFrom ? "Авах цэгээ" : "Хүргэх цэгээ"} газрын зураг дээр заавал үнэ энд гарч, оператор хүлээх шаардлагагүй.
+      </p>
+      <div className="flex gap-2">
+        {!hasFrom && <button onClick={() => onPick("from")} className="flex-1 bg-card border border-border rounded-xl py-2.5 text-sm font-semibold">Авах цэг</button>}
+        {!hasTo && <button onClick={() => onPick("to")} className="flex-1 bg-card border border-border rounded-xl py-2.5 text-sm font-semibold">Хүргэх цэг</button>}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -205,7 +245,8 @@ function RoutePreview({
   if (isLatLng(fromPos)) markers.push({ pos: fromPos, kind: "from" });
   if (isLatLng(toPos)) markers.push({ pos: toPos, kind: "to" });
   if (courier) markers.push({ pos: courier, kind: "courier" });
-  const km = isLatLng(fromPos) && isLatLng(toPos) ? distanceKm(fromPos, toPos) : null;
+  // Үнийн тооцоотой ижил зай (замын тойм)
+  const km = isLatLng(fromPos) && isLatLng(toPos) ? roadKm(fromPos, toPos) : null;
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -247,7 +288,7 @@ function RoutePreview({
   );
 }
 
-export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
   const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
@@ -386,6 +427,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   }
   const myOrder = orders.find((o) => o.id === myOrderId);
 
+  // Байршлаар шууд үнэ — тариф асаалттай, үйлчилгээ дэмжигдсэн, хоёр цэг заасан үед
+  const quote = quoteDelivery(tariff, serviceId, fromPos, toPos, cargo.urgent);
+  const autoPriceService = tariff.enabled && AUTO_PRICE_SERVICES.includes(serviceId);
+
   const trackCourierId =
     myOrder && ["томилогдсон", "авсан"].includes(myOrder.status) ? myOrder.courierId ?? null : null;
   const [courierLoc, setCourierLoc] = useState<CourierLocation | null>(null);
@@ -420,7 +465,8 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         basket,
         basketTotal,
         partnerId: basketPartnerId ?? undefined,
-        price: 0, distance: 0, // үнийг оператор тогтооно
+        // Шууд үнэтэй бол шууд төлбөр рүү, үгүй бол оператор үнэ тавина
+        price: quote?.price ?? 0, distance: quote?.km ?? 0, autoPriced: !!quote,
         customerName: userName, customerPhone: userPhone, customerId: userId,
       });
       setMyOrderId(id);
@@ -726,7 +772,12 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                           >
                             <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}><SvcIcon id={sv.id} /></span>
                             <span className="flex-1 min-w-0">
-                              <span className="block text-[15px] font-semibold leading-snug">{sv.label}</span>
+                              <span className="block text-[15px] font-semibold leading-snug">
+                                {sv.label}
+                                {tariff.enabled && AUTO_PRICE_SERVICES.includes(sv.id) && (
+                                  <span className="ml-1.5 align-middle inline-block text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-300 bg-green-500/15 px-1.5 py-0.5 rounded-md">Шууд үнэ</span>
+                                )}
+                              </span>
                               <span className="block text-xs text-muted-foreground mt-0.5">{sv.desc}</span>
                             </span>
                             {active
@@ -809,6 +860,11 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                             {locating ? <Spinner className="w-4 h-4" /> : <LocateFixed className="w-4 h-4 text-primary" />} Миний байршил
                           </button>
                         </div>
+                        {autoPriceService && !pos && (
+                          <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                            Газрын зураг дээр цэгээ заавал үнэ шууд гарна — оператор хүлээхгүй.
+                          </p>
+                        )}
                         {pos && (
                           <button onClick={() => setPos(null)} className="text-xs text-muted-foreground hover:text-foreground">
                             Газрын зураг дээрх цэгийг арилгах
@@ -864,6 +920,8 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 {/* ── 4. Нэмэлт мэдээлэл ── */}
                 {formStep === 3 && (
                   <>
+                    <PriceCard quote={quote} autoPriceService={autoPriceService} hasFrom={!!fromPos} hasTo={!!toPos} onPick={(t) => setPickerFor(t)} />
+
                     {/* Хураангуй — мөр бүрийг дарж засна */}
                     <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
                       <button onClick={() => goStep(0)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/40">
@@ -1030,14 +1088,25 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   )}
                 </div>
 
-                {/* Price — operator sets it after the order is placed */}
-                <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <p className="text-sm font-semibold">Үнэ операторын зүгээс тогтоогдоно</p>
+                {quote ? (
+                  <div className="bg-card border-2 border-primary rounded-2xl p-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold">Хүргэлтийн үнэ</span>
+                      <span className="text-3xl font-extrabold tabular text-primary">₮{quote.price.toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ≈ {quote.km.toFixed(1)} км замаар · газрын зураг дээрх цэгээр шууд тооцов{cargo.urgent ? " · яаралтай" : ""}. Захиалсны дараа шууд төлбөр рүү шилжинэ.
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна. Доод үнэ — 5,000₮.</p>
-                </div>
+                ) : (
+                  <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <p className="text-sm font-semibold">Үнэ операторын зүгээс тогтоогдоно</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна. Доод үнэ — 5,000₮.</p>
+                  </div>
+                )}
 
                 <BottomBar>
                   <button
@@ -1045,7 +1114,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                     disabled={placing}
                     className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-60"
                   >
-                    {placing ? <Spinner className="w-5 h-5" /> : <>Хүргэлт захиалах <ArrowRight className="w-4 h-4" /></>}
+                    {placing ? <Spinner className="w-5 h-5" /> : quote ? <>₮{quote.price.toLocaleString()} — Захиалах <ArrowRight className="w-4 h-4" /></> : <>Хүргэлт захиалах <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </BottomBar>
               </div>

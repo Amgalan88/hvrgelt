@@ -1,5 +1,6 @@
 import { NotifyCard } from "../shared/NotifyCard";
-import { routeUrl, distanceKm } from "../../lib/geo";
+import { routeUrl } from "../../lib/geo";
+import { roadKm } from "../../lib/pricing";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { RoleHeader, HeaderIconButton } from "../shared/RoleHeader";
 import { useState, Fragment } from "react";
@@ -274,7 +275,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                           Газрын зураг дээр заасан цэг харах
                           {order.fromLat != null && order.toLat != null && (
                             <span className="text-muted-foreground font-normal tabular">
-                              · ≈ {distanceKm({ lat: order.fromLat, lng: order.fromLng! }, { lat: order.toLat, lng: order.toLng! }).toFixed(1)} км
+                              · ≈ {roadKm({ lat: order.fromLat, lng: order.fromLng! }, { lat: order.toLat, lng: order.toLng! }).toFixed(1)} км
                             </span>
                           )}
                         </a>

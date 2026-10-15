@@ -1,3 +1,4 @@
+import { DEFAULT_TARIFF, TARIFF_SETTINGS_KEY, parseTariff, type Tariff } from "../../lib/pricing";
 import { createMockInvoice, type QpayBank } from "../../lib/mockQpay";
 import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser, CourierDocs, PartnerProduct, OrderRating, BasketItem } from "./types";
@@ -15,6 +16,9 @@ export interface FeedbackRow {
 }
 
 /** createPayment-ийн буцаалт */
+/** Шинэ захиалга — autoPriced бол үнийг байршлаар бодсон (оператор тавихгүй) */
+export type NewOrder = Omit<Order, "id" | "createdAt" | "status"> & { autoPriced?: boolean };
+
 export interface PaymentIntent {
   provider: string;
   manual: boolean;
@@ -267,6 +271,7 @@ export function useStore() {
   const [ratings, setRatings] = useState<OrderRating[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [bankInfo, setBankInfo] = useState<string>("");
+  const [tariff, setTariff] = useState<Tariff>(DEFAULT_TARIFF);
   const [loading, setLoading] = useState(true);
 
   // ── Initial load + realtime subscriptions ──────────────────────────
@@ -347,8 +352,11 @@ export function useStore() {
   }, []);
 
   const refreshSettings = useCallback(async () => {
-    const { data } = await supabase.from("settings").select("value").eq("key", "bank_info").single();
-    if (data) setBankInfo(data.value ?? "");
+    const { data } = await supabase.from("settings").select("key, value").in("key", ["bank_info", TARIFF_SETTINGS_KEY]);
+    for (const row of data ?? []) {
+      if (row.key === "bank_info") setBankInfo(row.value ?? "");
+      if (row.key === TARIFF_SETTINGS_KEY) setTariff(parseTariff(row.value));
+    }
   }, []);
 
   useEffect(() => {
@@ -471,7 +479,7 @@ export function useStore() {
   //        → томилогдсон → авсан → хүргэгдсэн
   //
   const addOrder = useCallback(
-    async (order: Omit<Order, "id" | "createdAt" | "status">): Promise<string> => {
+    async (order: NewOrder): Promise<string> => {
       // Migration 11-13, 17 ажиллуулаагүй DB дээр ч захиалга үүсэх ёстой тул
       // шинэ баганууд тусад нь, алдаа гарвал хасагдана.
       const base = {
@@ -482,7 +490,8 @@ export function useStore() {
         package_note: order.packageNote,
         price: order.price,
         distance: order.distance,
-        status: "шинэ",
+        // Байршлаар шууд үнэ бодсон бол оператор хүлээхгүй, шууд төлбөр рүү
+        status: order.autoPriced && order.price > 0 ? "төлбөр хүлээж байна" : "шинэ",
         created_at: nowTime(),
         courier_id: order.courierId ?? null,
         courier_name: order.courierName ?? null,
@@ -629,6 +638,13 @@ export function useStore() {
     },
     [],
   );
+
+  /** Шууд үнийн тариф (супер админ) */
+  const updateTariff = useCallback(async (t: Tariff) => {
+    const { error } = await supabase.from("settings").upsert({ key: TARIFF_SETTINGS_KEY, value: JSON.stringify(t) });
+    if (error) throw error;
+    setTariff(t);
+  }, []);
 
   const courierUpdateStatus = useCallback(
     async (orderId: string, status: "авсан" | "хүргэгдсэн") => {
@@ -1084,6 +1100,7 @@ export function useStore() {
     ratings,
     feedback,
     bankInfo,
+    tariff,
     loading,
     operatorAccounts,
     courierAccounts,
@@ -1108,6 +1125,7 @@ export function useStore() {
     deleteProduct,
     updatePartnerAccess,
     updateBankInfo,
+    updateTariff,
     addOperator,
     updateOperator,
     deleteOperator,
