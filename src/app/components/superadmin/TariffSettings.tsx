@@ -64,7 +64,7 @@ export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
           onClick={() => setDraft({ ...draft, enabled: !draft.enabled })}
           className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${draft.enabled ? "bg-primary" : "bg-switch-background"}`}
         >
-          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${draft.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+          <span className={`absolute top-0.5 left-0 w-6 h-6 rounded-full bg-white shadow transition-transform ${draft.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
         </button>
       </div>
 

@@ -364,6 +364,9 @@ function Inner() {
           onDeliver={(id) => store.courierUpdateStatus(id, "хүргэгдсэн")}
           onLogout={requestLogout}
           shareLocation={!session.viaAdmin}
+          courierAccounts={store.courierAccounts}
+          onClaim={(orderId) => store.claimOrder(orderId, session.id)}
+          onSetOnline={(on) => store.setCourierOnline(session.id, on)}
         />
       )}
 

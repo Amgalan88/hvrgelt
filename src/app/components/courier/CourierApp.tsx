@@ -12,7 +12,9 @@ import { PushToggle } from "../shared/PushToggle";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { serviceById, serviceLabel } from "../customer/services";
 import { useLocationSharing } from "./useLocationSharing";
-import { navigateUrl } from "../../lib/geo";
+import { navigateUrl, watchAllCourierLocations, type CourierLocation } from "../../lib/geo";
+import { offerFor, type DispatchCourier } from "../../lib/dispatch";
+import { OfferCards, type Offer } from "./OfferCards";
 
 const COURIER_HELP_STEPS = [
   "Шинэ захиалга томилогдоход мэдэгдэл авна (хонх идэвхжүүлсэн бол).",
@@ -33,11 +35,17 @@ interface CourierAppProps {
   onLogout: () => void;
   /** Байршлаа илгээх эсэх — супер админ role-оор үзэж байхад өөрийнхөө байршлыг илгээхгүй */
   shareLocation?: boolean;
+  /** Бүх хүргэгч — "хамгийн ойр 4"-ийг тооцоход */
+  courierAccounts: CourierAccount[];
+  /** Санал дээр "Авах" — true бол амжилттай авсан */
+  onClaim: (orderId: string) => Promise<boolean>;
+  /** Ажилд гарах / амрах */
+  onSetOnline: (online: boolean) => Promise<void>;
 }
 
 const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
-export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true }: CourierAppProps) {
+export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true, courierAccounts, onClaim, onSetOnline }: CourierAppProps) {
   const [tab, setTab] = useState<"active" | "done" | "docs">("active");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
@@ -50,8 +58,56 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   const activeOrders = myOrders.filter((o) => o.status === "томилогдсон" || o.status === "авсан");
   const doneOrders = myOrders.filter((o) => o.status === "хүргэгдсэн");
 
-  // Идэвхтэй захиалгатай үед л байршлаа илгээнэ
-  const sharing = useLocationSharing(courierId, shareLocation && activeOrders.length > 0);
+  // Ажилд гарсан эсвэл идэвхтэй захиалгатай үед байршлаа илгээнэ
+  const online = account?.available ?? false;
+  const canWork = !!account?.verified && !!account?.active;
+  const sharing = useLocationSharing(courierId, shareLocation && (online || activeOrders.length > 0));
+  const [toggling, setToggling] = useState(false);
+
+  // ── Хамгийн ойрын хүргэгчдэд санал ──
+  const searching = orders.filter((o) => o.status === "жолооч хайж байна" && !o.courierId);
+  const [locs, setLocs] = useState<Map<string, CourierLocation>>(new Map());
+  useEffect(() => {
+    if (!online || searching.length === 0) return;
+    return watchAllCourierLocations(setLocs);
+  }, [online, searching.length > 0]);
+  // 2 минутын давалгааг шинэчлэхийн тулд 20 сек тутам дахин тооцно
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (searching.length === 0) return;
+    const t = setInterval(() => setTick((n) => n + 1), 20_000);
+    return () => clearInterval(t);
+  }, [searching.length]);
+  void tick;
+  const dispatchCouriers: DispatchCourier[] = courierAccounts.map((c) => {
+    const l = locs.get(c.id);
+    return { id: c.id, available: c.available, active: c.active, verified: c.verified, pos: l ? { lat: l.lat, lng: l.lng } : undefined, locAt: l?.updatedAt };
+  });
+  const offers: Offer[] =
+    online && canWork && activeOrders.length === 0
+      ? searching.flatMap((o) => {
+          const pickup = o.fromLat != null && o.fromLng != null ? { lat: o.fromLat, lng: o.fromLng } : null;
+          const hit = offerFor(courierId, { pickup, searchingSince: o.searchingSince }, dispatchCouriers);
+          return hit ? [{ order: o, kmToPickup: hit.km }] : [];
+        })
+      : [];
+
+  // Шинэ санал ирэхэд дуут дохио
+  const seenOffers = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const fresh = offers.some((o) => !seenOffers.current.has(o.order.id));
+    offers.forEach((o) => seenOffers.current.add(o.order.id));
+    if (fresh) alertNewOrder();
+  }, [offers.map((o) => o.order.id).join(",")]);
+
+  async function toggleOnline() {
+    setToggling(true);
+    try {
+      await onSetOnline(!online);
+    } finally {
+      setToggling(false);
+    }
+  }
 
   // "Өнөөдөр" — delivered_at нь зөвхөн цаг (HH:MM) хадгалдаг тул өдрийг
   // захиалга үүссэн огноогоор (inserted_at) тогтооно. Өмнө нь бүх цаг
@@ -171,7 +227,42 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
         {tab === "active" && (
           <div className="space-y-3">
             {shareLocation && <NotifyCard role="courier" userId={courierId} />}
-            {activeOrders.length > 0 && shareLocation && (
+
+            {/* Ажилд гарах — гарсан үед л ойрын захиалгын санал ирнэ */}
+            <div className={`rounded-2xl p-4 flex items-center gap-3 border ${online ? "bg-green-500/10 border-green-500/30" : "bg-card border-border"}`}>
+              <span className={`w-3 h-3 rounded-full shrink-0 ${online ? "bg-green-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold leading-tight">{online ? "Ажилд гарсан" : "Амарч байна"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {!canWork
+                    ? "Баримт бичиг баталгаажсаны дараа санал ирж эхэлнэ"
+                    : online
+                      ? "Танд ойр захиалга гармагц энд санал ирнэ"
+                      : "Ажилд гарвал ойр байгаа захиалгын санал ирнэ"}
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={online}
+                aria-label="Ажилд гарах"
+                onClick={() => void toggleOnline()}
+                disabled={toggling || (!canWork && !online)}
+                className={`relative w-14 h-8 rounded-full shrink-0 transition-colors disabled:opacity-50 ${online ? "bg-green-500" : "bg-switch-background"}`}
+              >
+                <span className={`absolute top-1 left-0 w-6 h-6 rounded-full bg-white shadow transition-transform ${online ? "translate-x-7" : "translate-x-1"}`} />
+              </button>
+            </div>
+
+            <OfferCards
+              offers={offers}
+              onClaim={async (id) => {
+                const ok = await onClaim(id);
+                // Санал авсан нь хүлээн авсан гэсэн үг — "Хүлээн авах"-ыг дахин дарахгүй
+                if (ok) acceptOrder(id);
+                return ok;
+              }}
+            />
+            {(activeOrders.length > 0 || online) && shareLocation && (
               <div
                 className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs border ${
                   sharing.state === "on" || sharing.state === "starting"

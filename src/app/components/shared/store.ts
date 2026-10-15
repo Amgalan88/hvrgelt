@@ -628,6 +628,48 @@ export function useStore() {
     [courierAccounts, refreshOrders, refreshCouriers],
   );
 
+  /**
+   * Хүргэгч санал дээр "Авах" дарсан. Нөхцөлтэй шинэчлэлт — зөвхөн
+   * "хүргэгч хайж байна" төлөвтэй, хэн ч аваагүй захиалгыг л авна. Хоёр
+   * хүргэгч зэрэг дарвал DB нэгийг нь л зөвшөөрнө. true = амжилттай авсан.
+   */
+  const claimOrder = useCallback(
+    async (orderId: string, courierId: string): Promise<boolean> => {
+      const cr = courierAccounts.find((c) => c.id === courierId);
+      if (!cr) return false;
+      const order = orders.find((o) => o.id === orderId);
+      const { data, error } = await supabase
+        .from("orders")
+        .update({
+          status: "томилогдсон",
+          courier_id: courierId,
+          courier_name: cr.name,
+          courier_phone: cr.phone,
+          eta: etaTime(order?.urgent ? 20 : 30),
+          assigned_at: nowTime(),
+        })
+        .eq("id", orderId)
+        .eq("status", "жолооч хайж байна")
+        .is("courier_id", null)
+        .select("id");
+      if (error) throw error;
+      const won = (data?.length ?? 0) === 1;
+      if (won) await supabase.from("couriers").update({ available: false }).eq("id", courierId);
+      await Promise.all([refreshOrders(), refreshCouriers()]);
+      return won;
+    },
+    [courierAccounts, orders, refreshOrders, refreshCouriers],
+  );
+
+  /** Хүргэгч ажилд гарах / амрах — ажилд гарсан үед л санал ирнэ */
+  const setCourierOnline = useCallback(
+    async (courierId: string, online: boolean) => {
+      await supabase.from("couriers").update({ available: online }).eq("id", courierId);
+      await refreshCouriers();
+    },
+    [refreshCouriers],
+  );
+
   const cancelOrder = useCallback(
     async (orderId: string) => {
       const order = orders.find((o) => o.id === orderId);
@@ -1154,6 +1196,8 @@ export function useStore() {
     addPartner,
     updatePartner,
     setPartnerLocation,
+    claimOrder,
+    setCourierOnline,
     deletePartner,
     resolveByPhone,
     addCustomer,

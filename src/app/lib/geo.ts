@@ -140,6 +140,36 @@ export function watchCourierLocation(courierId: string, onChange: (loc: CourierL
   };
 }
 
+/**
+ * Бүх хүргэгчийн байршил — хүргэгчийн апп "хамгийн ойр 4"-ийг тооцоход.
+ * Буцаасан функцээр зогсооно.
+ */
+export function watchAllCourierLocations(onChange: (all: Map<string, CourierLocation>) => void): () => void {
+  let alive = true;
+  const all = new Map<string, CourierLocation>();
+  supabase
+    .from("courier_locations")
+    .select("*")
+    .then(({ data }) => {
+      if (!alive || !data) return;
+      for (const r of data) all.set(r.courier_id, rowToLocation(r));
+      onChange(new Map(all));
+    });
+  const channel = supabase
+    .channel("courier-loc-all")
+    .on("postgres_changes", { event: "*", schema: "public", table: "courier_locations" }, (payload) => {
+      const r = payload.new as { courier_id?: string } | null;
+      if (!alive || !r?.courier_id) return;
+      all.set(r.courier_id, rowToLocation(r));
+      onChange(new Map(all));
+    })
+    .subscribe();
+  return () => {
+    alive = false;
+    supabase.removeChannel(channel);
+  };
+}
+
 /** "2 минутын өмнө" */
 export function agoText(iso: string): string {
   const sec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));

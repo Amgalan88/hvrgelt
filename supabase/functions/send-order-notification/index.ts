@@ -30,7 +30,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const STATUS_MESSAGES: Record<string, { title: string; body: string } | undefined> = {
   "үнэ батлах": { title: "Хүргэлтийн үнэ тогтлоо", body: "Апп дээрээ орж баталгаажуулна уу." },
   "төлбөр хүлээж байна": { title: "Төлбөр хүлээгдэж байна", body: "QR-аар төлбөрөө төлснөөр жолооч хуваарилагдана." },
-  "жолооч хайж байна": { title: "Төлбөр амжилттай ✅", body: "Танд жолооч хуваарилаад мэдээллийг нь илгээнэ." },
+  "жолооч хайж байна": { title: "Төлбөр амжилттай ✅", body: "Ойр байгаа хүргэгчдэд санал илгээлээ — эхэлж зөвшөөрсөн нь ирнэ." },
   "томилогдсон": { title: "Хүргэгч томилогдлоо", body: "Таны захиалгыг хүргэгч удахгүй авах болно." },
   "авсан": { title: "Ачаа авлаа", body: "Хүргэгч ачааг авлаа. Удахгүй хүргэнэ." },
   "хүргэгдсэн": { title: "Хүргэгдлээ ✅", body: "Таны захиалга амжилттай хүргэгдлээ. Баярлалаа!" },
@@ -38,6 +38,45 @@ const STATUS_MESSAGES: Record<string, { title: string; body: string } | undefine
 };
 
 interface Sub { endpoint: string; p256dh: string; auth: string }
+
+// ── Ойрын хүргэгчид санал (src/app/lib/dispatch.ts-тэй ижил дүрэм) ─────
+const OFFER_BATCH = 4;
+const LOCATION_FRESH_MS = 10 * 60_000;
+
+function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/**
+ * Ажилд гарсан, баталгаажсан хүргэгчдээс авах цэгт хамгийн ойр 4-ийг сонгоно.
+ * Авах цэгийн байршилгүй бол бүгдийг. Дараагийн давалгааг (2 мин тутам)
+ * хүргэгчийн апп өөрөө харуулж дуут дохио өгнө.
+ */
+// deno-lint-ignore no-explicit-any
+async function nearestCourierIds(record: any): Promise<string[]> {
+  const { data: crs } = await supabase.from("couriers").select("id").eq("available", true).eq("active", true).eq("verified", true);
+  const ids = (crs ?? []).map((c: { id: string }) => c.id);
+  if (ids.length === 0) return [];
+  if (record.from_lat == null || record.from_lng == null) return ids;
+  const { data: locs } = await supabase.from("courier_locations").select("*").in("courier_id", ids);
+  const now = Date.now();
+  const pickup = { lat: record.from_lat, lng: record.from_lng };
+  const byId = new Map((locs ?? []).map((l: { courier_id: string }) => [l.courier_id, l]));
+  return ids
+    // deno-lint-ignore no-explicit-any
+    .map((id: string) => {
+      // deno-lint-ignore no-explicit-any
+      const l: any = byId.get(id);
+      const fresh = l && now - new Date(l.updated_at).getTime() <= LOCATION_FRESH_MS;
+      return { id, d: fresh ? km(pickup, { lat: l.lat, lng: l.lng }) : Infinity };
+    })
+    .sort((a: { d: number }, b: { d: number }) => a.d - b.d)
+    .slice(0, OFFER_BATCH)
+    .map((x: { id: string }) => x.id);
+}
 
 async function sendToAll(subs: Sub[], payloadStr: string) {
   await Promise.all(
@@ -79,6 +118,27 @@ Deno.serve(async (req) => {
   }
 
   if (payload.type !== "UPDATE") return new Response("ignored event", { status: 200 });
+
+  // ── Төлбөр орж хүргэгч хайж эхлэхэд хамгийн ойр 4 хүргэгчид санал ──
+  if (record.status === "жолооч хайж байна" && oldRecord?.status !== "жолооч хайж байна" && !record.courier_id) {
+    const targets = await nearestCourierIds(record);
+    if (targets.length) {
+      const { data: subs } = await supabase.from("push_subscriptions").select("*").eq("role", "courier").in("user_id", targets);
+      if (subs?.length) {
+        const earn = Math.round((record.price ?? 0) * 0.8);
+        await sendToAll(
+          subs,
+          JSON.stringify({
+            title: record.urgent ? `⚡ Яаралтай санал · ₮${earn.toLocaleString()}` : `Шинэ санал · ₮${earn.toLocaleString()}`,
+            body: `${route} — эхэлж "Авах" дарсан нь авна`,
+            orderId: record.id,
+            url: "/",
+            urgent: true,
+          }),
+        );
+      }
+    }
+  }
 
   // ── Хүргэгч шинээр томилогдоход тухайн хүргэгчид мэдэгдэнэ ──────────
   if (record.courier_id && record.courier_id !== oldRecord?.courier_id) {
