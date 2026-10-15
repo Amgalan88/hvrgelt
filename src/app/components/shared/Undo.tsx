@@ -50,16 +50,17 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   return (
     <UndoContext.Provider value={{ offerUndo }}>
       {children}
-      <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[95] flex justify-center px-4 pointer-events-none">
+      {/* Дээд талд — доод хэсгийн үндсэн товч, цэстэй давхцахгүй */}
+      <div className="fixed inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-[95] flex justify-center px-4 pointer-events-none">
         <AnimatePresence>
           {entry && (
             <motion.div
               key={entry.id}
               role="status"
               aria-live="polite"
-              initial={{ opacity: 0, y: 16, scale: 0.97 }}
+              initial={{ opacity: 0, y: -16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12 }}
+              exit={{ opacity: 0, y: -12 }}
               transition={{ type: "spring", damping: 26, stiffness: 340 }}
               className="relative overflow-hidden pointer-events-auto w-full max-w-sm flex items-center gap-2 bg-foreground text-background rounded-2xl pl-4 pr-1.5 py-1.5 shadow-xl"
             >

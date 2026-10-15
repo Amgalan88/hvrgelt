@@ -274,3 +274,23 @@
 }
 @keyframes hv-pulse { from { transform: scale(0.75); opacity: 0.6; } to { transform: scale(1.35); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .hv-courier::after { animation: none; } }
+
+/* ── Апп шиг мэдрэмж ───────────────────────────────────────────────────── */
+/* Хуруугаар дарахад web-ийн цэнхэр тодруулга, текст сонголт, удаан дарахад
+   гарах цэс, хуудас бүхэлдээ "үсрэх" зэргийг арилгана. */
+html { -webkit-tap-highlight-color: transparent; }
+body { overscroll-behavior-y: none; }
+button, a, nav, header, [role="tab"], [role="radio"], [role="switch"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+button, a { touch-action: manipulation; }
+/* Хүрэлтэт дэлгэц дээр дарсан мөчид бага зэрэг бараан болж хариу өгнө */
+@media (hover: none) {
+  button:not(:disabled):active, a:active { filter: brightness(0.93); }
+}
+/* Суулгасан апп-д (standalone) хөтчийн гүйлгэх зураасыг нууна */
+@media (display-mode: standalone) {
+  ::-webkit-scrollbar { width: 0; height: 0; }
+}

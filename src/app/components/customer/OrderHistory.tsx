@@ -1,27 +1,49 @@
 import { useState } from "react";
-import { MapPin, Package, ChevronRight, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { ChevronRight, RotateCcw, Package, Plus } from "lucide-react";
 import type { Order, OrderStatus } from "../shared/types";
 import { serviceById } from "./services";
+import { serviceIcon } from "./serviceIcons";
+import { useUndo } from "../shared/Undo";
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
-  шинэ:          { label: "Хүлээгдэж байна",      color: "text-amber-400",  icon: Clock },
-  "үнэ батлах":  { label: "Үнэ батлахыг хүлээж", color: "text-orange-400", icon: Clock },
-  "төлбөр хүлээж байна": { label: "Төлбөр хүлээгдэж", color: "text-violet-400", icon: Clock },
-  "жолооч хайж байна":   { label: "Хүргэгч хайж байна", color: "text-cyan-400",   icon: Clock },
-  томилогдсон:   { label: "Хүргэгч томилогдсон",  color: "text-blue-400",   icon: Clock },
-  авсан:         { label: "Ачаа авсан",            color: "text-primary",    icon: Clock },
-  хүргэгдсэн:   { label: "Хүргэгдсэн",            color: "text-green-400",  icon: CheckCircle },
-  цуцлагдсан:   { label: "Цуцлагдсан",            color: "text-red-400",    icon: XCircle },
+/** Төлөв бүрийн шошго — хэрэглэгчийн хэлээр, өнгөөр ялгана */
+const STATUS_PILL: Record<OrderStatus, { label: string; cls: string }> = {
+  шинэ: { label: "Үнэ тогтоож байна", cls: "bg-amber-500/12 text-amber-700 dark:text-amber-300" },
+  "үнэ батлах": { label: "Таны ээлж · үнэ", cls: "bg-primary text-primary-foreground" },
+  "төлбөр хүлээж байна": { label: "Таны ээлж · төлбөр", cls: "bg-primary text-primary-foreground" },
+  "жолооч хайж байна": { label: "Хүргэгч хайж байна", cls: "bg-sky-500/12 text-sky-700 dark:text-sky-300" },
+  томилогдсон: { label: "Хүргэгч явж байна", cls: "bg-sky-500/12 text-sky-700 dark:text-sky-300" },
+  авсан: { label: "Замдаа", cls: "bg-sky-500/12 text-sky-700 dark:text-sky-300" },
+  хүргэгдсэн: { label: "Хүргэгдсэн", cls: "bg-green-500/12 text-green-700 dark:text-green-300" },
+  цуцлагдсан: { label: "Цуцлагдсан", cls: "bg-secondary text-muted-foreground" },
 };
+
+const isActive = (o: Order) => !["хүргэгдсэн", "цуцлагдсан"].includes(o.status);
+
+/** "Өнөөдөр", "Өчигдөр", "10-р сарын 12" */
+function dayLabel(iso?: string): string {
+  if (!iso) return "Өмнө";
+  const d = new Date(iso);
+  const today = new Date();
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((start(today) - start(d)) / 86400000);
+  if (diff === 0) return "Өнөөдөр";
+  if (diff === 1) return "Өчигдөр";
+  const md = `${d.getMonth() + 1}-р сарын ${d.getDate()}`;
+  return d.getFullYear() === today.getFullYear() ? md : `${d.getFullYear()} оны ${md}`;
+}
 
 interface OrderHistoryProps {
   orders: Order[];
   userId: string;
   onTrack: (orderId: string) => void;
+  /** Хүргэгдсэн захиалгыг ижил хаяг, үйлчилгээгээр дахин захиална */
+  onRepeat: (order: Order) => void;
+  onNew: () => void;
 }
 
-export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
-  // Hidden orders are cleared from the customer's view only — NOT deleted from the DB.
+export function OrderHistory({ orders, userId, onTrack, onRepeat, onNew }: OrderHistoryProps) {
+  const { offerUndo } = useUndo();
+  // Нуусан захиалга зөвхөн энэ төхөөрөмжийн жагсаалтаас алга болно — DB-ээс устахгүй
   const HIDDEN_KEY = "hvrgelt_hidden_orders_" + userId;
   const [hidden, setHidden] = useState<Set<string>>(() => {
     try {
@@ -31,169 +53,125 @@ export function OrderHistory({ orders, userId, onTrack }: OrderHistoryProps) {
     }
   });
 
-  const myOrders = orders.filter(
-    (o) => o.customerId === userId && !hidden.has(o.id),
-  );
-
-  function clearPast(pastOrders: Order[]) {
-    const next = new Set(hidden);
-    pastOrders.forEach((o) => next.add(o.id));
+  function saveHidden(next: Set<string>) {
     setHidden(next);
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next])); } catch { /* noop */ }
   }
 
-  if (myOrders.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-          <Package className="w-7 h-7 text-muted-foreground" />
-        </div>
-        <p className="text-muted-foreground text-sm">Захиалгын түүх байхгүй байна</p>
-        <p className="text-xs text-muted-foreground mt-1">Анхны захиалгаа өгөөрэй</p>
-      </div>
-    );
+  const mine = orders.filter((o) => o.customerId === userId && !hidden.has(o.id));
+  const active = mine.filter(isActive);
+  const past = mine.filter((o) => !isActive(o));
+  const [seg, setSeg] = useState<"active" | "past">(() => (active.length > 0 ? "active" : "past"));
+  const list = seg === "active" ? active : past;
+
+  function clearPast() {
+    const prev = hidden;
+    const next = new Set(hidden);
+    past.forEach((o) => next.add(o.id));
+    saveHidden(next);
+    offerUndo(`${past.length} захиалга жагсаалтаас нуугдлаа`, () => saveHidden(prev));
   }
 
-  const active = myOrders.filter((o) => !["хүргэгдсэн", "цуцлагдсан"].includes(o.status));
-  const past = myOrders.filter((o) => ["хүргэгдсэн", "цуцлагдсан"].includes(o.status));
+  // Өдрөөр бүлэглэнэ (шинэ нь эхэнд)
+  const groups: { day: string; items: Order[] }[] = [];
+  for (const o of list) {
+    const day = dayLabel(o.insertedAt);
+    const g = groups.find((x) => x.day === day);
+    if (g) g.items.push(o);
+    else groups.push({ day, items: [o] });
+  }
 
   return (
-    <div className="space-y-5">
-      {/* Active orders */}
-      {active.length > 0 && (
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2" style={{ fontSize: "0.7rem" }}>Идэвхтэй захиалга</p>
-          <div className="space-y-2">
-            {active.map((o) => <OrderCard key={o.id} order={o} onTrack={onTrack} />)}
-          </div>
-        </div>
-      )}
-
-      {/* Past orders */}
-      {past.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider" style={{ fontSize: "0.7rem" }}>Өмнөх захиалгууд</p>
-            <button
-              onClick={() => clearPast(past)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Цэвэрлэх
-            </button>
-          </div>
-          <div className="space-y-2">
-            {past.map((o) => (
-              <OrderCard
-                key={o.id}
-                order={o}
-                onTrack={onTrack}
-                onHide={o.status === "цуцлагдсан" ? () => clearPast([o]) : undefined}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OrderCard({ order, onTrack, onHide }: { order: Order; onTrack: (id: string) => void; onHide?: () => void }) {
-  const cfg = STATUS_CONFIG[order.status];
-  const Icon = cfg.icon;
-  const isActive = !["хүргэгдсэн", "цуцлагдсан"].includes(order.status);
-
-  return (
-    <div className={`bg-card border rounded-2xl overflow-hidden ${isActive ? "border-primary/30" : "border-border"}`}>
-      {/* Status bar */}
-      <div className={`flex items-center justify-between px-4 py-2 ${isActive ? "bg-primary/8" : "bg-secondary/30"}`} style={{ background: isActive ? "rgba(255,90,31,0.06)" : undefined }}>
-        <div className="flex items-center gap-2">
-          <Icon className={`w-3.5 h-3.5 ${cfg.color} ${isActive ? "animate-pulse" : ""}`} />
-          <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
-        </div>
-        <span className="text-xs font-mono text-muted-foreground">#{order.id} · {order.createdAt}</span>
+    <div className="space-y-4">
+      {/* Сегмент */}
+      <div className="grid grid-cols-2 gap-1 p-1 bg-secondary rounded-2xl" role="tablist">
+        {([
+          { key: "active", label: "Идэвхтэй", n: active.length },
+          { key: "past", label: "Дууссан", n: past.length },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={seg === t.key}
+            onClick={() => setSeg(t.key)}
+            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              seg === t.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            {t.label}
+            {t.n > 0 && (
+              <span className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] flex items-center justify-center tabular ${seg === t.key && t.key === "active" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>
+                {t.n}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      <div className="px-4 py-3">
-        {/* Route */}
-        <div className="flex gap-3 items-stretch mb-3">
-          <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
-            <div className="w-2 h-2 rounded-full bg-green-400" />
-            <div className="w-px flex-1 bg-border min-h-4" />
-            <MapPin className="w-3 h-3 text-primary" />
-          </div>
-          <div className="flex-1 space-y-2 min-w-0">
-            <div>
-              <p className="text-xs text-muted-foreground">Авах хаяг</p>
-              <p className="text-sm text-foreground leading-snug">{order.fromAddress}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Хүргэх хаяг</p>
-              <p className="text-sm text-foreground leading-snug">{order.toAddress}</p>
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
-              ₮{order.price.toLocaleString()}
-            </p>
-            <p className="text-xs text-muted-foreground">{order.distance} км</p>
-          </div>
+      {list.length === 0 ? (
+        <div className="flex flex-col items-center text-center py-14 px-6">
+          <span className="w-16 h-16 rounded-3xl bg-secondary flex items-center justify-center">
+            <Package className="w-7 h-7 text-muted-foreground" />
+          </span>
+          <p className="font-semibold mt-4">{seg === "active" ? "Идэвхтэй захиалга алга" : "Дууссан захиалга алга"}</p>
+          <p className="text-sm text-muted-foreground mt-1">Хүргэлтээ захиалахад энд харагдана.</p>
+          <button onClick={onNew} className="mt-5 inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold px-5 py-3 rounded-2xl">
+            <Plus className="w-4 h-4" /> Хүргэлт захиалах
+          </button>
         </div>
-
-        {/* Service type */}
-        {serviceById(order.serviceId) && (
-          <div className="flex gap-1.5 items-center mb-2 text-xs text-primary font-medium">
-            <span className="leading-none">{serviceById(order.serviceId)!.emoji}</span>
-            {serviceById(order.serviceId)!.label}
-          </div>
-        )}
-
-        {/* Note */}
-        {order.packageNote && order.packageNote !== "Тэмдэглэлгүй" && (
-          <div className="flex gap-2 items-center mb-3 text-xs text-muted-foreground bg-secondary/40 rounded-lg px-2.5 py-1.5">
-            <Package className="w-3.5 h-3.5 shrink-0" />
-            {order.packageNote}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between">
-          {order.courierName ? (
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold">
-                {order.courierName[0]}
+      ) : (
+        <>
+          {groups.map((g) => (
+            <section key={g.day} className="space-y-2">
+              <p className="text-[13px] font-semibold text-muted-foreground px-1">{g.day}</p>
+              <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                {g.items.map((o) => {
+                  const Icon = serviceIcon(o.serviceId);
+                  const pill = STATUS_PILL[o.status] ?? STATUS_PILL["шинэ"];
+                  const sv = serviceById(o.serviceId);
+                  return (
+                    <div key={o.id} className="flex items-stretch">
+                      <button onClick={() => onTrack(o.id)} className="flex-1 min-w-0 flex items-center gap-3 px-3.5 py-3 text-left active:bg-secondary/60 transition-colors">
+                        <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${isActive(o) ? "bg-primary/12 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                          <Icon className="w-5 h-5" />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[15px] font-semibold truncate">{o.toDetail || o.toAddress}</span>
+                          <span className="block text-xs text-muted-foreground truncate mt-0.5">
+                            {o.fromDetail || o.fromAddress}{sv ? ` · ${sv.label}` : ""}
+                          </span>
+                          <span className={`inline-block mt-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          {o.price > 0 && <span className="block font-bold tabular">₮{o.price.toLocaleString()}</span>}
+                          <span className="block text-xs text-muted-foreground tabular">{o.createdAt}</span>
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </button>
+                      {o.status === "хүргэгдсэн" && (
+                        <button
+                          onClick={() => onRepeat(o)}
+                          aria-label="Дахин захиалах"
+                          title="Дахин захиалах"
+                          className="w-14 shrink-0 border-l border-border flex flex-col items-center justify-center gap-0.5 text-primary active:bg-primary/10"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span className="text-[10px] font-semibold">Дахин</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <span className="text-xs text-muted-foreground">{order.courierName}</span>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Хүргэгч хүлээж байна...</span>
-          )}
-
-          {isActive && (
-            <button
-              onClick={() => onTrack(order.id)}
-              className="flex items-center gap-1 text-xs text-primary border border-primary/30 px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
-            >
-              Хянах <ChevronRight className="w-3 h-3" />
+            </section>
+          ))}
+          {seg === "past" && past.length > 0 && (
+            <button onClick={clearPast} className="w-full text-sm text-muted-foreground py-2">
+              Жагсаалтыг цэвэрлэх
             </button>
           )}
-
-          {order.status === "хүргэгдсэн" && (
-            <div className="flex items-center gap-1 text-xs text-green-400">
-              <CheckCircle className="w-3.5 h-3.5" />
-              {order.deliveredAt && `${order.deliveredAt}-д хүргэгдсэн`}
-            </div>
-          )}
-
-          {order.status === "цуцлагдсан" && onHide && (
-            <button
-              onClick={onHide}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Устгах
-            </button>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

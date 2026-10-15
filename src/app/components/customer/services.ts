@@ -14,6 +14,11 @@ export interface SubService {
   id: string;
   label: string;
   desc?: string;
+  /**
+   * Сонголтод харуулахгүй — хуучин захиалгын нэрийг зөв харуулахын тулд л
+   * үлдсэн (DB-д хадгалагдсан id-г устгаж болохгүй).
+   */
+  hidden?: boolean;
 }
 
 export interface Service {
@@ -41,7 +46,7 @@ export const SERVICES: Service[] = [
     label: "Бараа хүргэлт 20кг хүртэл",
     emoji: "📦",
     desc: "Жижиг илгээмж, баглаа боодол",
-    notePlaceholder: "Юу хүргэх вэ? — хэмжээ, эмзэг эсэх...",
+    notePlaceholder: "Жишээ: орцны код 12#, ирэхээсээ өмнө залгана уу",
     needsCargo: true,
     subs: [
       { id: "cargo",    label: "Карго",           desc: "Каргоны илгээмж авах" },
@@ -49,7 +54,8 @@ export const SERVICES: Service[] = [
       { id: "grocery",  label: "Хүнсний дэлгүүр", desc: "Хүнсний бараа авах" },
       { id: "shop",     label: "Барааны дэлгүүр", desc: "Барааны дэлгүүрээс авах" },
       { id: "hand",     label: "Гараас гарт",     desc: "Шууд гардуулж өгөх" },
-      { id: "express",  label: "Онцгой хурдан",   desc: "Бусдаас түрүүлж хүргэнэ" },
+      // "Онцгой яаралтай" товчтой давхардаж байсан тул сонголтоос хасав
+      { id: "express",  label: "Онцгой хурдан",   desc: "Бусдаас түрүүлж хүргэнэ", hidden: true },
     ],
   },
   {
@@ -57,7 +63,7 @@ export const SERVICES: Service[] = [
     label: "Бараа хүргэлт 20кг дээш",
     emoji: "🧳",
     desc: "Хүнд, овор ихтэй ачаа",
-    notePlaceholder: "Ачааны хэмжээ, жин, ачих нөхцөл...",
+    notePlaceholder: "Жишээ: 3 том хайрцаг, 2-р давхраас буулгана",
     needsCargo: true,
     subs: LOAD_SUBS,
   },
@@ -150,4 +156,9 @@ export function serviceLabel(serviceId?: string, subId?: string): string {
   if (!s) return "";
   const sub = subServiceById(serviceId, subId);
   return sub ? `${s.label} · ${sub.label}` : s.label;
+}
+
+/** Сонгож болох дэд төрлүүд (нуусныг хасна) */
+export function visibleSubs(service?: Service): SubService[] {
+  return service ? service.subs.filter((x) => !x.hidden) : [];
 }

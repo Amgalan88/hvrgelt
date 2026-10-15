@@ -2,9 +2,9 @@ import { InstallButton } from "../shared/InstallApp";
 import { NotifyCard } from "../shared/NotifyCard";
 import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown } from "lucide-react";
+import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown, User as UserIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent } from "../shared/store";
 import { useUser, type QuickOrder } from "../shared/UserContext";
@@ -12,7 +12,8 @@ import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
-import { SERVICES, serviceById, subServiceById } from "./services";
+import { SERVICES, serviceById, subServiceById, visibleSubs } from "./services";
+import { serviceIcon } from "./serviceIcons";
 import { CourierProfileModal } from "./CourierProfileModal";
 import { CargoDetails, type CargoInfo } from "./CargoDetails";
 import { PaymentPanel } from "./PaymentPanel";
@@ -37,6 +38,7 @@ const CUSTOMER_HELP_STEPS = [
 ];
 
 type AppTab = "order" | "places" | "history" | "settings";
+const TAB_TITLE: Record<AppTab, string> = { order: "Захиалга", places: "Газрууд", history: "Миний захиалгууд", settings: "Профайл" };
 
 /** Захиалгын асуултууд — нэг дэлгэцэнд нэг асуулт */
 type FormStep = 0 | 1 | 2 | 3;
@@ -165,6 +167,27 @@ interface CustomerAppProps {
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
+}
+
+/** Үйлчилгээний icon — emoji-ийн оронд нэг хэв маяг */
+function SvcIcon({ id, className = "w-5 h-5" }: { id?: string; className?: string }) {
+  const I = serviceIcon(id);
+  return <I className={className} />;
+}
+
+/**
+ * Үндсэн товч — дэлгэцийн доод хэсэгт (доод цэсний дээр) үргэлж харагдана.
+ * Урт хуудсыг гүйлгэж товч хайх шаардлагагүй.
+ */
+function BottomBar({ children }: { children: ReactNode }) {
+  return (
+    // Доод цэсний голын "Захиалах" товч 1.25rem дээш цухуйдаг тул түүнээс дээр байрлана
+    <div className="fixed inset-x-0 z-30 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] pointer-events-none">
+      <div className="max-w-sm mx-auto px-4 pt-5 pb-1 bg-gradient-to-t from-background via-background to-transparent pointer-events-auto">
+        {children}
+      </div>
+    </div>
+  );
 }
 
 // Маршрут — цэг заасан бол газрын зураг (OpenStreetMap), доор нь Google Maps чиглэл.
@@ -541,6 +564,33 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setPickerFor(null);
   }
 
+  /** Доод цэсний "Захиалах" — хаанаас ч шинэ захиалга эхлүүлнэ */
+  function startNewOrder() {
+    setAppTab("order");
+    if (orderStep === "tracking") handleNewOrder();
+    else if (orderStep === "confirm") setOrderStep("form");
+    else goStep(0);
+  }
+
+  /** Хүргэгдсэн захиалгыг ижил хаяг, үйлчилгээгээр дахин захиална */
+  function repeatOrder(o: Order) {
+    setMyOrderId(null);
+    setServiceId(serviceById(o.serviceId) ? o.serviceId! : SERVICES[0].id);
+    setSubServiceId(o.subServiceId ?? null);
+    setFromAddr(o.fromAddress);
+    setFromDetail(o.fromDetail && o.fromDetail !== o.fromAddress ? o.fromDetail : "");
+    setToAddr(o.toAddress);
+    setToDetail(o.toDetail && o.toDetail !== o.toAddress ? o.toDetail : "");
+    setFromPos(o.fromLat != null ? { lat: o.fromLat, lng: o.fromLng! } : null);
+    setToPos(o.toLat != null ? { lat: o.toLat, lng: o.toLng! } : null);
+    setNote("");
+    setCargo({ fragile: false, urgent: false });
+    setOrderStep("form");
+    setFormStep(3);
+    setAppTab("order");
+    window.scrollTo({ top: 0 });
+  }
+
   function fillAddress(target: "from" | "to", addr: string, detail: string) {
     if (target === "from") { setFromAddr(addr); setFromDetail(detail); }
     else { setToAddr(addr); setToDetail(detail); }
@@ -549,24 +599,25 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-        <Logo size="sm" />
-        <div className="flex items-center gap-2">
-          <HelpButton onClick={() => setHelpOpen(true)} />
-          {tab === "order" && myOrder && orderStep === "tracking" && (
-            <button onClick={handleNewOrder} className="text-xs border border-border px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-              + Шинэ
+      {/* Апп-ын дээд мөр */}
+      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border pt-[env(safe-area-inset-top)]">
+        <div className="max-w-sm mx-auto h-14 px-4 flex items-center justify-between">
+          {tab === "order" ? <Logo size="sm" /> : <p className="text-[17px] font-bold">{TAB_TITLE[tab]}</p>}
+          <div className="flex items-center gap-1">
+            <HelpButton onClick={() => setHelpOpen(true)} />
+            <button
+              onClick={() => setAppTab("settings")}
+              aria-label="Профайл"
+              className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold text-sm flex items-center justify-center"
+            >
+              {userName[0]}
             </button>
-          )}
-          <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold text-xs" style={{ fontFamily: "var(--font-display)" }}>
-            {userName[0]}
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <div className="flex-1 max-w-sm mx-auto w-full px-4 py-5 pb-24">
+      <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56">
        <AnimatePresence mode="wait">
         <motion.div
           key={tab}
@@ -673,7 +724,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                             onClick={() => { pickService(sv.id); goStep(1); }}
                             className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${active ? "bg-primary/[0.07]" : "hover:bg-secondary/50"}`}
                           >
-                            <span className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 ${active ? "bg-primary/15" : "bg-secondary"}`}>{sv.emoji}</span>
+                            <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}><SvcIcon id={sv.id} /></span>
                             <span className="flex-1 min-w-0">
                               <span className="block text-[15px] font-semibold leading-snug">{sv.label}</span>
                               <span className="block text-xs text-muted-foreground mt-0.5">{sv.desc}</span>
@@ -708,7 +759,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       {/* Өмнөх хариултууд — дарж засна */}
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => goStep(0)} className="inline-flex items-center gap-1.5 bg-card border border-border rounded-full pl-2 pr-3 py-1 text-xs hover:border-primary/40">
-                          <span>{service?.emoji}</span> <span className="font-medium max-w-[11rem] truncate">{service?.label}</span>
+                          <SvcIcon id={service?.id} className="w-3.5 h-3.5 text-primary" /> <span className="font-medium max-w-[11rem] truncate">{service?.label}</span>
                         </button>
                         {target === "to" && fromAddr && (
                           <button onClick={() => goStep(1)} className="inline-flex items-center gap-1.5 bg-card border border-border rounded-full pl-2.5 pr-3 py-1 text-xs hover:border-primary/40">
@@ -797,13 +848,15 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         </div>
                       )}
 
-                      <button
-                        onClick={() => goStep((formStep + 1) as FormStep)}
-                        disabled={!addr.trim()}
-                        className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-                      >
-                        Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
-                      </button>
+                      <BottomBar>
+                        <button
+                          onClick={() => goStep((formStep + 1) as FormStep)}
+                          disabled={!addr.trim()}
+                          className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                        >
+                          {addr.trim() ? <>Үргэлжлүүлэх <ArrowRight className="w-4 h-4" /></> : target === "from" ? "Авах хаягаа бичнэ үү" : "Хүргэх хаягаа бичнэ үү"}
+                        </button>
+                      </BottomBar>
                     </>
                   );
                 })()}
@@ -814,7 +867,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                     {/* Хураангуй — мөр бүрийг дарж засна */}
                     <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
                       <button onClick={() => goStep(0)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/40">
-                        <span className="text-xl">{service?.emoji}</span>
+                        <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><SvcIcon id={service?.id} className="w-4 h-4" /></span>
                         <span className="flex-1 min-w-0 text-sm font-semibold truncate">{service?.label}</span>
                         <span className="text-xs font-semibold text-primary">Засах</span>
                       </button>
@@ -836,11 +889,11 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       </button>
                     </div>
 
-                    {service && service.subs.length > 0 && (
+                    {visibleSubs(service).length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">Төрөл</p>
                         <div className="flex flex-wrap gap-2">
-                          {service.subs.map((sub) => {
+                          {visibleSubs(service).map((sub) => {
                             const on = sub.id === subServiceId;
                             return (
                               <button
@@ -894,13 +947,15 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       />
                     </div>
 
-                    <button
-                      onClick={handleEstimate}
-                      disabled={!fromAddr.trim() || !toAddr.trim()}
-                      className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-                    >
-                      Шалгаад захиалах <ArrowRight className="w-4 h-4" />
-                    </button>
+                    <BottomBar>
+                      <button
+                        onClick={handleEstimate}
+                        disabled={!fromAddr.trim() || !toAddr.trim()}
+                        className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                      >
+                        Шалгаад захиалах <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </BottomBar>
                   </>
                 )}
                   </motion.div>
@@ -923,7 +978,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
                   {service && (
                     <div className="flex items-center gap-2.5 border-b border-border pb-3">
-                      <span className="text-xl leading-none">{service.emoji}</span>
+                      <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><SvcIcon id={service.id} className="w-4 h-4" /></span>
                       <div className="min-w-0">
                         <p className="text-xs text-muted-foreground">Үйлчилгээ</p>
                         <p className="text-sm font-medium">{service.label}</p>
@@ -984,14 +1039,15 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                   <p className="text-xs text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна. Доод үнэ — 5,000₮.</p>
                 </div>
 
-                <button
-                  onClick={handleConfirm}
-                  disabled={placing}
-                  className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-primary/90 transition-colors"
-                  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-                >
-                  {placing ? <Spinner className="w-5 h-5" /> : <>Захиалах <ArrowRight className="w-4 h-4" /></>}
-                </button>
+                <BottomBar>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={placing}
+                    className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-60"
+                  >
+                    {placing ? <Spinner className="w-5 h-5" /> : <>Хүргэлт захиалах <ArrowRight className="w-4 h-4" /></>}
+                  </button>
+                </BottomBar>
               </div>
             )}
 
@@ -1317,11 +1373,12 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
 
         {tab === "history" && (
           <div className="space-y-4">
-            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>Захиалгын түүх</h2>
             <OrderHistory
               orders={orders}
               userId={userId}
               onTrack={(id) => { setMyOrderId(id); setOrderStep("tracking"); setAppTab("order"); }}
+              onRepeat={repeatOrder}
+              onNew={startNewOrder}
             />
           </div>
         )}
@@ -1329,7 +1386,6 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         {/* ── SETTINGS TAB ── */}
         {tab === "settings" && (
           <div className="space-y-4">
-            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.2rem" }}>Тохиргоо</h2>
             <InstallButton variant="card" />
             <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
           </div>
@@ -1492,33 +1548,46 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         onClose={() => setCancelTarget(null)}
       />
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
-        <div className="max-w-sm mx-auto flex">
+      {/* Доод цэс — голд нь үргэлж харагдах "Захиалах" */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-sm mx-auto grid grid-cols-5 h-[4.75rem]">
           {([
-            { key: "order" as AppTab, label: "Захиалга", icon: Truck, badge: 0 },
+            { key: "order" as AppTab, label: "Нүүр", icon: Home, badge: 0 },
             { key: "places" as AppTab, label: "Газрууд", icon: Store, badge: 0 },
-            { key: "history" as AppTab, label: "Түүх", icon: Clock, badge: activeCount },
-            { key: "settings" as AppTab, label: "Тохиргоо", badge: 0, icon: ({ className }: { className?: string }) => (
-              <div className={`w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold ${className}`} style={{ fontSize: "0.6rem" }}>
-                {userName[0]}
+            null,
+            { key: "history" as AppTab, label: "Захиалгууд", icon: Clock, badge: activeCount },
+            { key: "settings" as AppTab, label: "Профайл", icon: UserIcon, badge: 0 },
+          ]).map((item) =>
+            item === null ? (
+              <div key="fab" className="flex flex-col items-center">
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={startNewOrder}
+                  aria-label="Хүргэлт захиалах"
+                  className="-mt-5 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/35 ring-4 ring-background flex items-center justify-center"
+                >
+                  <Plus className="w-7 h-7" strokeWidth={2.5} />
+                </motion.button>
+                <span className="text-[11px] font-semibold text-primary mt-1">Захиалах</span>
               </div>
-            )},
-          ] as const).map(({ key, label, icon: Icon, badge }) => (
-            <button
-              key={key}
-              onClick={() => setAppTab(key)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 relative transition-colors ${tab === key ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs">{label}</span>
-              {badge != null && badge > 0 && (
-                <span className="absolute top-1.5 right-1/4 w-4 h-4 bg-primary rounded-full text-white flex items-center justify-center" style={{ fontSize: "0.55rem" }}>
-                  {badge}
+            ) : (
+              <button
+                key={item.key}
+                onClick={() => setAppTab(item.key)}
+                className={`relative flex flex-col items-center justify-center gap-1 transition-colors ${tab === item.key ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <span className={`flex items-center justify-center w-14 h-8 rounded-full transition-colors ${tab === item.key ? "bg-primary/12" : ""}`}>
+                  <item.icon className="w-[22px] h-[22px]" strokeWidth={tab === item.key ? 2.4 : 2} />
                 </span>
-              )}
-            </button>
-          ))}
+                <span className={`text-[11px] ${tab === item.key ? "font-bold" : "font-medium"}`}>{item.label}</span>
+                {item.badge > 0 && (
+                  <span className="absolute top-2 left-1/2 ml-2 min-w-[18px] h-[18px] px-1 bg-primary rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-card tabular">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            ),
+          )}
         </div>
       </nav>
 

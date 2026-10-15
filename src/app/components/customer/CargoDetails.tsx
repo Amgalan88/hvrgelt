@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Camera, X, AlertTriangle, Zap, Weight, Loader2 } from "lucide-react";
+import { Camera, X, AlertTriangle, Zap, Loader2 } from "lucide-react";
 import { storePhoto } from "../../lib/photo";
 
 export interface CargoInfo {
   photoUrl?: string;
+  /** Хуучин захиалгуудад үлдсэн. Жинг үйлчилгээ (20кг хүртэл/дээш) аль хэдийн хэлдэг тул дахин асуухгүй. */
   weightKg?: number;
   fragile: boolean;
   urgent: boolean;
@@ -15,8 +16,8 @@ interface CargoDetailsProps {
 }
 
 /**
- * Үйлчилгээний гурав дахь түвшин — ачааны мэдээлэл.
- * Зураг, жин (кг), хагарах аюултай эсэх, онцгой яаралтай эсэх.
+ * Ачааны нэмэлт мэдээлэл — нэг мөрөнд: зураг, хагарах, яаралтай.
+ * Бүгд заавал биш, нэг товшилтоор асаана.
  */
 export function CargoDetails({ value, onChange }: CargoDetailsProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -37,11 +38,17 @@ export function CargoDetails({ value, onChange }: CargoDetailsProps) {
     }
   }
 
-  return (
-    <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>Ачааны мэдээлэл</p>
+  const chip = (on: boolean, tone: "amber" | "red") =>
+    `flex-1 flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-3 text-sm font-semibold transition-colors ${
+      on
+        ? tone === "amber"
+          ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300"
+          : "bg-red-500/12 border-red-500/40 text-red-600 dark:text-red-300"
+        : "bg-card border-border text-muted-foreground"
+    }`;
 
-      {/* Зураг */}
+  return (
+    <div className="space-y-2">
       <input
         ref={fileRef}
         type="file"
@@ -50,70 +57,37 @@ export function CargoDetails({ value, onChange }: CargoDetailsProps) {
         className="hidden"
         onChange={(e) => pickPhoto(e.target.files?.[0])}
       />
-      {value.photoUrl ? (
-        <div className="relative">
-          <img src={value.photoUrl} alt="Ачаа" className="w-full h-40 object-cover rounded-xl border border-border" />
-          <button
-            onClick={() => onChange({ ...value, photoUrl: undefined })}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center"
-            aria-label="Зураг устгах"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="w-full border border-dashed border-border rounded-xl py-6 flex flex-col items-center gap-1.5 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-          <span className="text-xs">{uploading ? "Хавсаргаж байна..." : "Барааны гадна зураг"}</span>
-        </button>
-      )}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-
-      {/* Жин */}
-      <div className="flex items-center gap-3 bg-secondary/50 border border-border rounded-xl px-3 py-2.5">
-        <Weight className="w-4 h-4 text-muted-foreground shrink-0" />
-        <input
-          value={value.weightKg ?? ""}
-          onChange={(e) => {
-            const n = e.target.value.replace(/[^0-9.]/g, "");
-            onChange({ ...value, weightKg: n === "" ? undefined : Number(n) });
-          }}
-          inputMode="decimal"
-          placeholder="Ойролцоо жин"
-          className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground"
-        />
-        <span className="text-xs text-muted-foreground">кг</span>
-      </div>
-
-      {/* Тэмдэглэгээ */}
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { key: "fragile" as const, icon: AlertTriangle, label: "Хагарах аюултай", cls: "amber" },
-          { key: "urgent" as const,  icon: Zap,           label: "Онцгой яаралтай", cls: "red" },
-        ].map((f) => {
-          const Icon = f.icon;
-          const on = value[f.key];
-          return (
+      <div className="flex gap-2">
+        {/* Зураг — жижиг хавтан */}
+        {value.photoUrl ? (
+          <div className="relative w-[52px] h-[52px] shrink-0">
+            <img src={value.photoUrl} alt="Ачаа" className="w-full h-full object-cover rounded-2xl border border-border" />
             <button
-              key={f.key}
-              onClick={() => onChange({ ...value, [f.key]: !on })}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs transition-colors ${
-                on
-                  ? f.cls === "amber"
-                    ? "bg-amber-500/15 border-amber-500 text-amber-500"
-                    : "bg-red-500/15 border-red-500 text-red-500"
-                  : "bg-secondary/50 border-border text-muted-foreground hover:border-primary/40"
-              }`}
+              onClick={() => onChange({ ...value, photoUrl: undefined })}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center"
+              aria-label="Зураг устгах"
             >
-              <Icon className="w-3.5 h-3.5 shrink-0" /> {f.label}
+              <X className="w-3 h-3" />
             </button>
-          );
-        })}
+          </div>
+        ) : (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            aria-label="Ачааны зураг"
+            className="w-[52px] h-[52px] shrink-0 rounded-2xl border border-dashed border-border bg-card flex items-center justify-center text-muted-foreground disabled:opacity-60"
+          >
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+          </button>
+        )}
+        <button onClick={() => onChange({ ...value, fragile: !value.fragile })} aria-pressed={value.fragile} className={chip(value.fragile, "amber")}>
+          <AlertTriangle className="w-4 h-4" /> Хагарамтгай
+        </button>
+        <button onClick={() => onChange({ ...value, urgent: !value.urgent })} aria-pressed={value.urgent} className={chip(value.urgent, "red")}>
+          <Zap className="w-4 h-4" /> Яаралтай
+        </button>
       </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

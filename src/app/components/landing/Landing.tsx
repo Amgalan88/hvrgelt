@@ -1,11 +1,11 @@
 import { InstallButton } from "../shared/InstallApp";
 import { motion } from "motion/react";
 import {
-  ArrowRight, Phone, Clock, MapPin, Truck, Package, Luggage, Container, Baby, Construction,
-  Droplets, Tractor, Forklift, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
+  ArrowRight, Phone, Clock, MapPin, Truck, Package, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
 } from "lucide-react";
 import { Logo, LogoMark } from "../shared/Logo";
 import { SERVICES } from "../customer/services";
+import { SERVICE_ICON } from "../customer/serviceIcons";
 import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE } from "../../lib/contact";
 
 export type LegalKey = "terms" | "privacy" | "about" | "contact";
@@ -18,18 +18,6 @@ interface LandingProps {
   onLegal: (page: LegalKey) => void;
 }
 
-/** Үйлчилгээ бүрийн icon — апп доторх emoji-ийн оронд нэг хэв маягийн дүрс */
-const SERVICE_ICON: Record<string, LucideIcon> = {
-  goods: Package,
-  "goods-heavy": Luggage,
-  "truck-2t": Truck,
-  "truck-big": Container,
-  kids: Baby,
-  crane: Construction,
-  vacuum: Droplets,
-  excavator: Tractor,
-  bobcat: Forklift,
-};
 
 /** Хүргэгчийн авах хувь — CourierApp-д price * 0.8 гэж тооцогддог */
 const COURIER_SHARE = "80%";
