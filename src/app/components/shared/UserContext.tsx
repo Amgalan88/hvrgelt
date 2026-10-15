@@ -32,6 +32,8 @@ interface UserContextValue {
   addAddress: (a: Omit<SavedAddress, "id">) => void;
   updateAddress: (id: string, a: Omit<SavedAddress, "id">) => void;
   removeAddress: (id: string) => void;
+  /** Устгасан хаягийг "Буцаах"-аар өмнөх жагсаалт руу нь сэргээнэ */
+  replaceAddresses: (list: SavedAddress[]) => void;
   quickOrders: QuickOrder[];
   saveQuickOrders: (list: QuickOrder[]) => void;
   /** PIN түгжээг шийдэхэд хэрэглэнэ: ok | missing (бүртгэл устсан) | error (сүлжээ) */
@@ -147,6 +149,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     persistAddresses(savedAddresses.filter((a) => a.id !== id));
   }
 
+  function replaceAddresses(list: SavedAddress[]) {
+    persistAddresses(list);
+  }
+
   // Persist the full quick-order list to the DB
   function saveQuickOrders(list: QuickOrder[]) {
     setQuickOrders(list);
@@ -154,7 +160,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );

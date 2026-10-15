@@ -1,3 +1,4 @@
+import { useUndo } from "../shared/Undo";
 import { useState, useEffect } from "react";
 import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone } from "lucide-react";
 import { PHONES, WORK_HOURS } from "../../lib/contact";
@@ -121,7 +122,8 @@ type LockFlow =
   | null;
 
 export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
-  const { theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, pin, setPin, pattern, setPattern } = useUser();
+  const { theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, pin, setPin, pattern, setPattern } = useUser();
+  const { offerUndo } = useUndo();
   const [showAdd, setShowAdd] = useState(false);
   const [editAddr, setEditAddr] = useState<SavedAddress | null>(null);
   const [lockFlow, setLockFlow] = useState<LockFlow>(null);
@@ -306,7 +308,11 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
                 <Pencil className="w-4 h-4" />
               </button>
               <button
-                onClick={() => removeAddress(addr.id)}
+                onClick={() => {
+                  const prev = savedAddresses;
+                  removeAddress(addr.id);
+                  offerUndo(`"${addr.label}" хаяг устгагдлаа`, () => replaceAddresses(prev));
+                }}
                 className="text-muted-foreground hover:text-destructive transition-colors p-1"
               >
                 <Trash2 className="w-4 h-4" />

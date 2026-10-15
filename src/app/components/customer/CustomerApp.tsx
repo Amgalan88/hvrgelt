@@ -1,3 +1,4 @@
+import { useUndo } from "../shared/Undo";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -46,6 +47,35 @@ const STATUS_STEPS: { key: OrderStatus; label: string; sub: string }[] = [
   { key: "авсан",                label: "Ачааг авлаа",               sub: "Хүргэгч таны захиалгыг хүргэж байна" },
   { key: "хүргэгдсэн",          label: "Амжилттай хүргэгдлээ! 🎉",  sub: "" },
 ];
+
+// ── Захиалгын ноорог ─────────────────────────────────────────────────
+// Хуудас дахин ачаалах, апп хаагдахад бичсэн маягт алдагдахгүй.
+// Төхөөрөмж дээр л хадгалагдана; захиалга илгээгдмэгц устна.
+interface OrderDraft {
+  fromAddr: string; fromDetail: string; toAddr: string; toDetail: string;
+  note: string; serviceId: string; subServiceId: string | null;
+  fromPos: LatLng | null; toPos: LatLng | null;
+}
+const draftKey = (userId: string) => `hvrgelt_order_draft_${userId}`;
+
+function readDraft(userId: string): Partial<OrderDraft> {
+  try {
+    const raw = localStorage.getItem(draftKey(userId));
+    return raw ? (JSON.parse(raw) as Partial<OrderDraft>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDraft(userId: string, d: OrderDraft) {
+  try {
+    const empty = !d.fromAddr && !d.toAddr && !d.note && !d.fromPos && !d.toPos;
+    if (empty) localStorage.removeItem(draftKey(userId));
+    else localStorage.setItem(draftKey(userId), JSON.stringify(d));
+  } catch {
+    /* хадгалах боломжгүй — энэ удаад л санана */
+  }
+}
 
 function getStatusIdx(status: OrderStatus) {
   return STATUS_STEPS.findIndex((s) => s.key === status);
@@ -143,17 +173,21 @@ function RoutePreview({
 
 export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
+  const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
   // Start on form always; if there's an active order go to tracking
   const [orderStep, setOrderStep] = useState<OrderStep>(myOrderId ? "tracking" : "form");
-  const [fromAddr, setFromAddr] = useState("");
-  const [fromDetail, setFromDetail] = useState("");
-  const [toAddr, setToAddr] = useState("");
-  const [toDetail, setToDetail] = useState("");
-  const [note, setNote] = useState("");
-  const [serviceId, setServiceId] = useState<string>(SERVICES[0].id);
-  const [subServiceId, setSubServiceId] = useState<string | null>(null);
+  const [draft] = useState(() => readDraft(userId));
+  const [fromAddr, setFromAddr] = useState(draft.fromAddr ?? "");
+  const [fromDetail, setFromDetail] = useState(draft.fromDetail ?? "");
+  const [toAddr, setToAddr] = useState(draft.toAddr ?? "");
+  const [toDetail, setToDetail] = useState(draft.toDetail ?? "");
+  const [note, setNote] = useState(draft.note ?? "");
+  const [serviceId, setServiceId] = useState<string>(
+    draft.serviceId && serviceById(draft.serviceId) ? draft.serviceId : SERVICES[0].id,
+  );
+  const [subServiceId, setSubServiceId] = useState<string | null>(draft.subServiceId ?? null);
   const [cargo, setCargo] = useState<CargoInfo>({ fragile: false, urgent: false });
   const [basket, setBasket] = useState<BasketItem[]>([]);
   const [basketPartnerId, setBasketPartnerId] = useState<string | null>(null);
@@ -163,8 +197,13 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   const [addrTarget, setAddrTarget] = useState<"from" | "to" | null>(null);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   // Газрын зураг дээр заасан цэгүүд
-  const [fromPos, setFromPos] = useState<LatLng | null>(null);
-  const [toPos, setToPos] = useState<LatLng | null>(null);
+  const [fromPos, setFromPos] = useState<LatLng | null>(draft.fromPos ?? null);
+  const [toPos, setToPos] = useState<LatLng | null>(draft.toPos ?? null);
+
+  // Маягт өөрчлөгдөх бүрт ноорог хадгална
+  useEffect(() => {
+    writeDraft(userId, { fromAddr, fromDetail, toAddr, toDetail, note, serviceId, subServiceId, fromPos, toPos });
+  }, [userId, fromAddr, fromDetail, toAddr, toDetail, note, serviceId, subServiceId, fromPos, toPos]);
   const [pickerFor, setPickerFor] = useState<"from" | "to" | null>(null);
   // Цуцлахын өмнө асуух — нэг товшилтоор санамсаргүй цуцлагдахаас сэргийлнэ
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
@@ -191,11 +230,54 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   const service = serviceById(serviceId);
   const subService = subServiceById(serviceId, subServiceId ?? undefined);
 
+  /**
+   * Үйлчилгээ солиход өмнөх үйлчилгээнд бичсэн тэмдэглэл, дэд төрөл,
+   * ачааны мэдээлэл цэвэрлэгдэнэ (шинэ үйлчилгээнд хамааралгүй тул).
+   * Андуурч солисон бол "Буцаах"-аар бүгд сэргэнэ.
+   */
   function pickService(id: string) {
+    if (id === serviceId) return;
+    const prev = { serviceId, subServiceId, note, cargo };
+    const hadInput = !!(subServiceId || note.trim() || cargo.photoUrl || cargo.weightKg != null || cargo.fragile || cargo.urgent);
     setServiceId(id);
     setSubServiceId(null);
-    const sv = serviceById(id);
-    if (!sv?.needsCargo) setCargo({ fragile: false, urgent: false });
+    setNote("");
+    setCargo({ fragile: false, urgent: false });
+    const label = serviceById(id)?.label ?? "Үйлчилгээ";
+    offerUndo(
+      hadInput ? `${label} — өмнө бичсэн мэдээлэл арилсан` : `${label} сонгогдлоо`,
+      () => {
+        setServiceId(prev.serviceId);
+        setSubServiceId(prev.subServiceId);
+        setNote(prev.note);
+        setCargo(prev.cargo);
+      },
+    );
+  }
+
+  /** Хаягийг арилгах — буцааж болно */
+  function clearAddress(target: "from" | "to") {
+    const prev =
+      target === "from"
+        ? { addr: fromAddr, detail: fromDetail, pos: fromPos }
+        : { addr: toAddr, detail: toDetail, pos: toPos };
+    if (target === "from") { setFromAddr(""); setFromDetail(""); setFromPos(null); }
+    else { setToAddr(""); setToDetail(""); setToPos(null); }
+    offerUndo(target === "from" ? "Авах хаяг арилсан" : "Хүргэх хаяг арилсан", () => {
+      if (target === "from") { setFromAddr(prev.addr); setFromDetail(prev.detail); setFromPos(prev.pos); }
+      else { setToAddr(prev.addr); setToDetail(prev.detail); setToPos(prev.pos); }
+    });
+  }
+
+  /** Сагс цэвэрлэх — буцааж болно */
+  function clearBasket() {
+    const prev = { basket, basketPartnerId };
+    setBasket([]);
+    setBasketPartnerId(null);
+    offerUndo("Сагс хоосорлоо", () => {
+      setBasket(prev.basket);
+      setBasketPartnerId(prev.basketPartnerId);
+    });
   }
   const myOrder = orders.find((o) => o.id === myOrderId);
 
@@ -239,6 +321,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
       });
       setMyOrderId(id);
       setOrderStep("tracking");
+      setFromAddr(""); setFromDetail(""); setToAddr(""); setToDetail(""); setNote("");
+      setFromPos(null); setToPos(null); setSubServiceId(null);
+      setCargo({ fragile: false, urgent: false });
+      setBasket([]); setBasketPartnerId(null);
     } finally {
       setPlacing(false);
     }
@@ -295,7 +381,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   }
 
   function deleteQuick(id: string) {
-    saveQuickOrders(quickOrders.filter((q) => q.id !== id));
+    const prev = quickOrders;
+    const removed = prev.find((q) => q.id === id);
+    saveQuickOrders(prev.filter((q) => q.id !== id));
+    offerUndo(`"${removed?.label ?? "Хурдан захиалга"}" устгагдлаа`, () => saveQuickOrders(prev));
   }
 
   async function confirmPlaceQuick() {
@@ -461,7 +550,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         placeholder="Авах хаяг — дүүрэг, хороо"
                         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
-                      {fromAddr && <button aria-label="Арилгах" onClick={() => { setFromAddr(""); setFromDetail(""); setFromPos(null); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      {fromAddr && <button aria-label="Арилгах" onClick={() => clearAddress("from")}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
                       <button
                         onClick={() => setPickerFor("from")}
                         aria-label="Авах цэгийг газрын зураг дээр заах"
@@ -492,7 +581,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         placeholder="Хүргэх хаяг — дүүрэг, хороо"
                         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                       />
-                      {toAddr && <button aria-label="Арилгах" onClick={() => { setToAddr(""); setToDetail(""); setToPos(null); }}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
+                      {toAddr && <button aria-label="Арилгах" onClick={() => clearAddress("to")}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>}
                       <button
                         onClick={() => setPickerFor("to")}
                         aria-label="Хүргэх цэгийг газрын зураг дээр заах"
@@ -598,7 +687,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         🛒 {basketPartner?.name ?? "Сагс"}
                       </p>
                       <button
-                        onClick={() => { setBasket([]); setBasketPartnerId(null); }}
+                        onClick={clearBasket}
                         className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                       >
                         Цэвэрлэх
@@ -644,6 +733,15 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 >
                   Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
                 </button>
+                {(!fromAddr.trim() || !toAddr.trim()) && (
+                  <p className="text-xs text-muted-foreground text-center -mt-1">
+                    {!fromAddr.trim() && !toAddr.trim()
+                      ? "Авах болон хүргэх хаягаа бичнэ үү"
+                      : !fromAddr.trim()
+                        ? "Авах хаягаа бичнэ үү"
+                        : "Хүргэх хаягаа бичнэ үү"}
+                  </p>
+                )}
                 {quickOrders.length === 0 && (
                   <button onClick={openQuickAdd} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
                     <Plus className="w-3.5 h-3.5" /> Байнгын хүргэлтээ хурдан захиалга болгох

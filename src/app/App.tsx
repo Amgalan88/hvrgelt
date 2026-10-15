@@ -1,3 +1,4 @@
+import { UndoProvider } from "./components/shared/Undo";
 import { useState, useEffect } from "react";
 import type { UserRole } from "./components/shared/types";
 import { useStore } from "./components/shared/store";
@@ -412,7 +413,9 @@ const isMockRoute = typeof window !== "undefined" && /^\/mock\/?$/.test(window.l
 export default function App() {
   return (
     <UserProvider>
-      {isMockRoute ? <MockPage /> : <Inner />}
+      <UndoProvider>
+        {isMockRoute ? <MockPage /> : <Inner />}
+      </UndoProvider>
     </UserProvider>
   );
 }
