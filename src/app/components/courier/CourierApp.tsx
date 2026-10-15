@@ -261,7 +261,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                       )}
 
                       {/* Ачааны зураг, жин, тэмдэглэгээ */}
-                      {(order.cargoPhotoUrl || order.weightKg != null || order.fragile || order.urgent) && (
+                      {(order.cargoPhotoUrl || order.weightKg != null || order.fragile || order.urgent || order.handToHand) && (
                         <div className="flex gap-3 items-center">
                           {order.cargoPhotoUrl && (
                             <a href={order.cargoPhotoUrl} target="_blank" rel="noreferrer" className="shrink-0">
@@ -272,11 +272,14 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                             {order.weightKg != null && (
                               <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг</span>
                             )}
+                            {order.handToHand && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400">Гараас гарт</span>
+                            )}
                             {order.fragile && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хагарах аюултай</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хагарамтгай</span>
                             )}
                             {order.urgent && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Онцгой яаралтай</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Яаралтай · 20 мин</span>
                             )}
                           </div>
                         </div>

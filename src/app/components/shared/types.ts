@@ -36,6 +36,10 @@ export interface Order {
   toAddress: string;
   fromDetail: string;
   toDetail: string;
+  /** Гараас гарт — орж авах, оруулж өгөх (migration 20) */
+  handToHand?: boolean;
+  /** Хүргэгч хайж эхэлсэн цаг (migration 20) */
+  searchingSince?: string;
   /** Газрын зураг дээр заасан цэг (migration 19) */
   fromLat?: number;
   fromLng?: number;

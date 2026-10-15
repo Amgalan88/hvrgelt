@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, X, AlertTriangle, Zap, Loader2 } from "lucide-react";
+import { Camera, X, AlertTriangle, Zap, Loader2, HandHelping } from "lucide-react";
 import { storePhoto } from "../../lib/photo";
 
 export interface CargoInfo {
@@ -8,18 +8,22 @@ export interface CargoInfo {
   weightKg?: number;
   fragile: boolean;
   urgent: boolean;
+  /** Гараас гарт — хүргэгч орж авч, оруулж өгнө */
+  handToHand?: boolean;
 }
 
 interface CargoDetailsProps {
   value: CargoInfo;
   onChange: (next: CargoInfo) => void;
+  /** Нэмэлт төлбөрийг товч дээр харуулна (шууд үнэтэй үед) */
+  prices?: { handToHand?: number; urgent?: number; fragile?: number };
 }
 
 /**
  * Ачааны нэмэлт мэдээлэл — нэг мөрөнд: зураг, хагарах, яаралтай.
  * Бүгд заавал биш, нэг товшилтоор асаана.
  */
-export function CargoDetails({ value, onChange }: CargoDetailsProps) {
+export function CargoDetails({ value, onChange, prices }: CargoDetailsProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -81,10 +85,18 @@ export function CargoDetails({ value, onChange }: CargoDetailsProps) {
           </button>
         )}
         <button onClick={() => onChange({ ...value, fragile: !value.fragile })} aria-pressed={value.fragile} className={chip(value.fragile, "amber")}>
-          <AlertTriangle className="w-4 h-4" /> Хагарамтгай
+          <AlertTriangle className="w-4 h-4" />
+          <span className="text-left leading-tight">Хагарамтгай{prices?.fragile ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.fragile.toLocaleString()}</span> : null}</span>
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => onChange({ ...value, handToHand: !value.handToHand })} aria-pressed={!!value.handToHand} className={chip(!!value.handToHand, "amber")}>
+          <HandHelping className="w-4 h-4" />
+          <span className="text-left leading-tight">Гараас гарт{prices?.handToHand ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.handToHand.toLocaleString()}</span> : null}</span>
         </button>
         <button onClick={() => onChange({ ...value, urgent: !value.urgent })} aria-pressed={value.urgent} className={chip(value.urgent, "red")}>
-          <Zap className="w-4 h-4" /> Яаралтай
+          <Zap className="w-4 h-4" />
+          <span className="text-left leading-tight">20 мин дотор{prices?.urgent ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.urgent.toLocaleString()}</span> : null}</span>
         </button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

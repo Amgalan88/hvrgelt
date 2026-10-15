@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
 import { Calculator, Loader2 } from "lucide-react";
-import { priceForKm, ROAD_FACTOR, ROUND_TO, type Tariff } from "../../lib/pricing";
+import { priceForKm, ROAD_FACTOR, ROUND_TO, URGENT_MINUTES, type Tariff } from "../../lib/pricing";
 
 interface TariffSettingsProps {
   tariff: Tariff;
   onSave: (t: Tariff) => Promise<void>;
 }
 
-const FIELDS: { key: "base" | "includedKm" | "perKm" | "urgentExtra"; label: string; unit: string; hint: string }[] = [
-  { key: "base", label: "Суурь үнэ", unit: "₮", hint: "Доод үнэ, суурь зайд багтана" },
-  { key: "includedKm", label: "Суурь зай", unit: "км", hint: "Энэ хүртэлх зайд суурь үнэ" },
-  { key: "perKm", label: "Нэмэлт км тутам", unit: "₮", hint: "Суурь зайнаас хэтэрсэн км бүрт" },
-  { key: "urgentExtra", label: "Яаралтай", unit: "₮", hint: "\"Яаралтай\" сонгоход нэмэгдэнэ" },
+const FIELDS: { key: "base" | "perKm" | "includedKm" | "handToHand" | "urgentExtra" | "fragileExtra"; label: string; unit: string; hint: string }[] = [
+  { key: "base", label: "Захиалга", unit: "₮", hint: "Захиалга бүрийн суурь төлбөр" },
+  { key: "perKm", label: "Км тутам", unit: "₮", hint: "Замын км бүрт" },
+  { key: "includedKm", label: "Суурьт багтах зай", unit: "км", hint: "0 бол эхний км-ээс тооцно" },
+  { key: "handToHand", label: "Гараас гарт", unit: "₮", hint: "Орж авах, оруулж өгөх" },
+  { key: "urgentExtra", label: `Яаралтай · ${URGENT_MINUTES} мин`, unit: "₮", hint: "Яаралтай ачааны нэмэлт" },
+  { key: "fragileExtra", label: "Хагарамтгай", unit: "₮", hint: "Хагарамтгай ачааны нэмэлт" },
 ];
 
 /** Тоон үзүүлэлтээр урьдчилан харах зай */
-const PREVIEW_KM = [2, 5, 8, 12];
+const PREVIEW_KM = [1, 3, 5, 8];
 
 /** Байршлаар шууд үнэ бодох тариф — 20кг хүртэлх бараа хүргэлт */
 export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
@@ -99,7 +101,7 @@ export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
           ))}
         </div>
         <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
-          Зай = хоёр цэгийн шулуун зай × {ROAD_FACTOR} (хотын замын ойролцоо урт). Үнэ ₮{ROUND_TO}-ээр дээш бөөрөнхийлөгдөнө.
+          Зай = хоёр цэгийн шулуун зай × {ROAD_FACTOR} (хотын замын ойролцоо урт). Км-ийн төлбөр ₮{ROUND_TO}-аар дээш бөөрөнхийлөгдөнө. Хүргэгч нийт үнийн 80%-ийг авна.
         </p>
       </div>
 

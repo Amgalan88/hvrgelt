@@ -133,6 +133,8 @@ function rowToOrder(r: any): Order {
     toAddress: r.to_address,
     fromDetail: r.from_detail,
     toDetail: r.to_detail,
+    handToHand: r.hand_to_hand ?? undefined,
+    searchingSince: r.searching_since ?? undefined,
     fromLat: r.from_lat ?? undefined,
     fromLng: r.from_lng ?? undefined,
     toLat: r.to_lat ?? undefined,
@@ -519,7 +521,12 @@ export function useStore() {
         to_lat: order.toLat ?? null,
         to_lng: order.toLng ?? null,
       };
-      let { data, error } = await supabase.from("orders").insert({ ...base, ...extra, ...geo }).select("id").single();
+      // Гараас гарт (migration 20) — байхгүй бол дараагийн оролдлогод хасагдана
+      const v20 = { hand_to_hand: order.handToHand ?? false };
+      let { data, error } = await supabase.from("orders").insert({ ...base, ...extra, ...geo, ...v20 }).select("id").single();
+      if (error && isMissingColumn(error)) {
+        ({ data, error } = await supabase.from("orders").insert({ ...base, ...extra, ...geo }).select("id").single());
+      }
       if (error && isMissingColumn(error)) {
         ({ data, error } = await supabase.from("orders").insert({ ...base, ...extra }).select("id").single());
       }

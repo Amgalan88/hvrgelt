@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown, User as UserIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent, NewOrder } from "../shared/store";
-import { quoteDelivery, roadKm, AUTO_PRICE_SERVICES, type Tariff } from "../../lib/pricing";
+import { quoteDelivery, roadKm, AUTO_PRICE_SERVICES, type Tariff, type Quote } from "../../lib/pricing";
 import { useUser, type QuickOrder } from "../shared/UserContext";
 import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
@@ -178,27 +178,40 @@ function SvcIcon({ id, className = "w-5 h-5" }: { id?: string; className?: strin
   return <I className={className} />;
 }
 
+/** Үнийн задаргаа — үйлчлүүлэгч юунд хэд төлж байгаагаа харна */
+function QuoteBreakdown({ quote }: { quote: Quote }) {
+  return (
+    <div className="bg-card border-2 border-primary rounded-2xl p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-semibold">Хүргэлтийн үнэ</span>
+        <span className="text-3xl font-extrabold tabular text-primary">₮{quote.price.toLocaleString()}</span>
+      </div>
+      <dl className="mt-3 pt-3 border-t border-border space-y-1.5 text-sm">
+        {quote.lines.map((l) => (
+          <div key={l.label} className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">{l.label}</dt>
+            <dd className="tabular font-medium">₮{l.amount.toLocaleString()}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-[11px] text-muted-foreground mt-3">
+        ≈ {quote.km.toFixed(1)} км замаар · сонгосон байршлаар шууд тооцов
+      </p>
+    </div>
+  );
+}
+
 /** 4-р алхам: шууд үнэ, эсвэл үнэ гаргахад юу дутууг хэлнэ */
 function PriceCard({
   quote, autoPriceService, hasFrom, hasTo, onPick,
 }: {
-  quote: { price: number; km: number } | null;
+  quote: Quote | null;
   autoPriceService: boolean;
   hasFrom: boolean;
   hasTo: boolean;
   onPick: (t: "from" | "to") => void;
 }) {
-  if (quote) {
-    return (
-      <div className="flex items-center justify-between gap-3 bg-card border-2 border-primary rounded-2xl px-4 py-3.5">
-        <div>
-          <p className="text-xs text-muted-foreground">Хүргэлтийн үнэ · ≈ {quote.km.toFixed(1)} км</p>
-          <p className="text-2xl font-extrabold tabular text-primary leading-tight">₮{quote.price.toLocaleString()}</p>
-        </div>
-        <span className="text-[11px] font-bold text-green-700 dark:text-green-300 bg-green-500/15 px-2 py-1 rounded-lg">Шууд үнэ</span>
-      </div>
-    );
-  }
+  if (quote) return <QuoteBreakdown quote={quote} />;
   if (!autoPriceService) return null;
   // Цэг дутуу — заавал үнэ шууд гарна
   return (
@@ -428,7 +441,11 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
   const myOrder = orders.find((o) => o.id === myOrderId);
 
   // Байршлаар шууд үнэ — тариф асаалттай, үйлчилгээ дэмжигдсэн, хоёр цэг заасан үед
-  const quote = quoteDelivery(tariff, serviceId, fromPos, toPos, cargo.urgent);
+  const quote = quoteDelivery(tariff, serviceId, fromPos, toPos, {
+    urgent: cargo.urgent,
+    fragile: cargo.fragile,
+    handToHand: cargo.handToHand,
+  });
   const autoPriceService = tariff.enabled && AUTO_PRICE_SERVICES.includes(serviceId);
 
   const trackCourierId =
@@ -462,6 +479,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         weightKg: cargo.weightKg,
         fragile: cargo.fragile,
         urgent: cargo.urgent,
+        handToHand: cargo.handToHand ?? false,
         basket,
         basketTotal,
         partnerId: basketPartnerId ?? undefined,
@@ -630,7 +648,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setFromPos(o.fromLat != null ? { lat: o.fromLat, lng: o.fromLng! } : null);
     setToPos(o.toLat != null ? { lat: o.toLat, lng: o.toLng! } : null);
     setNote("");
-    setCargo({ fragile: false, urgent: false });
+    setCargo({ fragile: !!o.fragile, urgent: false, handToHand: !!o.handToHand });
     setOrderStep("form");
     setFormStep(3);
     setAppTab("order");
@@ -992,7 +1010,13 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       </div>
                     )}
 
-                    {service?.needsCargo && <CargoDetails value={cargo} onChange={setCargo} />}
+                    {service?.needsCargo && (
+                      <CargoDetails
+                        value={cargo}
+                        onChange={setCargo}
+                        prices={autoPriceService ? { handToHand: tariff.handToHand, urgent: tariff.urgentExtra, fragile: tariff.fragileExtra } : undefined}
+                      />
+                    )}
 
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">Хүргэгчид хэлэх зүйл</p>
@@ -1089,15 +1113,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                 </div>
 
                 {quote ? (
-                  <div className="bg-card border-2 border-primary rounded-2xl p-4">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm font-semibold">Хүргэлтийн үнэ</span>
-                      <span className="text-3xl font-extrabold tabular text-primary">₮{quote.price.toLocaleString()}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      ≈ {quote.km.toFixed(1)} км замаар · газрын зураг дээрх цэгээр шууд тооцов{cargo.urgent ? " · яаралтай" : ""}. Захиалсны дараа шууд төлбөр рүү шилжинэ.
-                    </p>
-                  </div>
+                  <QuoteBreakdown quote={quote} />
                 ) : (
                   <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-1">
