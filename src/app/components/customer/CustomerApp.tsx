@@ -304,7 +304,7 @@ function RoutePreview({
 }
 
 export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
-  const { savedAddresses, quickOrders, saveQuickOrders } = useUser();
+  const { savedAddresses, quickOrders, saveQuickOrders, photoUrl } = useUser();
   const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
@@ -723,9 +723,9 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
             <button
               onClick={() => setAppTab("settings")}
               aria-label="Профайл"
-              className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold text-sm flex items-center justify-center"
+              className="w-9 h-9 rounded-full bg-primary/15 text-primary font-bold text-sm flex items-center justify-center overflow-hidden"
             >
-              {userName[0]}
+              {photoUrl ? <img src={photoUrl} alt="" className="w-full h-full object-cover" /> : userName[0]}
             </button>
           </div>
         </div>
@@ -1099,10 +1099,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг</span>
                         )}
                         {cargo.fragile && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хагарах аюултай</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хэврэг</span>
                         )}
                         {cargo.urgent && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-500">Онцгой яаралтай</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-500">Яаралтай</span>
                         )}
                       </div>
                     </div>

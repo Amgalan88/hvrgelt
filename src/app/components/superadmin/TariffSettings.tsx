@@ -12,8 +12,8 @@ const FIELDS: { key: "base" | "perKm" | "includedKm" | "handToHand" | "urgentExt
   { key: "perKm", label: "Км тутам", unit: "₮", hint: "Замын км бүрт" },
   { key: "includedKm", label: "Суурьт багтах зай", unit: "км", hint: "0 бол эхний км-ээс тооцно" },
   { key: "handToHand", label: "Гараас гарт", unit: "₮", hint: "Орж авах, оруулж өгөх" },
-  { key: "urgentExtra", label: `Яаралтай · ${URGENT_MINUTES} мин`, unit: "₮", hint: "Яаралтай ачааны нэмэлт" },
-  { key: "fragileExtra", label: "Хагарамтгай", unit: "₮", hint: "Хагарамтгай ачааны нэмэлт" },
+  { key: "urgentExtra", label: "Яаралтай", unit: "₮", hint: `Яаралтай ачааны нэмэлт (${URGENT_MINUTES} мин дотор)` },
+  { key: "fragileExtra", label: "Хэврэг", unit: "₮", hint: "Хэврэг ачааны нэмэлт" },
 ];
 
 /** Тоон үзүүлэлтээр урьдчилан харах зай */

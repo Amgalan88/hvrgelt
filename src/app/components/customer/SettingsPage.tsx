@@ -1,7 +1,8 @@
 import { useUndo } from "../shared/Undo";
+import { storePhoto } from "../../lib/photo";
 import { authLogin } from "../../lib/authApi";
-import { useState, useEffect } from "react";
-import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone, Camera } from "lucide-react";
 import { PHONES, WORK_HOURS } from "../../lib/contact";
 import { useUser, type SavedAddress, type AccentColor } from "../shared/UserContext";
 import { PinPad } from "../shared/PinPad";
@@ -123,7 +124,7 @@ type LockFlow =
   | null;
 
 export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
-  const { theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, pin, setPin, pattern, setPattern } = useUser();
+  const { photoUrl, setPhotoUrl, theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, pin, setPin, pattern, setPattern } = useUser();
   const { offerUndo } = useUndo();
   const [showAdd, setShowAdd] = useState(false);
   const [editAddr, setEditAddr] = useState<SavedAddress | null>(null);
@@ -131,6 +132,24 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
   const [pending, setPending] = useState("");
   const [lockError, setLockError] = useState("");
   const [target, setTarget] = useState<"pin" | "pattern">("pin");
+
+  // ── Профайл зураг ─────────────────────────────────────────────────
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  async function pickPhoto(file?: File) {
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoError("");
+    try {
+      await setPhotoUrl(await storePhoto(file));
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : "Зураг оруулж чадсангүй.");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = "";
+    }
+  }
 
   // ── Push мэдэгдэл ────────────────────────────────────────────────
   const [notifOn, setNotifOn] = useState(false);
@@ -179,17 +198,44 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
     <div className="space-y-5 pb-4">
       {/* Profile card */}
       <div className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary shrink-0" style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 700 }}>
-          {userName[0]}
-        </div>
+        {/* Профайл зураг — дарж солино */}
+        <button
+          onClick={() => photoInput.current?.click()}
+          disabled={photoBusy}
+          aria-label={photoUrl ? "Профайл зураг солих" : "Профайл зураг оруулах"}
+          className="relative w-16 h-16 rounded-full shrink-0 disabled:opacity-60"
+        >
+          {photoUrl ? (
+            <img src={photoUrl} alt="" className="w-full h-full rounded-full object-cover border-2 border-primary/30" />
+          ) : (
+            <span className="w-full h-full rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary" style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700 }}>
+              {userName[0]}
+            </span>
+          )}
+          <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-primary text-primary-foreground border-2 border-card flex items-center justify-center">
+            {photoBusy ? <span className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" /> : <Camera className="w-3 h-3" />}
+          </span>
+        </button>
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => void pickPhoto(e.target.files?.[0])}
+        />
         <div className="flex-1 min-w-0">
           <p className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{userName}</p>
           <p className="text-sm text-muted-foreground">{userPhone}</p>
         </div>
-        <button className="text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors">
-          Засах
+        <button
+          onClick={() => photoInput.current?.click()}
+          className="text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
+        >
+          {photoUrl ? "Зураг солих" : "Зураг оруулах"}
         </button>
       </div>
+
+      {photoError && <p className="text-xs text-destructive -mt-3 px-1">{photoError}</p>}
 
       {/* Appearance */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">

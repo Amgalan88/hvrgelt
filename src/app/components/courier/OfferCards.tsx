@@ -76,9 +76,9 @@ export function OfferCards({ offers, onClaim }: OfferCardsProps) {
             </div>
             {(o.urgent || o.handToHand || o.fragile) && (
               <div className="flex flex-wrap gap-1.5">
-                {o.urgent && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/12 text-red-600 dark:text-red-300"><Zap className="w-3 h-3" /> 20 мин дотор</span>}
+                {o.urgent && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/12 text-red-600 dark:text-red-300"><Zap className="w-3 h-3" /> Яаралтай</span>}
                 {o.handToHand && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-300"><HandHelping className="w-3 h-3" /> Гараас гарт</span>}
-                {o.fragile && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3 h-3" /> Хагарамтгай</span>}
+                {o.fragile && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3 h-3" /> Хэврэг</span>}
               </div>
             )}
             <button

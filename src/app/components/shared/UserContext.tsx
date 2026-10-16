@@ -31,6 +31,9 @@ interface UserContextValue {
   accentColor: AccentColor;
   setAccentColor: (c: AccentColor) => void;
   savedAddresses: SavedAddress[];
+  /** Профайл зураг (migration 23) */
+  photoUrl: string | null;
+  setPhotoUrl: (url: string | null) => Promise<void>;
   addAddress: (a: Omit<SavedAddress, "id">) => void;
   updateAddress: (id: string, a: Omit<SavedAddress, "id">) => void;
   removeAddress: (id: string) => void;
@@ -69,6 +72,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return saved && ACCENT_COLORS.includes(saved) ? saved : "orange";
   });
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [photoUrl, setPhotoState] = useState<string | null>(null);
   const [quickOrders, setQuickOrders] = useState<QuickOrder[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [pin, setPin] = useState<string | null>(null);
@@ -121,6 +125,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return "error";
     }
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
+    // Профайл зураг — багана байхгүй бол (migration 23-аас өмнө) алгасна
+    supabase.from("customers").select("photo_url").eq("id", cid).single()
+      .then(({ data: ph, error: phErr }) => { if (!phErr) setPhotoState((ph?.photo_url as string) || null); });
     setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
     // Түгжээ тохируулсан эсэхийг л мэднэ (утгыг сервер шалгана — App.unlock)
     if (data?.auth_method === "pin") { setPin(LOCK_SET); setPattern(null); }
@@ -128,8 +135,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return "ok";
   }, []);
 
+  /** Профайл зургаа солих — DB-д хадгална */
+  const setPhotoUrl = useCallback(async (url: string | null) => {
+    setPhotoState(url);
+    if (!customerId) return;
+    const { error } = await supabase.from("customers").update({ photo_url: url }).eq("id", customerId);
+    if (error) throw new Error("Зураг хадгалж чадсангүй. Дахин оролдоно уу.");
+  }, [customerId]);
+
   const clearCustomer = useCallback(() => {
     setCustomerId(null);
+    setPhotoState(null);
     setSavedAddresses([]);
     setQuickOrders([]);
     setPin(null);
@@ -165,7 +181,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
+    <UserContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor, photoUrl, setPhotoUrl, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, quickOrders, saveQuickOrders, loadCustomer, clearCustomer, pin, setPin, pattern, setPattern }}>
       {children}
     </UserContext.Provider>
   );

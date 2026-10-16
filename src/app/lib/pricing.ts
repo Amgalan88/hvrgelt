@@ -9,7 +9,7 @@
 //   захиалга (суурь) + км × км тутам
 //   + гараас гарт (орж авах, оруулж өгөх)
 //   + яаралтай (20 минутын дотор)
-//   + хагарамтгай
+//   + хэврэг
 //   → ₮100-аар дээш бөөрөнхийлнө
 //
 // Зай: хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт). Google
@@ -32,7 +32,7 @@ export interface Tariff {
   handToHand: number;
   /** Яаралтай — 20 минутын дотор */
   urgentExtra: number;
-  /** Хагарамтгай ачаа */
+  /** Хэврэг ачаа */
   fragileExtra: number;
 }
 
@@ -111,8 +111,8 @@ export function priceBreakdown(t: Tariff, km: number, extras: PriceExtras = {}):
   const lines: QuoteLine[] = [{ label: "Захиалга", amount: t.base }];
   if (billKm > 0) lines.push({ label: `${billKm.toFixed(1)} км × ${fmt(t.perKm)}`, amount: roundUp(billKm * t.perKm) });
   if (extras.handToHand && t.handToHand > 0) lines.push({ label: "Гараас гарт", amount: t.handToHand });
-  if (extras.urgent && t.urgentExtra > 0) lines.push({ label: `Яаралтай · ${URGENT_MINUTES} мин`, amount: t.urgentExtra });
-  if (extras.fragile && t.fragileExtra > 0) lines.push({ label: "Хагарамтгай", amount: t.fragileExtra });
+  if (extras.urgent && t.urgentExtra > 0) lines.push({ label: "Яаралтай", amount: t.urgentExtra });
+  if (extras.fragile && t.fragileExtra > 0) lines.push({ label: "Хэврэг", amount: t.fragileExtra });
   const price = lines.reduce((s, l) => s + l.amount, 0);
   return { price, km, lines };
 }

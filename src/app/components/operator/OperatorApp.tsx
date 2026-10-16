@@ -301,10 +301,10 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                               <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400">Гараас гарт</span>
                             )}
                             {order.fragile && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хагарамтгай</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хэврэг</span>
                             )}
                             {order.urgent && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Яаралтай · 20 мин</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Яаралтай</span>
                             )}
                           </div>
                         </div>
