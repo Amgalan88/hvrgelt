@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Camera, IdCard, Car, Bike, Hash, Loader2, CheckCircle, ShieldAlert, Save } from "lucide-react";
 import type { CourierDocs } from "../shared/types";
 import { storePhoto } from "../../lib/photo";
-import { VEHICLES, VEHICLE_ICON, docItems, missingDocs, type DocKey, type Vehicle } from "../../lib/vehicles";
+import { VEHICLES, VEHICLE_ICON, docItems, missingDocs, isMotorized, type DocKey, type Vehicle } from "../../lib/vehicles";
 
 interface CourierDocsFormProps {
   docs: CourierDocs;
@@ -47,6 +47,16 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
   const textItems = items.filter((d) => !PHOTO_KEYS.includes(d.key));
   const missing = missingDocs(vehicle, form);
   const vehicleChanged = vehicle !== initialVehicle;
+
+  /**
+   * Моторт ↔ моторгүй хэрэгсэл солиход үнэмлэхийн нүд өөр баримт болно
+   * (жолооны ↔ иргэний) — хуучин зургийг хоосолж дахин оруулуулна.
+   */
+  function chooseVehicle(v: Vehicle) {
+    setVehicle(v);
+    setSaved(false);
+    setForm((f) => ({ ...f, licensePhotoUrl: isMotorized(v) === isMotorized(initialVehicle) ? docs.licensePhotoUrl : "" }));
+  }
 
   async function pick(key: PhotoKey, file?: File) {
     if (!file) return;
@@ -113,7 +123,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
           {VEHICLES.map((v) => (
             <button
               key={v}
-              onClick={() => { setVehicle(v); setSaved(false); }}
+              onClick={() => chooseVehicle(v)}
               aria-pressed={vehicle === v}
               className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
                 vehicle === v ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/40"
@@ -139,6 +149,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
               <Icon className="w-4 h-4 text-primary" />
               <p className="text-sm font-medium">{f.label}</p>
               {!f.required && <span className="text-[11px] text-muted-foreground">заавал биш</span>}
+              {f.private && <span className="text-[11px] text-muted-foreground">зөвхөн админ харна</span>}
               {url && <CheckCircle className="w-3.5 h-3.5 text-green-500 ml-auto" />}
             </div>
             <input

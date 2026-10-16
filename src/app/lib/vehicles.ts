@@ -1,9 +1,13 @@
 // Хүргэгчийн тээврийн хэрэгсэл ба баталгаажуулалтад шаардах баримт.
 //
 // Шаардлага нь хэрэгслээс хамаарна:
-//   • явган, дугуй — зөвхөн цээж зураг (дугуйны зураг заавал биш)
+//   • явган, дугуй — цээж зураг, иргэний үнэмлэх (дугуйны зураг заавал биш)
 //   • мопед       — цээж зураг, жолооны үнэмлэх, мопедын зураг
 //   • мотоцикл, автомашин — дээрх + улсын дугаар, үнэмлэхийн дугаар
+//
+// Иргэний үнэмлэхийг жолооны үнэмлэхийн баганад (license_photo_url)
+// хадгална — моторгүй хэрэгсэлд тэр багана хоосон байдаг. Үйлчлүүлэгчид
+// харагдахгүй (CourierProfileModal зөвхөн моторт хэрэгсэлд үнэмлэх харуулна).
 //
 // Хүргэгчийн "Баримт" таб, супер админы шалгалт, үйлчлүүлэгчид харагдах
 // хүргэгчийн мэдээлэл бүгд эндээс уншина.
@@ -29,6 +33,8 @@ export interface DocItem {
   key: DocKey;
   label: string;
   required: boolean;
+  /** Зөвхөн админ харна — үйлчлүүлэгчид харагдахгүй */
+  private?: boolean;
 }
 
 /** Моторт хэрэгсэл — жолооны үнэмлэх шаардана */
@@ -44,8 +50,11 @@ export function hasPlate(v?: string): boolean {
 /** Энэ хэрэгсэлд хамаарах баримтууд, оруулах дарааллаар */
 export function docItems(v?: string): DocItem[] {
   const items: DocItem[] = [{ key: "photoUrl", label: "Цээж зураг", required: true }];
-  if (v === "явган") return items;
-  if (v === "дугуй") return [...items, { key: "carPhotoUrl", label: VEHICLE_PHOTO_LABEL.дугуй, required: false }];
+  if (!isMotorized(v)) {
+    items.push({ key: "licensePhotoUrl", label: "Иргэний үнэмлэх", required: true, private: true });
+    if (v === "дугуй") items.push({ key: "carPhotoUrl", label: VEHICLE_PHOTO_LABEL.дугуй, required: false });
+    return items;
+  }
   const strict = v === "мотоцикл" || v === "автомашин";
   return [
     ...items,

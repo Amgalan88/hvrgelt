@@ -50,6 +50,12 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+/** Моторгүй хүргэгчийн хүрэх зай (км) — src/app/lib/dispatch.ts VEHICLE_REACH-тэй ижил */
+const VEHICLE_REACH: Record<string, { pickupKm: number; tripKm: number }> = {
+  явган: { pickupKm: 1.5, tripKm: 3 },
+  дугуй: { pickupKm: 4, tripKm: 8 },
+};
+
 /**
  * Ажилд гарсан, баталгаажсан хүргэгчдээс авах цэгт хамгийн ойр 4-ийг сонгоно.
  * Авах цэгийн байршилгүй бол бүгдийг. Дараагийн давалгааг (2 мин тутам)
@@ -57,10 +63,17 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
  */
 // deno-lint-ignore no-explicit-any
 async function nearestCourierIds(record: any): Promise<string[]> {
-  const { data: crs } = await supabase.from("couriers").select("id").eq("available", true).eq("active", true).eq("verified", true);
+  const { data: crs } = await supabase.from("couriers").select("id, vehicle").eq("available", true).eq("active", true).eq("verified", true);
+  const vehicleOf = new Map((crs ?? []).map((c: { id: string; vehicle: string }) => [c.id, c.vehicle]));
   const ids = (crs ?? []).map((c: { id: string }) => c.id);
   if (ids.length === 0) return [];
-  if (record.from_lat == null || record.from_lng == null) return ids;
+  const tripKm = Number(record.distance) || 0;
+  if (record.from_lat == null || record.from_lng == null) {
+    return ids.filter((id: string) => {
+      const r = VEHICLE_REACH[vehicleOf.get(id) ?? ""];
+      return !r || !tripKm || tripKm <= r.tripKm;
+    });
+  }
   const { data: locs } = await supabase.from("courier_locations").select("*").in("courier_id", ids);
   const now = Date.now();
   const pickup = { lat: record.from_lat, lng: record.from_lng };
@@ -72,6 +85,11 @@ async function nearestCourierIds(record: any): Promise<string[]> {
       const l: any = byId.get(id);
       const fresh = l && now - new Date(l.updated_at).getTime() <= LOCATION_FRESH_MS;
       return { id, d: fresh ? km(pickup, { lat: l.lat, lng: l.lng }) : Infinity };
+    })
+    // Явган, дугуй хүргэгчид хол захиалга санал болгохгүй (src/app/lib/dispatch.ts-тэй ижил)
+    .filter((x: { id: string; d: number }) => {
+      const r = VEHICLE_REACH[vehicleOf.get(x.id) ?? ""];
+      return !r || ((!tripKm || tripKm <= r.tripKm) && x.d <= r.pickupKm);
     })
     .sort((a: { d: number }, b: { d: number }) => a.d - b.d)
     .slice(0, OFFER_BATCH)

@@ -81,13 +81,13 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   void tick;
   const dispatchCouriers: DispatchCourier[] = courierAccounts.map((c) => {
     const l = locs.get(c.id);
-    return { id: c.id, available: c.available, active: c.active, verified: c.verified, pos: l ? { lat: l.lat, lng: l.lng } : undefined, locAt: l?.updatedAt };
+    return { id: c.id, available: c.available, active: c.active, verified: c.verified, vehicle: c.vehicle, pos: l ? { lat: l.lat, lng: l.lng } : undefined, locAt: l?.updatedAt };
   });
   const offers: Offer[] =
     online && canWork && activeOrders.length === 0
       ? searching.flatMap((o) => {
           const pickup = o.fromLat != null && o.fromLng != null ? { lat: o.fromLat, lng: o.fromLng } : null;
-          const hit = offerFor(courierId, { pickup, searchingSince: o.searchingSince }, dispatchCouriers);
+          const hit = offerFor(courierId, { pickup, searchingSince: o.searchingSince, tripKm: o.distance }, dispatchCouriers);
           return hit ? [{ order: o, kmToPickup: hit.km }] : [];
         })
       : [];

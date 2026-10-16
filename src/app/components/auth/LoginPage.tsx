@@ -648,7 +648,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
               <p className="text-xs text-muted-foreground mt-2">
                 {isMotorized(rVehicle)
                   ? "Бүртгүүлсний дараа цээж зураг, жолооны үнэмлэх, хэрэгслийнхээ зургийг оруулна."
-                  : "Бүртгүүлсний дараа цээж зургаа л оруулахад хангалттай."}
+                  : "Бүртгүүлсний дараа цээж зураг, иргэний үнэмлэхний зургаа оруулна."}
               </p>
             </div>
           )}

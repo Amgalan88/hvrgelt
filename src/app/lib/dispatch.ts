@@ -9,6 +9,9 @@
 //     courier_id is null) өөрт нь бүртгэгдэж, бусдаас алга болно — хоёр
 //     хүргэгч зэрэг дарсан ч зөвхөн нэг нь авна
 //
+// Явган, дугуй хүргэгчид хүрэх зайгаас (VEHICLE_REACH) хол захиалгын санал
+// очихгүй: авах цэг хол, эсвэл хүргэх зам урт бол алгасна.
+//
 // Авах цэгийн байршилгүй захиалгад (оператор үнэ тавьсан г.м.) ажилд
 // гарсан бүх хүргэгчид санал очно. Оператор гараар томилж болсоор байна.
 //
@@ -21,11 +24,19 @@ export const OFFER_BATCH = 4;
 export const WAVE_MS = 2 * 60_000;
 export const LOCATION_FRESH_MS = 10 * 60_000;
 
+/** Моторгүй хүргэгчийн хүрэх зай (км): авах цэг хүртэл, авах → хүргэх зам */
+export const VEHICLE_REACH: Record<string, { pickupKm: number; tripKm: number }> = {
+  явган: { pickupKm: 1.5, tripKm: 3 },
+  дугуй: { pickupKm: 4, tripKm: 8 },
+};
+
 export interface DispatchCourier {
   id: string;
   available: boolean;
   active: boolean;
   verified: boolean;
+  /** Тээврийн хэрэгсэл — явган, дугуй бол хүрэх зай хязгаартай */
+  vehicle?: string;
   pos?: LatLng;
   /** Байршил сүүлд шинэчлэгдсэн ISO цаг */
   locAt?: string;
@@ -35,6 +46,18 @@ export interface DispatchOrder {
   pickup: LatLng | null;
   /** Хүргэгч хайж эхэлсэн ISO цаг (migration 20); байхгүй бол эхний давалгаа */
   searchingSince?: string;
+  /** Авах → хүргэх замын урт (км); 0/байхгүй бол хязгаарлахгүй */
+  tripKm?: number;
+}
+
+/** Энэ хүргэгч тухайн захиалгыг хүрч чадах уу (km — авах цэг хүртэл) */
+export function canReach(vehicle: string | undefined, order: DispatchOrder, km: number): boolean {
+  const r = VEHICLE_REACH[vehicle ?? ""];
+  if (!r) return true;
+  if (order.tripKm && order.tripKm > r.tripKm) return false;
+  // Авах цэг тодорхой бол хүргэгчийн байршил ч тодорхой, ойр байх ёстой
+  if (order.pickup) return Number.isFinite(km) && km <= r.pickupKm;
+  return true;
 }
 
 /** Санал авах эрхтэй хүргэгчид, ойрын дарааллаар (байршилгүй нь хамгийн сүүлд) */
@@ -43,6 +66,7 @@ export function rankCouriers(order: DispatchOrder, couriers: DispatchCourier[], 
   const fresh = (c: DispatchCourier) => !!c.pos && !!c.locAt && now - new Date(c.locAt).getTime() <= LOCATION_FRESH_MS;
   return eligible
     .map((c) => ({ c, km: order.pickup && fresh(c) ? distanceKm(order.pickup, c.pos!) : Infinity }))
+    .filter((x) => canReach(x.c.vehicle, order, x.km))
     .sort((a, b) => a.km - b.km)
     .map((x) => ({ id: x.c.id, km: x.km }));
 }
