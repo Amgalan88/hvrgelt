@@ -65,6 +65,10 @@ Supabase Dashboard → **Database → Webhooks → Create a new hook**:
 
 Хуучин `send-order-notification` Edge Function рүү заасан webhook байвал устгана.
 
+**«schema "supabase_functions" does not exist» алдаа гарвал** — цонхоор биш,
+[supabase_migration_21.sql](supabase_migration_21.sql)-ийг SQL Editor дээр
+ажиллуулна (`ЭНД_НУУЦ_УТГАА`-г `WEBHOOK_SECRET`-ээр сольж). Үр дүн нь ижил.
+
 ## 5. Туршиж үзэх
 
 1. Оператор, хүргэгч, супер админ — 🔔 дарж зөвшөөрнө. Захиалагч — Тохиргоо → Мэдэгдэл.
@@ -73,7 +77,8 @@ Supabase Dashboard → **Database → Webhooks → Create a new hook**:
 4. Шинэ хүргэгч баримтаа бүрэн оруулахад супер админ «Шинэ хүргэгч шалгалт хүлээж байна» авна.
 
 Ажиллахгүй бол:
-- Supabase → Database → Webhooks → `order-notify` → сүүлийн дуудлагууд. **401** бол
+- Supabase → Integrations → Database Webhooks → `order-notify` → сүүлийн дуудлагууд
+  (SQL-ээр үүсгэсэн бол: `select status_code, content::text from net._http_response order by created desc limit 5;`). **401** бол
   `x-webhook-secret` буруу, **501** бол Vercel-ийн түлхүүр дутуу.
 - Vercel → Deployments → сүүлийнх → Functions → `api/notify` log.
 
