@@ -62,7 +62,7 @@ export function OfferCards({ offers, onClaim }: OfferCardsProps) {
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{sv?.label ?? "Хүргэлт"}{o.distance > 0 ? ` · ${o.distance.toFixed(1)} км зам` : ""}</p>
                 <p className="text-2xl font-extrabold tabular mt-0.5">₮{Math.round(o.price * COURIER_SHARE).toLocaleString()}</p>
-                <p className="text-[11px] text-muted-foreground">таны орлого (₮{o.price.toLocaleString()}-ийн 80%)</p>
+                <p className="text-[11px] text-muted-foreground">таны орлого</p>
               </div>
               {kmToPickup != null && (
                 <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary px-2.5 py-1.5 rounded-xl">

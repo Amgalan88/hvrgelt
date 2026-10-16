@@ -19,8 +19,6 @@ interface LandingProps {
 }
 
 
-/** Хүргэгчийн авах хувь — CourierApp-д price * 0.8 гэж тооцогддог */
-const COURIER_SHARE = "80%";
 
 const FACTS: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Zap, title: "30 секунд", body: "захиалга өгөхөд" },
@@ -332,12 +330,12 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
                 </button>
               </div>
               <div className="border-t md:border-t-0 md:border-l border-white/10 p-7 md:p-12 flex flex-col justify-center bg-white/[0.03]">
-                <p className="font-extrabold tabular" style={{ fontSize: "clamp(3.5rem, 9vw, 5.5rem)", lineHeight: 1, color: "var(--brand)", letterSpacing: "-0.04em" }}>
-                  {COURIER_SHARE}
+                <p className="font-extrabold" style={{ fontSize: "clamp(2.4rem, 6vw, 3.6rem)", lineHeight: 1.02, color: "var(--brand)", letterSpacing: "-0.03em" }}>
+                  Хүссэн цагтаа
                 </p>
-                <p className="text-lg font-semibold mt-3">хүргэлтийн төлбөр танд</p>
+                <p className="text-lg font-semibold mt-3">ажилд гарч, ойрхон захиалга аваарай</p>
                 <p className="text-white/60 text-sm mt-2 leading-relaxed">
-                  Захиалга бүрийн орлогоо апп дээрээ шууд харна. Баримт бичиг баталгаажсаны дараа захиалга авч эхэлнэ.
+                  Хүргэлт бүрийн орлогоо апп дээрээ шууд харна. Баримт бичиг баталгаажсаны дараа захиалга авч эхэлнэ.
                 </p>
               </div>
             </div>

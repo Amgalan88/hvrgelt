@@ -1142,7 +1142,8 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
             {orderStep === "tracking" && myOrder && (() => {
               const view = statusView(myOrder);
               const ms = milestoneIdx(myOrder.status);
-              const canCancel = myOrder.status === "шинэ" || myOrder.status === "үнэ батлах";
+              // Төлбөр төлөхөөс өмнө захиалагч өөрөө цуцална (дараа нь оператор)
+              const canCancel = myOrder.status === "шинэ" || myOrder.status === "үнэ батлах" || myOrder.status === "төлбөр хүлээж байна";
               const onTheWay = myOrder.status === "томилогдсон" || myOrder.status === "авсан";
               const svc = serviceById(myOrder.serviceId);
               return (
