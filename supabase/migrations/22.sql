@@ -5,7 +5,7 @@
 --
 --  ⚠️ ДАРААЛАЛ: эхлээд нэвтрэлтийн шинэ хувилбар (api/auth.ts) ажиллаж,
 --  та өөрөө утсаараа нэвтэрч чадаж байгааг шалгасны ДАРАА ажиллуулна.
---  Асуудал гарвал supabase_migration_22_rollback.sql-ээр буцаана.
+--  Асуудал гарвал 22_rollback.sql-ээр буцаана.
 --
 --  Хэрэглэгч бүр нэвтрэхэд api/auth.ts Supabase session үүсгэдэг —
 --  JWT-ийн app_metadata.app_role, app_metadata.account_id-ээр таньна.

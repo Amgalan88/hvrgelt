@@ -74,8 +74,9 @@ export function OfferCards({ offers, onClaim }: OfferCardsProps) {
               <p className="flex items-start gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500 mt-1.5 shrink-0" /><span className="min-w-0">{o.fromDetail || o.fromAddress}</span></p>
               <p className="flex items-start gap-2"><MapPin className="w-3.5 h-3.5 text-primary mt-1 shrink-0" /><span className="min-w-0">{o.toDetail || o.toAddress}</span></p>
             </div>
-            {(o.urgent || o.handToHand || o.fragile) && (
+            {(o.urgent || o.handToHand || o.fragile || o.weightKg) && (
               <div className="flex flex-wrap gap-1.5">
+                {o.weightKg ? <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground">{o.weightKg} кг хүртэл</span> : null}
                 {o.urgent && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/12 text-red-600 dark:text-red-300"><Zap className="w-3 h-3" /> Яаралтай</span>}
                 {o.handToHand && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-300"><HandHelping className="w-3 h-3" /> Гараас гарт</span>}
                 {o.fragile && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3 h-3" /> Хэврэг</span>}

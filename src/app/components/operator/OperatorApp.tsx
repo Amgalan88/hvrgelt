@@ -295,7 +295,7 @@ export function OperatorApp({ orders, couriers, operatorId, operatorName, onSetP
                           )}
                           <div className="flex flex-wrap gap-1.5">
                             {order.weightKg != null && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг хүртэл</span>
                             )}
                             {order.handToHand && (
                               <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400">Гараас гарт</span>

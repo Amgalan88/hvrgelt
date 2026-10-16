@@ -52,6 +52,7 @@ const WIZARD_STEPS: { q: string; hint: string }[] = [
   { q: "Нэмэлт мэдээлэл", hint: "Хүргэгч зөв бэлдэхэд тусална. Заавал биш." },
 ];
 type OrderStep = "form" | "confirm" | "tracking";
+const WEIGHT_STEPS = [5, 10, 15, 20] as const;
 
 /**
  * Захиалгын төлөв бүрийг үйлчлүүлэгчийн хэлээр:
@@ -497,6 +498,9 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     handToHand: cargo.handToHand,
   });
   const autoPriceService = tariff.enabled && AUTO_PRICE_SERVICES.includes(serviceId);
+  // 20кг хүртэлх бараа — жингээ сонгоно (5/10/15/20 кг хүртэл)
+  const needsWeightChoice = serviceId === "goods";
+  const weightMissing = needsWeightChoice && !cargo.weightKg;
 
   const trackCourierId =
     myOrder && ["томилогдсон", "авсан"].includes(myOrder.status) ? myOrder.courierId ?? null : null;
@@ -967,6 +971,32 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       ))}
                     </div>
 
+                    {/* Ачааны жин — 20кг хүртэлх хүргэлтэд заавал (хүргэгч хэрэгслээ сонгоход тусална) */}
+                    {needsWeightChoice && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Ачааны жин</p>
+                        <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Ачааны жин">
+                          {WEIGHT_STEPS.map((w) => {
+                            const on = cargo.weightKg === w;
+                            return (
+                              <button
+                                key={w}
+                                role="radio"
+                                aria-checked={on}
+                                onClick={() => setCargo({ ...cargo, weightKg: w })}
+                                className={`rounded-2xl border py-2.5 flex flex-col items-center leading-tight transition-colors ${
+                                  on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:border-primary/40"
+                                }`}
+                              >
+                                <span className="text-base font-bold">{w} кг</span>
+                                <span className={`text-[11px] ${on ? "opacity-85" : "text-muted-foreground"}`}>хүртэл</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {visibleSubs(service).length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">Төрөл</p>
@@ -1034,10 +1064,10 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                     <BottomBar>
                       <button
                         onClick={handleEstimate}
-                        disabled={!fromAddr.trim() || !toAddr.trim()}
+                        disabled={!fromAddr.trim() || !toAddr.trim() || weightMissing}
                         className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                       >
-                        Шалгаад захиалах <ArrowRight className="w-4 h-4" />
+                        {weightMissing ? "Ачааны жингээ сонгоно уу" : <>Шалгаад захиалах <ArrowRight className="w-4 h-4" /></>}
                       </button>
                     </BottomBar>
                   </>
@@ -1096,7 +1126,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                       )}
                       <div className="flex flex-wrap gap-1.5">
                         {cargo.weightKg != null && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг хүртэл</span>
                         )}
                         {cargo.fragile && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хэврэг</span>

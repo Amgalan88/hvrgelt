@@ -17,8 +17,8 @@
 
 ## 1. Migration (нэг удаа)
 
-Supabase Dashboard → SQL Editor: [supabase_migration_9.sql](supabase_migration_9.sql),
-дараа нь [supabase_migration_10.sql](supabase_migration_10.sql).
+Supabase Dashboard → SQL Editor: [09.sql](supabase/migrations/09.sql),
+дараа нь [10.sql](supabase/migrations/10.sql).
 
 ## 2. VAPID түлхүүр
 
@@ -66,7 +66,7 @@ Supabase Dashboard → **Database → Webhooks → Create a new hook**:
 Хуучин `send-order-notification` Edge Function рүү заасан webhook байвал устгана.
 
 **«schema "supabase_functions" does not exist» алдаа гарвал** — цонхоор биш,
-[supabase_migration_21.sql](supabase_migration_21.sql)-ийг SQL Editor дээр
+[supabase/migrations/21.sql](supabase/migrations/21.sql)-ийг SQL Editor дээр
 ажиллуулна (`ЭНД_НУУЦ_УТГАА`-г `WEBHOOK_SECRET`-ээр сольж). Үр дүн нь ижил.
 
 ## 5. Туршиж үзэх

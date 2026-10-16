@@ -1079,7 +1079,7 @@ export function useStore() {
   const setPartnerLocation = useCallback(
     async (id: string, pos: { lat: number; lng: number } | null) => {
       const { error } = await supabase.from("partners").update({ lat: pos?.lat ?? null, lng: pos?.lng ?? null }).eq("id", id);
-      if (error) throw new Error(isMissingColumn(error) ? "Эхлээд supabase_migration_20.sql-ийг ажиллуулна уу." : error.message);
+      if (error) throw new Error(isMissingColumn(error) ? "Эхлээд supabase/migrations/20.sql-ийг ажиллуулна уу." : error.message);
       await refreshPartners();
     },
     [refreshPartners],
