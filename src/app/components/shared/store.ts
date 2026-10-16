@@ -33,6 +33,8 @@ export interface PaymentIntent {
   banks?: QpayBank[];
   /** Туршилтын QPay — жинхэнэ мөнгө шилжихгүй */
   test?: boolean;
+  /** Онлайн төлбөр үүсгэж чадаагүй шалтгаан (manual=true үед) */
+  error?: string;
 }
 
 // ── Auth method types ─────────────────────────────────────────────────
@@ -765,7 +767,10 @@ export function useStore() {
         };
       }
 
-      if (provider !== "manual") {
+      // Зөвхөн онлайн (Byl — QPay, карт). Дансаар шилжүүлэх горим хаалттай —
+      // үүсгэж чадахгүй бол захиалагчид дахин оролдох / оператортой холбогдохыг санал болгоно.
+      let error = "Онлайн төлбөр түр ажиллахгүй байна.";
+      {
         try {
           const res = await fetch("/api/payments?action=create", {
             method: "POST",
@@ -786,30 +791,13 @@ export function useStore() {
               };
             }
           }
-          // 501 = онлайн төлбөр тохируулаагүй → дансаар
+          const body = await res.json().catch(() => null);
+          if (body?.error) error = body.error;
         } catch {
-          // Сервер хүрэхгүй (локал dev г.м.) → дансаар
+          error = "Сүлжээний алдаа гарлаа. Интернэтээ шалгаад дахин оролдоно уу.";
         }
       }
-
-      // Нэг захиалгад нэг л хүлээгдэж буй нэхэмжлэх байлгана
-      const { data: existing } = await supabase
-        .from("payments")
-        .select("id")
-        .eq("order_id", orderId)
-        .eq("status", "pending")
-        .limit(1);
-      if (!existing?.length) {
-        await supabase.from("payments").insert({
-          id: "pay-" + newId(),
-          order_id: orderId,
-          provider: "manual",
-          amount,
-          status: "pending",
-          created_at: new Date().toISOString(),
-        });
-      }
-      return { provider: "manual", manual: true };
+      return { provider: "unavailable", manual: true, error };
     },
     [refreshOrders],
   );

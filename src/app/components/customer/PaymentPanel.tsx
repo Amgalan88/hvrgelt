@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { QrCode, Loader2, CheckCircle, Landmark, RefreshCw, FlaskConical, X } from "lucide-react";
+import { QrCode, Loader2, CheckCircle, RefreshCw, FlaskConical, X, AlertTriangle, Phone } from "lucide-react";
+import { PHONES } from "../../lib/contact";
 import type { Order } from "../shared/types";
 import type { PaymentIntent } from "../shared/store";
 import type { QpayBank } from "../../lib/mockQpay";
@@ -23,39 +24,30 @@ interface PaymentPanelProps {
  *   буцаана. Төлбөрийг Byl webhook, эсвэл сервер провайдероос лавлаж баталгаажуулна.
  * - Туршилтын QPay (test): бүтэц нь жинхэнэтэй ижил, банкны апп-ын оронд
  *   туршилтын цонх нээгдэнэ.
- * - Гарын авлага: дансны мэдээлэл харуулна.
+ * - Дансаар шилжүүлэх горим хаалттай: онлайн төлбөр үүсгэж чадахгүй бол
+ *   дахин оролдох, эсвэл оператортой холбогдохыг санал болгоно.
  */
-export function PaymentPanel({ order, bankInfo, createPayment, checkPayment, test = false, onPaid }: PaymentPanelProps) {
+export function PaymentPanel({ order, createPayment, checkPayment, test = false, onPaid }: PaymentPanelProps) {
   const [intent, setIntent] = useState<PaymentIntent | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [checkMsg, setCheckMsg] = useState("");
   const [testBank, setTestBank] = useState<QpayBank | null>(null);
 
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
     setLoading(true);
     createPayment(order.id, order.price, { test })
       .then((r) => alive && setIntent(r))
-      .catch(() => alive && setIntent({ provider: "manual", manual: true }))
+      .catch(() => alive && setIntent({ provider: "unavailable", manual: true }))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-    // Захиалга бүрт нэг л удаа нэхэмжлэх үүсгэнэ
+    // Захиалга бүрт нэг л удаа нэхэмжлэх үүсгэнэ (сервер хуучныг дахин ашиглана)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order.id]);
-
-  /** Гарын авлагын горим — үйлчлүүлэгч төлснөө мэдэгдэнэ */
-  async function confirmManual() {
-    if (confirming) return;
-    setConfirming(true);
-    try {
-      await onPaid("гарын авлага");
-    } finally {
-      setConfirming(false);
-    }
-  }
+  }, [order.id, attempt]);
 
   /** QPay — төлөгдсөн гэж өөрөө тэмдэглэхгүй, сервер дээр шалгуулна */
   async function checkQpay() {
@@ -182,30 +174,27 @@ export function PaymentPanel({ order, bankInfo, createPayment, checkPayment, tes
           </p>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        <div className="bg-card border border-amber-500/30 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Landmark className="w-4 h-4 text-primary" />
-            <p className="text-sm font-semibold">Дансаар шилжүүлэх</p>
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm font-semibold">Онлайн төлбөр түр ажиллахгүй байна</p>
           </div>
-          {bankInfo ? (
-            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans bg-secondary/40 rounded-xl p-3 leading-relaxed">
-              {bankInfo}
-            </pre>
-          ) : (
-            <p className="text-xs text-muted-foreground">Оператор тантай холбогдож төлбөрийн мэдээллийг өгнө.</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Гүйлгээний утга дээр захиалгын дугаар <span className="text-foreground font-medium">{order.id}</span>-г бичнэ үү.
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {intent?.error && intent.error !== "Онлайн төлбөр түр ажиллахгүй байна." ? `${intent.error} ` : ""}
+            Хэсэг хугацааны дараа дахин оролдоно уу. Яаралтай бол оператортой холбогдоорой.
           </p>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={confirmManual}
-            disabled={confirming}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+          <button
+            onClick={() => setAttempt((n) => n + 1)}
+            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold"
           >
-            <CheckCircle className="w-4 h-4" /> Төлбөр төлсөн
-          </motion.button>
-          <p className="text-[11px] text-amber-500/80 text-center">Оператор төлбөрийг шалгаж баталгаажуулна.</p>
+            <RefreshCw className="w-4 h-4" /> Дахин оролдох
+          </button>
+          <a
+            href={`tel:${PHONES[0].tel}`}
+            className="w-full border border-border py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold"
+          >
+            <Phone className="w-4 h-4" /> Оператор · {PHONES[0].label}
+          </a>
         </div>
       )}
 
