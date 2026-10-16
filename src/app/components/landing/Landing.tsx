@@ -119,10 +119,12 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
           className="absolute inset-0"
           style={{ background: "linear-gradient(180deg, rgba(11,13,18,0.45) 0%, rgba(11,13,18,0.6) 45%, rgba(11,13,18,0.97) 100%)" }}
         />
-        <div className="absolute inset-0 hidden md:block" style={{ background: "linear-gradient(90deg, rgba(11,13,18,0.92) 0%, rgba(11,13,18,0.55) 60%, rgba(11,13,18,0.35) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(11,13,18,0.92) 0%, rgba(11,13,18,0.55) 60%, rgba(11,13,18,0.35) 100%)" }} />
+        {/* Утсан дээр зураг бүхэлдээ бичгийн ард орно — компьютертой ижил бараан */}
+        <div className="absolute inset-0 md:hidden bg-[rgba(11,13,18,0.45)]" />
 
         <div className="relative max-w-6xl mx-auto px-5 md:px-8">
-          <nav className="flex items-center justify-between py-5">
+          <nav className="flex items-center justify-between pt-5 pb-3 md:py-5">
             <Logo textColor="#fff" />
             <div className="flex items-center gap-2 md:gap-6">
               <a href="#services" className="hidden md:inline text-sm text-white/75 hover:text-white">Үйлчилгээ</a>
@@ -136,8 +138,14 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
               </button>
             </div>
           </nav>
+          {/* Утсан дээр — компьютерын цэсийн ижил холбоосууд */}
+          <div className="md:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[["#services", "Үйлчилгээ"], ["#how", "Хэрхэн ажилладаг"], ["#couriers", "Хүргэгч болох"]].map(([href, label]) => (
+              <a key={href} href={href} className="shrink-0 text-xs font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-3 py-1.5">{label}</a>
+            ))}
+          </div>
 
-          <div className="grid md:grid-cols-[1.15fr_1fr] gap-10 items-center pt-16 pb-10 md:pt-14 md:pb-20">
+          <div className="grid md:grid-cols-[1.15fr_1fr] gap-10 items-center pt-8 pb-10 md:pt-14 md:pb-20">
             <motion.div
               className="space-y-6"
               initial={{ opacity: 0, y: 16 }}
@@ -162,18 +170,18 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
                 Илгээмжээс эхлээд крантай машин хүртэл — нэг апп-аас захиалж, хүргэгчээ газрын зураг дээр хянаарай.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <div className="flex flex-row gap-2.5 md:gap-3 pt-1">
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onStart("customer")}
-                  className="bg-[var(--brand)] text-white px-7 py-4 rounded-2xl flex items-center justify-center gap-2 font-bold text-base hover:brightness-105 transition"
+                  className="flex-1 md:flex-none bg-[var(--brand)] text-white px-4 md:px-7 py-3.5 md:py-4 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm md:text-base hover:brightness-105 transition whitespace-nowrap"
                 >
                   {hasSession ? "Үргэлжлүүлэх" : "Захиалга өгөх"} <ArrowRight className="w-5 h-5" />
                 </motion.button>
                 {!hasSession && (
                   <button
                     onClick={() => onStart("courier")}
-                    className="flex items-center justify-center gap-2 px-7 py-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold transition-colors"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-7 py-3.5 md:py-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-sm md:text-base transition-colors whitespace-nowrap"
                   >
                     <Truck className="w-4 h-4" /> Хүргэгч болох
                   </button>
@@ -183,12 +191,12 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
               {/* Утсаар захиалах — гурван дугаар бүгд */}
               <div className="pt-2">
                 <p className="text-xs text-white/55 mb-2">Утсаар захиалах · {WORK_HOURS}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 md:flex md:flex-wrap gap-2">
                   {PHONES.map((p) => (
                     <a
                       key={p.tel}
                       href={`tel:${p.tel}`}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 py-2 text-sm font-bold tabular transition-colors"
+                      className="inline-flex items-center justify-center gap-1 md:gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-2 md:px-3.5 py-2 text-xs md:text-sm font-bold tabular transition-colors whitespace-nowrap"
                     >
                       <Phone className="w-3.5 h-3.5 text-[var(--brand)]" /> {p.label}
                     </a>
@@ -199,7 +207,7 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
             </motion.div>
 
             <motion.div
-              className="hidden md:block"
+              className="block"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.1, ease: "easeOut" }}
