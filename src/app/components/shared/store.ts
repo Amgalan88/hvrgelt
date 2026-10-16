@@ -1,4 +1,5 @@
 import { DEFAULT_TARIFF, TARIFF_SETTINGS_KEY, parseTariff, type Tariff } from "../../lib/pricing";
+import { authLookup, authChange, authAdminSet, authAdminReset } from "../../lib/authApi";
 import type { Vehicle } from "../../lib/vehicles";
 import { createMockInvoice, type QpayBank } from "../../lib/mockQpay";
 import { useState, useCallback, useEffect } from "react";
@@ -45,7 +46,8 @@ export interface AccountLookup {
   id: string;
   name: string;
   authMethod: AuthMethod;
-  authKey: string;
+  /** Хуучин — нууц утга апп руу ирэхгүй болсон */
+  authKey?: string;
 }
 
 // ── Static account types ──────────────────────────────────────────────
@@ -98,15 +100,13 @@ export interface CustomerAccount {
 }
 
 // ── Superadmin (программ дотор тодорхойлогдсон) ────────────────────────
-export const SUPERADMIN = {
-  id: "sa1",
-  name: "Супер Админ",
-  username: "superadmin",
-  password: "gegee0011",
-  phone: "99739959",
-  authMethod: "password" as AuthMethod,
-  authKey: "gegee0011",
-};
+/** Нууц багана (password, auth_key)-гүй — migration 22 эдгээрийг хэнд ч уншуулахгүй */
+const COURIER_COLS =
+  "id, name, username, phone, auth_method, vehicle, available, rating, total_deliveries, today_deliveries, created_at, active, photo_url, license_class, license_expiry, car_photo_url, plate, verified_at, verified";
+const PARTNER_COLS = "id, name, category, emoji, address, detail, area, active, created_at, image, phone, auth_method, payment_qr_url, lat, lng";
+
+// Супер админы утас, нууц үг зөвхөн сервер дээр (Vercel: SUPERADMIN_PHONE,
+// SUPERADMIN_PASSWORD) — апп-ын кодонд байхгүй.
 
 // ── Helpers ───────────────────────────────────────────────────────────
 function nowTime() {
@@ -278,6 +278,8 @@ export function useStore() {
   const [ratings, setRatings] = useState<OrderRating[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [bankInfo, setBankInfo] = useState<string>("");
+  /** migration 22 ажилласан — DB хаалттай, Supabase session заавал */
+  const [authRequired, setAuthRequired] = useState(false);
   const [tariff, setTariff] = useState<Tariff>(DEFAULT_TARIFF);
   const [loading, setLoading] = useState(true);
 
@@ -293,15 +295,26 @@ export function useStore() {
   const refreshCouriers = useCallback(async () => {
     const { data } = await supabase
       .from("couriers")
-      .select("*")
+      .select(COURIER_COLS)
       .order("created_at", { ascending: true });
-    if (data) setCourierAccounts(data.map(rowToCourier));
+    if (!data) return;
+    // Үнэмлэхний зураг, дугаар — зөвхөн админ ба хүргэгч өөрөө (migration 22-ийн
+    // courier_private_docs). Функц байхгүй бол (migration-ээс өмнө) шууд уншина.
+    let priv: { id: string; license_photo_url?: string; license_no?: string }[] | null = null;
+    const rpc = await supabase.rpc("courier_private_docs");
+    if (!rpc.error) priv = rpc.data;
+    else {
+      const direct = await supabase.from("couriers").select("id, license_photo_url, license_no");
+      priv = direct.data;
+    }
+    const byId = new Map((priv ?? []).map((r) => [r.id, r]));
+    setCourierAccounts(data.map((r: Record<string, unknown>) => rowToCourier({ ...r, ...(byId.get(r.id as string) ?? {}) })));
   }, []);
 
   const refreshOperators = useCallback(async () => {
     const { data } = await supabase
       .from("operators")
-      .select("*")
+      .select("id, name, username, phone, auth_method, created_at, active")
       .order("created_at", { ascending: true });
     if (data) setOperatorAccounts(data.map(rowToOperator));
   }, []);
@@ -309,7 +322,7 @@ export function useStore() {
   const refreshCustomers = useCallback(async () => {
     const { data } = await supabase
       .from("customers")
-      .select("id, name, phone, auth_method, auth_key, created_at")
+      .select("id, name, phone, auth_method, created_at")
       .order("created_at", { ascending: false });
     if (data) setCustomerAccounts(data.map(rowToCustomer));
   }, []);
@@ -317,7 +330,7 @@ export function useStore() {
   const refreshPartners = useCallback(async () => {
     const { data } = await supabase
       .from("partners")
-      .select("*")
+      .select(PARTNER_COLS)
       .eq("active", true)
       .order("created_at", { ascending: true });
     if (data) setPartners(data.map(rowToPartner));
@@ -359,12 +372,23 @@ export function useStore() {
   }, []);
 
   const refreshSettings = useCallback(async () => {
-    const { data } = await supabase.from("settings").select("key, value").in("key", ["bank_info", TARIFF_SETTINGS_KEY]);
+    const { data } = await supabase.from("settings").select("key, value").in("key", ["bank_info", TARIFF_SETTINGS_KEY, "auth_required"]);
     for (const row of data ?? []) {
       if (row.key === "bank_info") setBankInfo(row.value ?? "");
+      if (row.key === "auth_required") setAuthRequired(row.value === "1");
       if (row.key === TARIFF_SETTINGS_KEY) setTariff(parseTariff(row.value));
     }
   }, []);
+
+  // Нэвтрэх, гарах үед өгөгдлөө шинээр ачаална — DB хаалттай үед эрх нь өөрчлөгдөнө
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        void Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshCustomers(), refreshPartners(), refreshProducts(), refreshRatings(), refreshFeedback()]);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [refreshOrders, refreshCouriers, refreshOperators, refreshCustomers, refreshPartners, refreshProducts, refreshRatings, refreshFeedback]);
 
   useEffect(() => {
     Promise.all([refreshOrders(), refreshCouriers(), refreshOperators(), refreshCustomers(), refreshPartners(), refreshProducts(), refreshRatings(), refreshFeedback(), refreshSettings()]).finally(() => setLoading(false));
@@ -417,65 +441,12 @@ export function useStore() {
   // андуураад дахин бүртгүүлэх шаардлагатай мэт харагдахаас сэргийлж,
   // алдааг зааж throw хийнэ — LoginPage үүнийг "олдсонгүй"-гээс ялгаж харна.
   const resolveByPhone = useCallback(async (rawPhone: string): Promise<AccountLookup | null> => {
-    const phone = normalizePhone(rawPhone);
-
-    if (phone === normalizePhone(SUPERADMIN.phone))
-      return { role: "superadmin", id: SUPERADMIN.id, name: SUPERADMIN.name, authMethod: "password", authKey: SUPERADMIN.password };
-
-    const { data: ops, error: opsErr } = await supabase.from("operators").select("*").eq("phone", phone).eq("active", true).limit(1);
-    if (opsErr) throw opsErr;
-    if (ops && ops.length) {
-      const o = ops[0];
-      return { role: "operator", id: o.id, name: o.name, authMethod: o.auth_method, authKey: o.auth_key };
-    }
-
-    const { data: crs, error: crsErr } = await supabase.from("couriers").select("*").eq("phone", phone).eq("active", true).limit(1);
-    if (crsErr) throw crsErr;
-    if (crs && crs.length) {
-      const c = crs[0];
-      return { role: "courier", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
-    }
-
-    const { data: prt, error: prtErr } = await supabase.from("partners").select("*").eq("phone", phone).eq("active", true).limit(1);
-    if (prtErr && !isMissingColumn(prtErr)) throw prtErr;
-    if (prt && prt.length && prt[0].auth_key) {
-      const pr = prt[0];
-      return { role: "partner", id: pr.id, name: pr.name, authMethod: pr.auth_method ?? "password", authKey: pr.auth_key };
-    }
-
-    const { data: cus, error: cusErr } = await supabase.from("customers").select("*").eq("phone", phone).limit(1);
-    if (cusErr) throw cusErr;
-    if (cus && cus.length) {
-      const c = cus[0];
-      return { role: "customer", id: c.id, name: c.name, authMethod: c.auth_method, authKey: c.auth_key };
-    }
-
-    return null;
+    // Сервер хайна — PIN, нууц үг апп руу ирэхгүй
+    const r = await authLookup(normalizePhone(rawPhone));
+    if (r.status === 0 || r.status >= 500) throw new Error(r.error ?? "network");
+    if (!r.found || !r.role || !r.id) return null;
+    return { role: r.role, id: r.id, name: r.name ?? "", authMethod: (r.authMethod ?? "pin") as AuthMethod };
   }, []);
-
-  // ── Customer registration ──────────────────────────────────────────
-  const addCustomer = useCallback(
-    async (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }): Promise<string> => {
-      const id = "cu-" + newId();
-      const { error } = await supabase.from("customers").insert({
-        id,
-        name: data.name,
-        phone: normalizePhone(data.phone),
-        auth_method: data.authMethod,
-        auth_key: data.authKey,
-        created_at: new Date().toISOString().slice(0, 10),
-      });
-      if (error) {
-        // 23505 = unique_violation (энэ дугаар өөр төхөөрөмжөөс аль хэдийн бүртгүүлсэн байж болно)
-        if ((error as { code?: string }).code === "23505") {
-          throw new Error("Энэ дугаар аль хэдийн бүртгэлтэй байна. Нэвтэрч орно уу.");
-        }
-        throw error;
-      }
-      return id;
-    },
-    [],
-  );
 
   // ── Orders ──────────────────────────────────────────────────────────
   //
@@ -850,32 +821,22 @@ export function useStore() {
     [refreshFeedback],
   );
 
-  // ── Auth: update PIN/Pattern after first login ─────────────────────
-  const updateAccountAuth = useCallback(
-    async (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => {
-      const table = role === "operator" ? "operators" : "couriers";
-      await supabase.from(table).update({ auth_method: authMethod, auth_key: authKey, active: true }).eq("id", id);
-      if (role === "operator") await refreshOperators();
-      else await refreshCouriers();
-    },
-    [refreshOperators, refreshCouriers],
-  );
-
-  // ── Auth: customer changes PIN/Pattern in settings ─────────────────
+  // ── Auth: customer changes PIN/Pattern in settings (сервер шифрлэнэ) ─
   const updateCustomerAuth = useCallback(
-    async (id: string, authMethod: "pin" | "pattern", authKey: string) => {
-      await supabase.from("customers").update({ auth_method: authMethod, auth_key: authKey }).eq("id", id);
+    async (_id: string, authMethod: "pin" | "pattern", authKey: string) => {
+      const r = await authChange(authMethod, authKey);
+      if (!r.ok) throw new Error(r.error ?? "Хадгалж чадсангүй. Дахин нэвтэрч оролдоно уу.");
     },
     [],
   );
 
   // ── Superadmin: PIN/Pattern мартсан хэрэглэгчийн нууцлалыг цэвэрлэх ─
   // Дараагийн нэвтрэлт дээр (утсаар баталгаажуулсны дараа) хэрэглэгч
-  // шинэ PIN/Pattern-аа шууд тохируулна — нэмэлт баталгаажуулалт шаардахгүй,
-  // учир нь admin аль хэдийн утсаар хэрэглэгчийг таньсан байна.
+  // шинэ PIN/Pattern-аа шууд тохируулна.
   const resetCustomerAuth = useCallback(
     async (id: string) => {
-      await supabase.from("customers").update({ auth_method: "reset", auth_key: "" }).eq("id", id);
+      const r = await authAdminReset(id);
+      if (!r.ok) throw new Error(r.error ?? "Цэвэрлэж чадсангүй");
       await refreshCustomers();
     },
     [refreshCustomers],
@@ -884,17 +845,21 @@ export function useStore() {
   // ── Superadmin: operator CRUD ───────────────────────────────────────
   const addOperator = useCallback(
     async (data: { name: string; username: string; password: string; phone: string }) => {
-      await supabase.from("operators").insert({
-        id: newId(),
+      const id = newId();
+      const { error } = await supabase.from("operators").insert({
+        id,
         name: data.name,
         username: data.username,
-        password: data.password,
+        password: "",
         phone: data.phone,
         auth_method: "password",
-        auth_key: data.password,
+        auth_key: "",
         created_at: new Date().toISOString().slice(0, 10),
         active: true,
       });
+      if (error) throw error;
+      const r = await authAdminSet("operators", id, data.password);
+      if (!r.ok) throw new Error(r.error ?? "Нууц үг тохируулж чадсангүй");
       await refreshOperators();
     },
     [refreshOperators],
@@ -905,14 +870,13 @@ export function useStore() {
       const patch: any = {};
       if (data.name !== undefined) patch.name = data.name;
       if (data.username !== undefined) patch.username = data.username;
-      if (data.password !== undefined) {
-        patch.password = data.password;
-        patch.auth_key = data.password;
-        patch.auth_method = "password";
-      }
       if (data.phone !== undefined) patch.phone = data.phone;
       if (data.active !== undefined) patch.active = data.active;
-      await supabase.from("operators").update(patch).eq("id", id);
+      if (Object.keys(patch).length) await supabase.from("operators").update(patch).eq("id", id);
+      if (data.password) {
+        const r = await authAdminSet("operators", id, data.password);
+        if (!r.ok) throw new Error(r.error ?? "Нууц үг тохируулж чадсангүй");
+      }
       await refreshOperators();
     },
     [refreshOperators],
@@ -929,14 +893,15 @@ export function useStore() {
   // ── Superadmin: courier CRUD ────────────────────────────────────────
   const addCourier = useCallback(
     async (data: { name: string; username: string; password: string; phone: string; vehicle: CourierAccount["vehicle"] }) => {
-      await supabase.from("couriers").insert({
-        id: newId(),
+      const id = newId();
+      const { error } = await supabase.from("couriers").insert({
+        id,
         name: data.name,
         username: data.username,
-        password: data.password,
+        password: "",
         phone: data.phone,
         auth_method: "password",
-        auth_key: data.password,
+        auth_key: "",
         vehicle: data.vehicle,
         available: true,
         rating: 5.0,
@@ -945,6 +910,9 @@ export function useStore() {
         created_at: new Date().toISOString().slice(0, 10),
         active: true,
       });
+      if (error) throw error;
+      const r = await authAdminSet("couriers", id, data.password);
+      if (!r.ok) throw new Error(r.error ?? "Нууц үг тохируулж чадсангүй");
       await refreshCouriers();
     },
     [refreshCouriers],
@@ -955,11 +923,6 @@ export function useStore() {
       const patch: any = {};
       if (data.name !== undefined) patch.name = data.name;
       if (data.username !== undefined) patch.username = data.username;
-      if (data.password !== undefined) {
-        patch.password = data.password;
-        patch.auth_key = data.password;
-        patch.auth_method = "password";
-      }
       if (data.phone !== undefined) patch.phone = data.phone;
       if (data.vehicle !== undefined) patch.vehicle = data.vehicle;
       if (data.available !== undefined) patch.available = data.available;
@@ -967,7 +930,11 @@ export function useStore() {
       if (data.totalDeliveries !== undefined) patch.total_deliveries = data.totalDeliveries;
       if (data.todayDeliveries !== undefined) patch.today_deliveries = data.todayDeliveries;
       if (data.active !== undefined) patch.active = data.active;
-      await supabase.from("couriers").update(patch).eq("id", id);
+      if (Object.keys(patch).length) await supabase.from("couriers").update(patch).eq("id", id);
+      if (data.password) {
+        const r = await authAdminSet("couriers", id, data.password);
+        if (!r.ok) throw new Error(r.error ?? "Нууц үг тохируулж чадсангүй");
+      }
       await refreshCouriers();
     },
     [refreshCouriers],
@@ -982,45 +949,6 @@ export function useStore() {
   );
 
   // ── Жолоочийн баримт бичиг (migration 12) ──────────────────────────
-  /** Жолооч өөрөө бүртгүүлнэ — супер админ баталгаажуулах хүртэл захиалга авахгүй */
-  const registerCourier = useCallback(
-    async (data: {
-      name: string;
-      phone: string;
-      vehicle: CourierAccount["vehicle"];
-      authMethod: "pin" | "pattern";
-      authKey: string;
-    }): Promise<string> => {
-      const id = "cr-" + newId();
-      const { error } = await supabase.from("couriers").insert({
-        id,
-        name: data.name,
-        username: normalizePhone(data.phone),
-        password: data.authKey,
-        phone: normalizePhone(data.phone),
-        auth_method: data.authMethod,
-        auth_key: data.authKey,
-        vehicle: data.vehicle,
-        available: false,
-        rating: 5.0,
-        total_deliveries: 0,
-        today_deliveries: 0,
-        created_at: new Date().toISOString().slice(0, 10),
-        active: true,
-        verified: false,
-      });
-      if (error) {
-        if ((error as { code?: string }).code === "23505") {
-          throw new Error("Энэ дугаар аль хэдийн бүртгэлтэй байна. Нэвтэрч орно уу.");
-        }
-        throw error;
-      }
-      await refreshCouriers();
-      return id;
-    },
-    [refreshCouriers],
-  );
-
   /** Жолооч өөрийн баримт бичгээ оруулах/солих */
   const updateCourierDocs = useCallback(
     async (id: string, docs: CourierDocs) => {
@@ -1106,13 +1034,15 @@ export function useStore() {
     async (id: string, data: { phone?: string; authKey?: string; paymentQrUrl?: string }) => {
       const patch: any = {};
       if (data.phone !== undefined) patch.phone = normalizePhone(data.phone);
-      if (data.authKey !== undefined) {
-        patch.auth_key = data.authKey;
-        patch.auth_method = "password";
-      }
       if (data.paymentQrUrl !== undefined) patch.payment_qr_url = data.paymentQrUrl;
-      const { error } = await supabase.from("partners").update(patch).eq("id", id);
-      if (error) throw error;
+      if (Object.keys(patch).length) {
+        const { error } = await supabase.from("partners").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      if (data.authKey) {
+        const r = await authAdminSet("partners", id, data.authKey);
+        if (!r.ok) throw new Error(r.error ?? "Нууц үг тохируулж чадсангүй");
+      }
       await refreshPartners();
     },
     [refreshPartners],
@@ -1171,6 +1101,7 @@ export function useStore() {
     ratings,
     feedback,
     bankInfo,
+    authRequired,
     tariff,
     loading,
     operatorAccounts,
@@ -1188,7 +1119,6 @@ export function useStore() {
     rateOrder,
     submitFeedback,
     setFeedbackHandled,
-    registerCourier,
     updateCourierDocs,
     verifyCourier,
     addProduct,
@@ -1210,8 +1140,6 @@ export function useStore() {
     setCourierOnline,
     deletePartner,
     resolveByPhone,
-    addCustomer,
-    updateAccountAuth,
     updateCustomerAuth,
     resetCustomerAuth,
   };

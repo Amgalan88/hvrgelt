@@ -97,7 +97,9 @@ function OperatorModal({ initial, onSave, onClose }: {
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [username, setUsername] = useState(initial?.username ?? "");
-  const [password, setPassword] = useState(initial?.password ?? "");
+  // Засахдаа хоосон үлдээвэл нууц үг өөрчлөгдөхгүй (хадгалсан утга шифрлэгдсэн)
+  const [password, setPassword] = useState("");
+  const editing = !!initial?.id;
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [showPass, setShowPass] = useState(false);
 
@@ -105,7 +107,7 @@ function OperatorModal({ initial, onSave, onClose }: {
     <Modal title={initial?.id ? "Оператор засах" : "Оператор нэмэх"} onClose={onClose}>
       <Field label="Овог нэр"><Input value={name} onChange={setName} placeholder="Д. Дэлгэрмаа" /></Field>
       <Field label="Нэвтрэх нэр (username)"><Input value={username} onChange={setUsername} placeholder="delgermaa" /></Field>
-      <Field label="Нэг удаагийн нууц үг">
+      <Field label={editing ? "Шинэ нэг удаагийн нууц үг (солих бол)" : "Нэг удаагийн нууц үг"}>
         <div className="relative">
           <Input value={password} onChange={setPassword} placeholder="••••••••" type={showPass ? "text" : "password"} />
           <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -117,8 +119,8 @@ function OperatorModal({ initial, onSave, onClose }: {
       <div className="flex gap-2 pt-2">
         <button onClick={onClose} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:border-primary/30 transition-colors">Болих</button>
         <button
-          onClick={() => { if (name && username && password && phone) { onSave({ name, username, password, phone }); onClose(); } }}
-          disabled={!name || !username || !password || !phone}
+          onClick={() => { if (name && username && (password || editing) && phone) { onSave({ name, username, password, phone }); onClose(); } }}
+          disabled={!name || !username || (!password && !editing) || !phone}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
           style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
         >
@@ -137,7 +139,8 @@ function CourierModal({ initial, onSave, onClose }: {
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [username, setUsername] = useState(initial?.username ?? "");
-  const [password, setPassword] = useState(initial?.password ?? "");
+  const [password, setPassword] = useState("");
+  const editing = !!initial?.id;
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [vehicle, setVehicle] = useState<Vehicle>(initial?.vehicle ?? "мотоцикл");
   const [showPass, setShowPass] = useState(false);
@@ -146,7 +149,7 @@ function CourierModal({ initial, onSave, onClose }: {
     <Modal title={initial?.id ? "Хүргэгч засах" : "Хүргэгч нэмэх"} onClose={onClose}>
       <Field label="Овог нэр"><Input value={name} onChange={setName} placeholder="Б. Мөнхбат" /></Field>
       <Field label="Нэвтрэх нэр (username)"><Input value={username} onChange={setUsername} placeholder="munkh" /></Field>
-      <Field label="Нэг удаагийн нууц үг">
+      <Field label={editing ? "Шинэ нэг удаагийн нууц үг (солих бол)" : "Нэг удаагийн нууц үг"}>
         <div className="relative">
           <Input value={password} onChange={setPassword} placeholder="••••••••" type={showPass ? "text" : "password"} />
           <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -168,8 +171,8 @@ function CourierModal({ initial, onSave, onClose }: {
       <div className="flex gap-2 pt-2">
         <button onClick={onClose} className="flex-1 border border-border py-2.5 rounded-xl text-sm hover:border-primary/30 transition-colors">Болих</button>
         <button
-          onClick={() => { if (name && username && password && phone) { onSave({ name, username, password, phone, vehicle }); onClose(); } }}
-          disabled={!name || !username || !password || !phone}
+          onClick={() => { if (name && username && (password || editing) && phone) { onSave({ name, username, password, phone, vehicle }); onClose(); } }}
+          disabled={!name || !username || (!password && !editing) || !phone}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm disabled:opacity-40 hover:bg-primary/90 transition-colors"
           style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
         >
@@ -534,7 +537,7 @@ export function SuperadminApp({
                 {/* Credentials row */}
                 <div className="flex gap-4 px-4 py-2 bg-secondary/30 border-t border-border text-xs text-muted-foreground font-mono">
                   <span>user: <span className="text-foreground">{op.username}</span></span>
-                  <span>pass: <span className="text-foreground">{op.password}</span></span>
+                  <span>нэвтрэлт: <span className="text-foreground">{op.authMethod === "password" ? "нэг удаагийн нууц үг (анх нэвтрээгүй)" : op.authMethod === "pattern" ? "Pattern" : "PIN"}</span></span>
                 </div>
               </div>
             ))}

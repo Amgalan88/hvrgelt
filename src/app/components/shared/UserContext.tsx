@@ -48,6 +48,8 @@ interface UserContextValue {
 }
 
 const ACCENT_KEY = "hvrgelt_accent";
+/** pin/pattern-д жинхэнэ утгын оронд "тохируулсан" гэсэн тэмдэг */
+export const LOCK_SET = "•";
 const THEME_KEY = "hvrgelt_theme";
 const ACCENT_COLORS: AccentColor[] = ["orange", "blue", "green", "violet"];
 
@@ -107,7 +109,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setCustomerId(cid);
     const { data, error } = await supabase
       .from("customers")
-      .select("addresses, quick_orders, auth_method, auth_key")
+      .select("addresses, quick_orders, auth_method")
       .eq("id", cid)
       .single();
     // Сүлжээний алдаа гарвал хадгалсан хаяг/PIN-ийг хоослохгүй, дараагийн
@@ -120,8 +122,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     setSavedAddresses((data?.addresses as SavedAddress[]) ?? []);
     setQuickOrders((data?.quick_orders as QuickOrder[]) ?? []);
-    if (data?.auth_method === "pin") { setPin(data.auth_key); setPattern(null); }
-    else if (data?.auth_method === "pattern") { setPattern(data.auth_key); setPin(null); }
+    // Түгжээ тохируулсан эсэхийг л мэднэ (утгыг сервер шалгана — App.unlock)
+    if (data?.auth_method === "pin") { setPin(LOCK_SET); setPattern(null); }
+    else if (data?.auth_method === "pattern") { setPattern(LOCK_SET); setPin(null); }
     return "ok";
   }, []);
 

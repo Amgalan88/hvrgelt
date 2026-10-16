@@ -1,4 +1,5 @@
 import { useUndo } from "../shared/Undo";
+import { authLogin } from "../../lib/authApi";
 import { useState, useEffect } from "react";
 import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone } from "lucide-react";
 import { PHONES, WORK_HOURS } from "../../lib/contact";
@@ -157,6 +158,13 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
     } finally {
       setNotifBusy(false);
     }
+  }
+
+  /** Одоогийн PIN/Pattern-ийг серверээр шалгаад шинийг оруулах руу шилжинэ */
+  async function verifyCurrent(entered: string, wrongMsg: string) {
+    const r = await authLogin(userPhone, entered);
+    if (r.ok) { setLockError(""); setLockFlow(target === "pin" ? "pin-new" : "pattern-new"); }
+    else setLockError(r.status === 401 ? wrongMsg : r.error ?? wrongMsg);
   }
 
   // alias for backward compat
@@ -427,18 +435,12 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
           {/* Verify current credential before switching/changing */}
           {lockFlow === "verify" && pin && (
             <PinPad title="Баталгаажуулах" subtitle="Одоогийн PIN кодоо оруулна уу" error={lockError}
-              onComplete={(p) => {
-                if (p === pin) { setLockError(""); setLockFlow(target === "pin" ? "pin-new" : "pattern-new"); }
-                else setLockError("PIN код буруу байна");
-              }}
+              onComplete={(p) => void verifyCurrent(p, "PIN код буруу байна")}
               onCancel={() => { setLockFlow(null); setLockError(""); }} />
           )}
           {lockFlow === "verify" && !pin && pattern && (
             <PatternLock title="Баталгаажуулах" subtitle="Одоогийн pattern-аа зурна уу" error={lockError}
-              onComplete={(p) => {
-                if (p === pattern) { setLockError(""); setLockFlow(target === "pin" ? "pin-new" : "pattern-new"); }
-                else setLockError("Pattern буруу байна");
-              }}
+              onComplete={(p) => void verifyCurrent(p, "Pattern буруу байна")}
               onCancel={() => { setLockFlow(null); setLockError(""); }} />
           )}
 

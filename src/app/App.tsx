@@ -16,6 +16,8 @@ import { LoadingScreen } from "./components/shared/Spinner";
 import { LogOut } from "lucide-react";
 import { Logo } from "./components/shared/Logo";
 import { InstallPrompt } from "./components/shared/InstallPrompt";
+import { authLogin, applySession, signOutSession } from "./lib/authApi";
+import { supabase } from "./lib/supabase";
 import { MockPage } from "./components/MockPage";
 import { Landing, type LegalKey } from "./components/landing/Landing";
 import { LegalPage } from "./components/landing/LegalPage";
@@ -128,7 +130,18 @@ function Inner() {
     handleLogin(adminReturn.role, adminReturn.id, adminReturn.name, adminReturn.phone);
   }
 
+  // DB хаалттай (migration 22) үед Supabase session-гүй хуучин нэвтрэлтийг
+  // дахин нэвтрүүлнэ — эс бөгөөс өгөгдөл хоосон харагдана.
+  useEffect(() => {
+    if (!session || !store.authRequired) return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) doLogout();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, store.authRequired]);
+
   function doLogout() {
+    void signOutSession();
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(ADMIN_RETURN_KEY);
     setAdminReturn(null);
@@ -166,10 +179,6 @@ function Inner() {
       <LoginPage
         onLogin={handleLogin}
         resolveByPhone={store.resolveByPhone}
-        addCustomer={store.addCustomer}
-        updateAccountAuth={store.updateAccountAuth}
-        updateCustomerAuth={store.updateCustomerAuth}
-        registerCourier={store.registerCourier}
         initialMode={loginMode}
         onBack={() => setLandingDone(false)}
       />
@@ -199,7 +208,19 @@ function Inner() {
     );
   }
 
-  // Customer with lock set → require PIN or Pattern before entering app
+  // Customer with lock set → require PIN or Pattern before entering app.
+  // Сервер шалгана; зөв бол Supabase session шинэчлэгдэнэ.
+  async function unlock(entered: string, wrongMsg: string) {
+    if (!session) return;
+    const r = await authLogin(session.phone, entered);
+    if (r.ok) {
+      await applySession(r);
+      setPinVerified(true);
+      setPinError("");
+    } else {
+      setPinError(r.status === 401 ? wrongMsg : r.error ?? wrongMsg);
+    }
+  }
   if (session.role === "customer" && hasLock && !pinVerified && !session.viaAdmin) {
     const greeting = `Сайн байна уу, ${session.name.split(".")[0] ?? session.name}!`;
     return (
@@ -213,10 +234,7 @@ function Inner() {
               title={greeting}
               subtitle="Pattern зурна уу"
               error={pinError}
-              onComplete={(entered) => {
-                if (entered === pattern) { setPinVerified(true); setPinError(""); }
-                else setPinError("Pattern буруу байна. Дахин зурна уу.");
-              }}
+              onComplete={(entered) => void unlock(entered, "Pattern буруу байна. Дахин зурна уу.")}
               onCancel={doLogout}
             />
           ) : (
@@ -224,10 +242,7 @@ function Inner() {
               title={greeting}
               subtitle="PIN кодоо оруулна уу"
               error={pinError}
-              onComplete={(entered) => {
-                if (entered === pin) { setPinVerified(true); setPinError(""); }
-                else setPinError("PIN код буруу байна. Дахин оролдоно уу.");
-              }}
+              onComplete={(entered) => void unlock(entered, "PIN код буруу байна. Дахин оролдоно уу.")}
               onCancel={doLogout}
             />
           )}

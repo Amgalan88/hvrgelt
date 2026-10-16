@@ -11,20 +11,11 @@ import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 import { normalizePhone, isValidPhone } from "../../lib/phone";
+import { authLogin, authSetup, authRegister, applySession, type AuthResult } from "../../lib/authApi";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
   resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
-  addCustomer: (data: { name: string; phone: string; authMethod: "pin" | "pattern"; authKey: string }) => Promise<string>;
-  updateAccountAuth: (role: "operator" | "courier", id: string, authMethod: "pin" | "pattern", authKey: string) => void;
-  updateCustomerAuth: (id: string, authMethod: "pin" | "pattern", authKey: string) => void;
-  registerCourier: (data: {
-    name: string;
-    phone: string;
-    vehicle: Vehicle;
-    authMethod: "pin" | "pattern";
-    authKey: string;
-  }) => Promise<string>;
   /** Бүртгэлгүй дугаар оруулбал аль төрлөөр бүртгүүлэхийг урьдчилан сонгоно */
   initialMode?: LoginMode;
   /** Нүүр хуудас руу буцах */
@@ -53,7 +44,7 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
-export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountAuth, updateCustomerAuth, registerCourier, initialMode = "customer", onBack }: LoginPageProps) {
+export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", onBack }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
   const [screen, setScreen] = useState<Screen>("phone");
   const [mode, setMode] = useState<LoginMode>(initialMode);
@@ -154,45 +145,79 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
   }
 
-  // ── Auth: verify ─────────────────────────────────────────────────
-  function verifyAuth(entered: string) {
-    if (!account) return;
-    if (countdown > 0) return;
-    if (entered === account.authKey) {
+  // ── Auth: verify (сервер шалгана — апп нууц утгыг хэзээ ч мэдэхгүй) ──
+  const [verifying, setVerifying] = useState(false);
+  /** Ажилтны нэг удаагийн нууц үг — анхны PIN тохируулахад сервер дахин шалгана */
+  const setupOtp = useRef("");
+
+  /** Сервер "буруу" гэвэл үлдсэн оролдлого, түгжээг харуулна */
+  function showAuthError(r: AuthResult, wrongMsg: string) {
+    if (r.lockedUntil && r.lockedUntil > Date.now()) {
+      setFailCount(MAX_ATTEMPTS);
+      setLockUntil(r.lockedUntil);
+      setAuthError(r.error ?? "Түр хүлээгээд дахин оролдоно уу.");
+    } else if (r.status === 401) {
+      const used = MAX_ATTEMPTS - (r.attemptsLeft ?? MAX_ATTEMPTS - 1);
+      setFailCount(used);
+      setLockUntil(Date.now() + WRONG_DELAY_MS);
+      setAuthError(`${wrongMsg} (${used}/${MAX_ATTEMPTS})`);
+    } else {
+      setAuthError(r.error ?? "Алдаа гарлаа. Дахин оролдоно уу.");
+    }
+  }
+
+  async function verifyAuth(entered: string) {
+    if (!account || countdown > 0 || verifying) return;
+    setVerifying(true);
+    try {
+      const r = await authLogin(phone, entered);
+      if (!r.ok) {
+        showAuthError(r,
+          account.authMethod === "pin"     ? "PIN буруу байна" :
+          account.authMethod === "pattern" ? "Pattern буруу байна" :
+                                             "Нууц үг буруу байна");
+        return;
+      }
       localStorage.setItem(SAVED_PHONE_KEY, phone);
-      // Staff with OTP (authMethod === "password", not superadmin) → must set up PIN/Pattern first
-      if (account.authMethod === "password" && account.role !== "superadmin") {
+      // Ажилтан нэг удаагийн нууц үгээр анх орсон → өөрийн PIN/Pattern тохируулна
+      if (r.needsSetup) {
+        setupOtp.current = entered;
         setSetupStep("choose");
         setSetupPinFirst(""); setSetupPatternFirst(""); setSetupError("");
         setScreen("first-setup");
         return;
       }
+      await applySession(r);
       if (account.role === "customer") {
         if (account.authMethod === "pin") { setPin(entered); setPattern(null); }
         else if (account.authMethod === "pattern") { setPattern(entered); setPin(null); }
       }
       onLogin(account.role, account.id, account.name, normalizePhone(phone));
-    } else {
-      handleFail(
-        account.authMethod === "pin"     ? "PIN буруу байна" :
-        account.authMethod === "pattern" ? "Pattern буруу байна" :
-                                           "Нууц үг буруу байна"
-      );
+    } finally {
+      setVerifying(false);
     }
   }
 
-  // ── First-login setup handlers ───────────────────────────────────
+  // ── First-login / сэргээсэн нууцлал тохируулах ───────────────────
+  async function finishSetup(method: "pin" | "pattern", key: string) {
+    const r = await authSetup(phone, setupOtp.current, method, key);
+    if (!r.ok) {
+      setSetupPinFirst(""); setSetupPatternFirst("");
+      setSetupError(r.error ?? "Тохируулж чадсангүй. Дахин оролдоно уу.");
+      return;
+    }
+    await applySession(r);
+    if (account!.role === "customer") {
+      if (method === "pin") { setPin(key); setPattern(null); } else { setPattern(key); setPin(null); }
+    }
+    localStorage.setItem(SAVED_PHONE_KEY, phone);
+    onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
+  }
+
   function handleSetupPin(pin: string) {
     if (!setupPinFirst) { setSetupPinFirst(pin); return; }
     if (pin === setupPinFirst) {
-      if (account!.role === "customer") {
-        updateCustomerAuth(account!.id, "pin", pin);
-        setPin(pin); setPattern(null);
-      } else {
-        updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pin", pin);
-      }
-      localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
+      void finishSetup("pin", pin);
     } else {
       setSetupPinFirst("");
       setSetupError("PIN таарсангүй. Дахин оруулна уу.");
@@ -203,14 +228,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   function handleSetupPattern(pattern: string) {
     if (!setupPatternFirst) { setSetupPatternFirst(pattern); return; }
     if (pattern === setupPatternFirst) {
-      if (account!.role === "customer") {
-        updateCustomerAuth(account!.id, "pattern", pattern);
-        setPattern(pattern); setPin(null);
-      } else {
-        updateAccountAuth(account!.role as "operator" | "courier", account!.id, "pattern", pattern);
-      }
-      localStorage.setItem(SAVED_PHONE_KEY, phone);
-      onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
+      void finishSetup("pattern", pattern);
     } else {
       setSetupPatternFirst("");
       setSetupError("Pattern таарсангүй. Дахин зурна уу.");
@@ -218,25 +236,33 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     }
   }
 
-  // ── Register helpers ─────────────────────────────────────────────
+  // ── Register (сервер нууцлалыг шифрлэж хадгална) ─────────────────
+  async function finishRegister(method: "pin" | "pattern", key: string): Promise<boolean> {
+    const r = await authRegister({
+      role: mode,
+      name: rName.trim(),
+      phone: normalizePhone(rPhone),
+      vehicle: mode === "courier" ? rVehicle ?? "явган" : undefined,
+      method,
+      key,
+    });
+    if (!r.ok || !r.id) {
+      setRegError(r.error ?? "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
+      return false;
+    }
+    await applySession(r);
+    if (mode === "customer") {
+      if (method === "pin") { setPin(key); setPattern(null); } else { setPattern(key); setPin(null); }
+    }
+    localStorage.setItem(SAVED_PHONE_KEY, rPhone);
+    onLogin(mode, r.id, rName.trim(), normalizePhone(rPhone));
+    return true;
+  }
+
   async function handlePinEntry(pin: string) {
     if (!pinFirst) { setPinFirst(pin); return; }
     if (pin === pinFirst) {
-      try {
-        if (mode === "courier") {
-          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle ?? "явган", authMethod: "pin", authKey: pin });
-          localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-          onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
-          return;
-        }
-        const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pin", authKey: pin });
-        setPin(pin); setPattern(null);
-        localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-        onLogin("customer", id, rName.trim(), normalizePhone(rPhone));
-      } catch (e) {
-        setPinFirst("");
-        setRegError(e instanceof Error ? e.message : "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
-      }
+      if (!(await finishRegister("pin", pin))) setPinFirst("");
     } else {
       setPinFirst("");
       setRegError("PIN таарсангүй. Дахин оруулна уу.");
@@ -247,21 +273,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   async function handlePatternEntry(pattern: string) {
     if (!patternFirst) { setPatternFirst(pattern); return; }
     if (pattern === patternFirst) {
-      try {
-        if (mode === "courier") {
-          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle ?? "явган", authMethod: "pattern", authKey: pattern });
-          localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-          onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
-          return;
-        }
-        const id = await addCustomer({ name: rName.trim(), phone: normalizePhone(rPhone), authMethod: "pattern", authKey: pattern });
-        setPattern(pattern); setPin(null);
-        localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-        onLogin("customer", id, rName.trim(), normalizePhone(rPhone));
-      } catch (e) {
-        setPatternFirst("");
-        setRegError(e instanceof Error ? e.message : "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
-      }
+      if (!(await finishRegister("pattern", pattern))) setPatternFirst("");
     } else {
       setPatternFirst("");
       setRegError("Pattern таарсангүй. Дахин зурна уу.");
