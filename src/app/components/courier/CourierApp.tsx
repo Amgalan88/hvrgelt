@@ -16,12 +16,14 @@ import { useLocationSharing } from "./useLocationSharing";
 import { navigateUrl, watchAllCourierLocations, type CourierLocation } from "../../lib/geo";
 import { offerFor, type DispatchCourier } from "../../lib/dispatch";
 import { OfferCards, type Offer } from "./OfferCards";
+import { CourierOnboarding } from "./CourierOnboarding";
 
 const COURIER_HELP_STEPS = [
-  "Шинэ захиалга томилогдоход мэдэгдэл авна (хонх идэвхжүүлсэн бол).",
-  "Захиалгаа нээгээд авах болон хүргэх хаягийг харна.",
-  "Ачааг авахдаа \"Авлаа\" товч дарна.",
-  "Хүргэсний дараа \"Хүргэлээ\" товч дарна — дараагийн захиалга авахад бэлэн болно.",
+  "«Ажилд гарах»-ыг асаана — байршлаа илгээхийг зөвшөөрнө.",
+  "Танд ойр захиалга гармагц дуут дохиотой санал ирнэ. Эхэлж «Авах» дарсан хүн авна.",
+  "Авах цэг дээр ачаагаа аваад «Ачаа авлаа» дарна. Навигацийн товч зам заана.",
+  "Хүлээлгэж өгөөд «Хүргэлт дуусгах» дарна — орлого «Дууссан» хэсэгт харагдана.",
+  "Завгүй болбол «Ажилд гарах»-ыг унтраана — санал ирэхээ болино.",
 ];
 
 interface CourierAppProps {
@@ -50,7 +52,8 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
   const { theme, toggleTheme } = useUser();
-  const [helpOpen, setHelpOpen] = useFirstVisitHelp("courier");
+  // Заавар баталгаажсаны дараа л автоматаар нээгдэнэ — өмнө нь хөтлөгч карт харагдана
+  const [helpOpen, setHelpOpen] = useFirstVisitHelp("courier", !!account?.verified);
 
   const courier = courierInfo;
 
@@ -126,7 +129,16 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
     plate: account?.plate,
     verified: account?.verified ?? false,
   };
-  const docsMissing = missingDocs(account?.vehicle, docs).length > 0;
+  const missing = missingDocs(account?.vehicle, docs);
+  const docsMissing = missing.length > 0;
+
+  // Шинээр бүртгүүлсэн хүргэгч шууд баримтын хуудсанд орно
+  const routedToDocs = useRef(false);
+  useEffect(() => {
+    if (!account || routedToDocs.current) return;
+    routedToDocs.current = true;
+    if (!account.verified && docsMissing) setTab("docs");
+  }, [account, docsMissing]);
 
   // ── Захиалгыг хүлээн авах ──
   // Үйлчлүүлэгчийн утасны дугаар зөвхөн захиалгыг хүлээн авсны дараа
@@ -203,19 +215,15 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
           ))}
         </div>
 
-        {/* Баримт дутуу бол сануулга */}
-        {tab !== "docs" && docsMissing && (
-          <button
-            onClick={() => setTab("docs")}
-            className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-center gap-3 text-left hover:border-amber-500/60 transition-colors"
-          >
-            <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-500">Баримт бичгээ оруулна уу</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Баталгаажих хүртэл захиалга хуваарилагдахгүй</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-amber-500 shrink-0" />
-          </button>
+        {/* Шинэ хүргэгчийг ажилд гартал хөтөлнө */}
+        {account && tab !== "docs" && (
+          <CourierOnboarding
+            courierId={courierId}
+            vehicle={account.vehicle}
+            missing={missing}
+            verified={account.verified}
+            onOpenDocs={() => setTab("docs")}
+          />
         )}
 
         {/* Баримт бичиг */}
@@ -289,7 +297,9 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                   <Package className="w-7 h-7 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground text-sm">Одоогоор захиалга байхгүй</p>
-                <p className="text-xs text-muted-foreground mt-1">Оператор захиалга томилоход энд харагдана</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {canWork ? "Ажилд гарвал ойр захиалгын санал энд ирнэ" : "Баталгаажсаны дараа захиалгын санал энд ирнэ"}
+                </p>
               </div>
             ) : (
               activeOrders.map((order) => {
@@ -506,7 +516,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
           {([
             { key: "active", label: "Захиалгууд", icon: Package, badge: activeOrders.length },
             { key: "done", label: "Дууссан", icon: CheckCircle, badge: 0 },
-            { key: "docs", label: "Баримт", icon: IdCard, badge: docsMissing ? 1 : 0 },
+            { key: "docs", label: "Баримт", icon: IdCard, badge: docsMissing && !account?.verified ? 1 : 0 },
           ] as const).map(({ key, label, icon: Icon, badge }) => (
             <button
               key={key}

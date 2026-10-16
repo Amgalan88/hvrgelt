@@ -390,6 +390,10 @@ export function SuperadminApp({
   onViewAs, onLogout,
 }: SuperadminAppProps) {
   const { theme, toggleTheme } = useUser();
+  // Баримтаа бүрэн оруулсан, баталгаажаагүй хүргэгчид — шалгалт хүлээж байна
+  const isPending = (c: CourierAccount) => !c.verified && missingDocs(c.vehicle, c).length === 0;
+  const pendingReview = courierAccounts.filter(isPending).length;
+  const sortedCouriers = [...courierAccounts].sort((a, b) => Number(isPending(b)) - Number(isPending(a)));
   const [bankDraft, setBankDraft] = useState(bankInfo);
   const [locPartner, setLocPartner] = useState<Partner | null>(null);
   const [locError, setLocError] = useState("");
@@ -465,6 +469,9 @@ export function SuperadminApp({
               {key === "feedback" && feedback.some((f) => !f.handled) && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
               )}
+              {key === "couriers" && pendingReview > 0 && (
+                <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{pendingReview}</span>
+              )}
             </button>
           ))}
         </div>
@@ -536,7 +543,12 @@ export function SuperadminApp({
               </button>
             </div>
 
-            {courierAccounts.map((cr) => (
+            {pendingReview > 0 && (
+              <p className="text-xs bg-primary/10 text-primary border border-primary/25 rounded-xl px-3 py-2">
+                {pendingReview} хүргэгч баримтаа бүрэн оруулж, шалгалт хүлээж байна — дээр нь эхэлж харагдана.
+              </p>
+            )}
+            {sortedCouriers.map((cr) => (
               <div key={cr.id} className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold shrink-0" style={{ fontFamily: "var(--font-display)" }}>

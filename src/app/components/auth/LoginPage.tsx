@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { VEHICLES, VEHICLE_ICON, isMotorized, type Vehicle } from "../../lib/vehicles";
+import { VEHICLE_REACH } from "../../lib/dispatch";
 import { motion } from "motion/react";
 import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User } from "lucide-react";
 import { Logo as AppLogo } from "../shared/Logo";
@@ -33,7 +34,13 @@ interface LoginPageProps {
 /** Нэвтрэх/бүртгүүлэх урсгалыг 2 салгана */
 type LoginMode = "customer" | "courier";
 
-const VEHICLE_CHOICES = VEHICLES.map((key) => ({ key, emoji: VEHICLE_ICON[key] }));
+/** Бүртгэлд — хэрэгсэл бүрийн шаардах баримт, хүрэх зай */
+const VEHICLE_CHOICES = VEHICLES.map((key) => ({
+  key,
+  emoji: VEHICLE_ICON[key],
+  needs: isMotorized(key) ? "Цээж зураг, жолооны үнэмлэх, хэрэгслийн зураг" : "Цээж зураг, иргэний үнэмлэх",
+  note: VEHICLE_REACH[key] ? `ойрхон захиалга (${VEHICLE_REACH[key].tripKm} км хүртэл)` : undefined,
+}));
 
 type Screen = "phone" | "auth" | "first-setup" | "register";
 type RegStep = "info" | "choose" | "pin" | "pattern";
@@ -79,7 +86,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // Register
   const [rName, setRName]           = useState("");
   const [rPhone, setRPhone]         = useState("");
-  const [rVehicle, setRVehicle]     = useState<Vehicle>("мотоцикл");
+  const [rVehicle, setRVehicle]     = useState<Vehicle | null>(null);
   const [regStep, setRegStep]       = useState<RegStep>("info");
   const [pinFirst, setPinFirst]     = useState("");
   const [patternFirst, setPatternFirst] = useState("");
@@ -217,7 +224,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (pin === pinFirst) {
       try {
         if (mode === "courier") {
-          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle, authMethod: "pin", authKey: pin });
+          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle ?? "явган", authMethod: "pin", authKey: pin });
           localStorage.setItem(SAVED_PHONE_KEY, rPhone);
           onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
           return;
@@ -242,7 +249,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
     if (pattern === patternFirst) {
       try {
         if (mode === "courier") {
-          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle, authMethod: "pattern", authKey: pattern });
+          const id = await registerCourier({ name: rName.trim(), phone: normalizePhone(rPhone), vehicle: rVehicle ?? "явган", authMethod: "pattern", authKey: pattern });
           localStorage.setItem(SAVED_PHONE_KEY, rPhone);
           onLogin("courier", id, rName.trim(), normalizePhone(rPhone));
           return;
@@ -263,7 +270,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   }
 
   function resetRegister() {
-    setRName(""); setRPhone("");
+    setRName(""); setRPhone(""); setRVehicle(null);
     setRegStep("info");
     setPinFirst(""); setPatternFirst("");
     setRegError("");
@@ -629,27 +636,32 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
           </div>
           {mode === "courier" && (
             <div>
-              <label className="text-xs text-muted-foreground block mb-1.5">Тээврийн хэрэгсэл</label>
-              <div className="grid grid-cols-3 gap-2">
-                {VEHICLE_CHOICES.map((v) => (
-                  <button
-                    key={v.key}
-                    onClick={() => setRVehicle(v.key)}
-                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
-                      rVehicle === v.key
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-card border-border text-muted-foreground hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="text-lg leading-none">{v.emoji}</span> {v.key}
-                  </button>
-                ))}
+              <p className="text-xs text-muted-foreground mb-1.5">Юугаар хүргэх вэ?</p>
+              <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden" role="radiogroup" aria-label="Тээврийн хэрэгсэл">
+                {VEHICLE_CHOICES.map((v) => {
+                  const on = rVehicle === v.key;
+                  return (
+                    <button
+                      key={v.key}
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setRVehicle(v.key)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${on ? "bg-primary/10" : "hover:bg-secondary/50"}`}
+                    >
+                      <span className="text-2xl leading-none w-8 text-center">{v.emoji}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-sm font-semibold capitalize ${on ? "text-primary" : ""}`}>{v.key}</span>
+                        <span className="block text-[11px] text-muted-foreground leading-snug">
+                          {v.needs}{v.note ? ` · ${v.note}` : ""}
+                        </span>
+                      </span>
+                      <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${on ? "border-primary" : "border-border"}`}>
+                        {on && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {isMotorized(rVehicle)
-                  ? "Бүртгүүлсний дараа цээж зураг, жолооны үнэмлэх, хэрэгслийнхээ зургийг оруулна."
-                  : "Бүртгүүлсний дараа цээж зураг, иргэний үнэмлэхний зургаа оруулна."}
-              </p>
             </div>
           )}
           <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
@@ -662,7 +674,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
         <div className="mt-6 space-y-3">
           <button
             onClick={() => setRegStep("choose")}
-            disabled={!rName.trim() || !isValidPhone(rPhone)}
+            disabled={!rName.trim() || !isValidPhone(rPhone) || (mode === "courier" && !rVehicle)}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >

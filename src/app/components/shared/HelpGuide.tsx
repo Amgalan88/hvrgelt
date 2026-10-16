@@ -6,11 +6,15 @@ const SEEN_KEY_PREFIX = "hvrgelt_help_seen_";
 
 // Тухайн үүргийн апп-д анх удаа орж ирэхэд зааврыг автоматаар нээнэ,
 // дараа нь зөвхөн "?" товч дараад дахин үзэх боломжтой.
-export function useFirstVisitHelp(role: string) {
+export function useFirstVisitHelp(role: string, enabled = true) {
   const key = SEEN_KEY_PREFIX + role;
-  const [open, setOpen] = useState(() => {
-    try { return !localStorage.getItem(key); } catch { return false; }
-  });
+  const [open, setOpen] = useState(false);
+
+  // enabled болмогц (жишээ нь хүргэгч баталгаажмагц) анх удаа нээнэ
+  useEffect(() => {
+    if (!enabled) return;
+    try { if (!localStorage.getItem(key)) setOpen(true); } catch { /* noop */ }
+  }, [enabled, key]);
 
   useEffect(() => {
     if (open) {

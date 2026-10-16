@@ -65,7 +65,8 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
     try {
       const url = await storePhoto(file);
       setForm((f) => ({ ...f, [key]: url }));
-      setSaved(false);
+      // Зургийг шууд хадгална — "Хадгалах" дарахаа мартсан ч алдагдахгүй
+      await onSave({ [key]: url });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Зураг хавсаргахад алдаа гарлаа.");
     } finally {
@@ -106,7 +107,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
             <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Баталгаажаагүй байна</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {missing.length > 0
-                ? `Дутуу: ${missing.join(", ")}. Оруулаад хадгална уу — админ шалгасны дараа захиалга авч эхэлнэ.`
+                ? `Дутуу: ${missing.join(", ")}. Оруулсны дараа админ шалгаж баталгаажуулна.`
                 : "Мэдээлэл бүрэн. Админ шалгаж баталгаажуулах хүртэл хүлээнэ үү."}
             </p>
           </div>
@@ -186,6 +187,10 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
         );
       })}
 
+      {photoItems.length > 0 && (
+        <p className="text-[11px] text-muted-foreground text-center -mt-1">Зураг оруулмагц автоматаар хадгалагдана.</p>
+      )}
+
       {/* Текст талбарууд — моторт хэрэгсэлд */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
         {textItems.length > 0 && (
@@ -219,6 +224,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
 
       {error && <p className="text-xs text-red-400 text-center">{error}</p>}
 
+      {(textItems.length > 0 || vehicleChanged) && (
       <button
         onClick={save}
         disabled={saving}
@@ -228,6 +234,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
         {saved ? "Хадгалагдлаа" : "Хадгалах"}
       </button>
+      )}
 
       <p className="text-[11px] text-muted-foreground text-center">
         Цээж зураг, хэрэгслийн мэдээлэл ачаа авах үед үйлчлүүлэгчид харагдана.
