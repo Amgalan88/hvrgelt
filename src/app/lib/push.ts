@@ -25,7 +25,7 @@ export function notificationPermission(): NotificationPermission | "unsupported"
 export type PushRole = "customer" | "operator" | "courier" | "superadmin";
 
 // Хэрэглэгч мэдэгдлийг идэвхжүүлэхэд: SW бүртгэх → зөвшөөрөл асуух →
-// push-д subscribe хийх → subscription-г DB-д хадгалах (Edge Function
+// push-д subscribe хийх → subscription-г DB-д хадгалах (api/notify.ts
 // үүгээр дамжуулж мэдэгдэл илгээнэ).
 export async function subscribeToPush(role: PushRole, userId: string): Promise<void> {
   if (!pushSupported()) throw new Error("Энэ browser push мэдэгдэл дэмждэггүй.");
