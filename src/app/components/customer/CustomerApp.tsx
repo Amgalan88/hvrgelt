@@ -348,6 +348,20 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  /**
+   * Хаяг байршилтайгаар сонгогдмогц (жагсаалт, газрын зураг, "Миний байршил")
+   * "Үргэлжлүүлэх" дарахгүйгээр дараагийн алхам руу шилжинэ. "Байршил тодорхой"
+   * гэдгийг харж амжихаар бага зэрэг хүлээнэ. Сүүлийн алхмаас засаж байвал шилжихгүй.
+   */
+  function advanceAfterPick(target: "from" | "to") {
+    const step: FormStep = target === "from" ? 1 : 2;
+    setTimeout(() => setFormStep((cur) => {
+      if (cur !== step) return cur;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return (step + 1) as FormStep;
+    }), 450);
+  }
+
   async function locateMe(target: "from" | "to") {
     setLocating(true);
     setGeoErr("");
@@ -360,6 +374,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
         setToPos(p);
         if (!toAddr.trim()) setToAddr("Миний байршил");
       }
+      advanceAfterPick(target);
     } catch (e) {
       setGeoErr(geoErrorText(e as GeoError));
     } finally {
@@ -660,6 +675,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
       setToPos(pos);
       if (!toAddr.trim()) setToAddr("Газрын зураг дээр заасан цэг");
     }
+    if (pickerFor) advanceAfterPick(pickerFor);
     setPickerFor(null);
   }
 
@@ -886,6 +902,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         locating={locating}
                         geoErr={geoErr}
                         autoPriceHint={autoPriceService}
+                        onPicked={() => advanceAfterPick(target)}
                       />
 
                       <BottomBar>
@@ -929,6 +946,25 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
                         </span>
                         <span className="text-xs font-semibold text-primary">Засах</span>
                       </button>
+                    </div>
+
+                    {/* Байр, орц, тоот — хаягийн алхмыг автоматаар алгассан тул энд бичнэ */}
+                    <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
+                      <p className="text-sm font-semibold px-1">Байр, орц, тоот <span className="text-xs font-normal text-muted-foreground">(заавал биш)</span></p>
+                      {([
+                        { label: "Авах", value: fromDetail, set: setFromDetail, dot: <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" /> },
+                        { label: "Хүргэх", value: toDetail, set: setToDetail, dot: <MapPin className="w-3.5 h-3.5 text-primary shrink-0" /> },
+                      ] as const).map((f) => (
+                        <label key={f.label} className="flex items-center gap-2.5 bg-secondary/60 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-primary/20">
+                          {f.dot}
+                          <input
+                            value={f.value}
+                            onChange={(e) => f.set(e.target.value)}
+                            placeholder={`${f.label}: байр, орц, давхар, тоот`}
+                            className="flex-1 min-w-0 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+                          />
+                        </label>
+                      ))}
                     </div>
 
                     {visibleSubs(service).length > 0 && (

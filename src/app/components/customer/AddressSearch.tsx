@@ -21,6 +21,8 @@ interface AddressSearchProps {
   geoErr?: string;
   /** Байршилтай бол үнэ шууд гарна гэдгийг сануулах эсэх */
   autoPriceHint?: boolean;
+  /** Жагсаалтаас байршилтай газар сонгомогц — дараагийн алхам руу шилжинэ */
+  onPicked?: () => void;
 }
 
 const SOURCE_ICON: Record<PlaceSource, typeof Store> = { partner: Store, saved: Bookmark, recent: History, map: MapPin };
@@ -30,7 +32,7 @@ const SOURCE_LABEL: Record<PlaceSource, string> = { partner: "Газрууд", s
  * Хаяг хайх — "Дархан бүсийн карго" гэж бичихэд байршилтайгаа гарна.
  * Сонгосон газрын байршлаар зай, үнэ шууд бодогдоно.
  */
-export function AddressSearch({ target, value, onChange, candidates, onOpenMap, onMyLocation, locating, geoErr, autoPriceHint }: AddressSearchProps) {
+export function AddressSearch({ target, value, onChange, candidates, onOpenMap, onMyLocation, locating, geoErr, autoPriceHint, onPicked }: AddressSearchProps) {
   const [open, setOpen] = useState(false);
   const [remote, setRemote] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -65,7 +67,14 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
     : candidates.filter((c) => c.source !== "partner").slice(0, 5);
   // Апп-ын газрын нэртэй давхардсан газрын зургийн үр дүнг хасна
   const localNames = new Set(local.map((l) => l.name.toLowerCase()));
-  const mapResults = remote.filter((r) => !localNames.has(r.name.toLowerCase()));
+  // Газрын зургийн эх сурвалж нэг газрыг олон дахин буцаадаг — нэр, дэд гарчгаар давхардлыг хасна
+  const seenRemote = new Set<string>();
+  const mapResults = remote.filter((r) => {
+    const key = `${r.name}|${r.subtitle ?? ""}`.toLowerCase();
+    if (localNames.has(r.name.toLowerCase()) || seenRemote.has(key)) return false;
+    seenRemote.add(key);
+    return true;
+  });
 
   async function pick(r: PlaceResult) {
     let pos = r.pos ?? null;
@@ -76,7 +85,12 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
     }
     onChange({ addr: r.name, pos });
     setOpen(false);
-    setTimeout(() => detailRef.current?.focus(), 50);
+    // Байршилтай бол шууд дараагийн алхам; байр, тоотыг сүүлийн алхамд бичнэ.
+    // Гарын товчлуур өөрөө нээгдэхгүй — хэрэгтэй үед л талбарт дарна.
+    if (pos) {
+      (document.activeElement as HTMLElement | null)?.blur();
+      onPicked?.();
+    }
   }
 
   const showList = open && !value.pos;
@@ -94,7 +108,7 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
             placeholder={placeholder}
-            autoFocus={!value.addr}
+
             enterKeyHint="search"
             className="w-full bg-transparent text-base font-semibold placeholder:text-muted-foreground/70 placeholder:font-normal focus:outline-none"
           />
