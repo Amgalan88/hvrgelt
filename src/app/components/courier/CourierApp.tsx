@@ -10,6 +10,7 @@ import { alertNewOrder } from "../../lib/alert";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
 import { PushToggle } from "../shared/PushToggle";
+import { notifyCourierDocsReady } from "../../lib/push";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { serviceById, serviceLabel } from "../customer/services";
 import { useLocationSharing } from "./useLocationSharing";
@@ -131,6 +132,15 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   };
   const missing = missingDocs(account?.vehicle, docs);
   const docsMissing = missing.length > 0;
+
+  // Баримт дутуугаас бүрэн болох мөчид админд мэдэгдэнэ (апп нээх бүрт биш)
+  const readyForReview = !!account && !account.verified && !docsMissing;
+  const wasReady = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!account) return;
+    if (wasReady.current === false && readyForReview && shareLocation) notifyCourierDocsReady(courierId);
+    wasReady.current = readyForReview;
+  }, [account, readyForReview, courierId, shareLocation]);
 
   // Шинээр бүртгүүлсэн хүргэгч шууд баримтын хуудсанд орно
   const routedToDocs = useRef(false);

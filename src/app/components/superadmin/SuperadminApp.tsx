@@ -4,7 +4,9 @@ import { TariffSettings } from "./TariffSettings";
 import type { Tariff } from "../../lib/pricing";
 import { RoleHeader } from "../shared/RoleHeader";
 import { useUser } from "../shared/UserContext";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { PushToggle } from "../shared/PushToggle";
+import { alertNewOrder } from "../../lib/alert";
 import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare, ChevronRight } from "lucide-react";
 import { Logo } from "../shared/Logo";
 import { VEHICLES as VEHICLE_OPTIONS, VEHICLE_ICON, docItems, missingDocs, type Vehicle } from "../../lib/vehicles";
@@ -394,6 +396,12 @@ export function SuperadminApp({
   const isPending = (c: CourierAccount) => !c.verified && missingDocs(c.vehicle, c).length === 0;
   const pendingReview = courierAccounts.filter(isPending).length;
   const sortedCouriers = [...courierAccounts].sort((a, b) => Number(isPending(b)) - Number(isPending(a)));
+  // Апп нээлттэй байхад шинэ хүргэгч шалгалтад орж ирвэл дуут дохио
+  const prevPending = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevPending.current !== null && pendingReview > prevPending.current) alertNewOrder();
+    prevPending.current = pendingReview;
+  }, [pendingReview]);
   const [bankDraft, setBankDraft] = useState(bankInfo);
   const [locPartner, setLocPartner] = useState<Partner | null>(null);
   const [locError, setLocError] = useState("");
@@ -429,6 +437,7 @@ export function SuperadminApp({
         onToggleTheme={toggleTheme}
         onLogout={onLogout}
       >
+        <PushToggle role="superadmin" userId="superadmin" />
         <button
           onClick={onViewAs}
           title="Бусад role-ын дэлгэцийг шалгах"

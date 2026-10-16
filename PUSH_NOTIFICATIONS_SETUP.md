@@ -103,6 +103,22 @@ Supabase Dashboard → **Database → Webhooks → Create a new hook**:
 
 ---
 
+## 8. Шинэ хүргэгчийн мэдэгдэл (супер админд) — Vercel
+
+Хүргэгч баримтаа бүрэн оруулмагц супер админд «Шинэ хүргэгч шалгалт хүлээж
+байна» гэж очно. Энэ нь Supabase биш, [api/notify.ts](api/notify.ts) (Vercel)
+тул CLI хэрэггүй. Vercel → Settings → Environment Variables-д (VITE_-гүй):
+
+| Key | Value |
+|---|---|
+| `VITE_VAPID_PUBLIC_KEY` | Public Key (апп-д ч хэрэгтэй — Production, Preview) |
+| `VAPID_PRIVATE_KEY` | Private Key — **нууц** |
+| `SUPABASE_SERVICE_ROLE_KEY` | (төлбөрт аль хэдийн нэмсэн бол дахин хэрэггүй) |
+
+Redeploy хийсний дараа супер админ толгой хэсгийн 🔔 товчоор мэдэгдлээ
+асаана. Апп нээлттэй үед мэдэгдэл тохируулаагүй ч дуут дохио гарч, «Хүргэгчид»
+таб дээр тоо харагдана.
+
 ## Хэрэв push notification хэрэггүй болвол
 
 Тохиргоог алгасаж болно — `.env`-д `VITE_VAPID_PUBLIC_KEY` байхгүй бол Settings

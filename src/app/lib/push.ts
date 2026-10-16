@@ -22,7 +22,7 @@ export function notificationPermission(): NotificationPermission | "unsupported"
   return Notification.permission;
 }
 
-export type PushRole = "customer" | "operator" | "courier";
+export type PushRole = "customer" | "operator" | "courier" | "superadmin";
 
 // Хэрэглэгч мэдэгдлийг идэвхжүүлэхэд: SW бүртгэх → зөвшөөрөл асуух →
 // push-д subscribe хийх → subscription-г DB-д хадгалах (Edge Function
@@ -58,6 +58,19 @@ export async function subscribeToPush(role: PushRole, userId: string): Promise<v
     { onConflict: "endpoint" },
   );
   if (error) throw error;
+}
+
+/**
+ * Хүргэгч баримтаа бүрэн оруулмагц супер админд push илгээлгэнэ (api/notify.ts).
+ * Сервер DB-ээс өөрөө шалгадаг тул илүү дуудсан ч хор хөнөөлгүй; тохируулаагүй
+ * (501) эсвэл сүлжээ тасарсан бол чимээгүй өнгөрнө.
+ */
+export function notifyCourierDocsReady(courierId: string): void {
+  void fetch("/api/notify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "courier-docs", courierId }),
+  }).catch(() => {});
 }
 
 export async function unsubscribeFromPush(): Promise<void> {
