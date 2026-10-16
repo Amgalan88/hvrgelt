@@ -6,7 +6,7 @@ import {
 import { Logo, LogoMark } from "../shared/Logo";
 import { SERVICES } from "../customer/services";
 import { SERVICE_ICON } from "../customer/serviceIcons";
-import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE } from "../../lib/contact";
+import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE, COMPANY } from "../../lib/contact";
 
 export type LegalKey = "terms" | "privacy" | "about" | "contact";
 
@@ -71,14 +71,14 @@ function PhonePreview() {
         </div>
         <div className="flex items-center gap-1.5 px-4 py-2">
           <LogoMark size={20} />
-          <span className="text-[11px] font-extrabold tracking-tight">Дархан <span style={{ color: "#e8531c" }}>хүргэлт</span></span>
+          <span className="text-[11px] font-extrabold tracking-tight">Дархан <span style={{ color: "#ff6028" }}>хүргэлт</span></span>
         </div>
         <div className="mx-3 rounded-2xl bg-[#16181d] text-white p-3.5">
           <p className="text-[9px] text-white/55 text-right">Алхам 1/4</p>
           <p className="text-[17px] font-extrabold leading-tight mt-0.5">Юу хүргүүлэх вэ?</p>
           <p className="text-[9.5px] text-white/60 mt-1">Үйлчилгээгээ сонгоно уу</p>
           <div className="grid grid-cols-4 gap-1 mt-2.5">
-            <span className="h-[3px] rounded-full bg-[#e8531c]" />
+            <span className="h-[3px] rounded-full bg-[#ff6028]" />
             <span className="h-[3px] rounded-full bg-white/15" />
             <span className="h-[3px] rounded-full bg-white/15" />
             <span className="h-[3px] rounded-full bg-white/15" />
@@ -88,8 +88,8 @@ function PhonePreview() {
           {rows.map((sv, i) => {
             const Icon = SERVICE_ICON[sv.id] ?? Package;
             return (
-              <div key={sv.id} className={`flex items-center gap-2 px-2.5 py-2 ${i === 0 ? "bg-[#e8531c]/[0.06]" : ""}`}>
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${i === 0 ? "bg-[#e8531c]/15 text-[#e8531c]" : "bg-[#efece7] text-[#16181d]"}`}>
+              <div key={sv.id} className={`flex items-center gap-2 px-2.5 py-2 ${i === 0 ? "bg-[#ff6028]/[0.06]" : ""}`}>
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${i === 0 ? "bg-[#ff6028]/15 text-[#ff6028]" : "bg-[#efece7] text-[#16181d]"}`}>
                   <Icon className="w-3.5 h-3.5" />
                 </span>
                 <span className="flex-1 min-w-0">
@@ -144,7 +144,16 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
             >
-              <p className="text-sm text-white/70">Дархан хотын 65 жилийн ойд зориулав</p>
+              <div className="flex items-center gap-4">
+                <img
+                  src="/logo-full.png"
+                  alt="Дархан хүргэлт — Хурдан. Найдвартай. Дархандаа. 9937 · 8837 · 9637-1961, «Морьтой Бэрс» ХХК"
+                  width={112}
+                  height={112}
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full shadow-2xl ring-4 ring-white/15 shrink-0"
+                />
+                <p className="text-sm text-white/70">Дархан хотын 65 жилийн ойд зориулав</p>
+              </div>
               <h1 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(2.5rem, 7vw, 4.4rem)", lineHeight: 0.98, letterSpacing: "-0.04em" }}>
                 Хурдан.<br />Найдвартай.<br />
                 <span style={{ color: "var(--brand)" }}>Дархандаа.</span>
@@ -408,7 +417,7 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
         </div>
         <div className="border-t border-white/10">
           <div className="max-w-6xl mx-auto px-5 md:px-8 py-5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
-            <span>© {year} {SITE}. Бүх эрх хуулиар хамгаалагдсан.</span>
+            <span>© {year} {COMPANY} · {SITE}. Бүх эрх хуулиар хамгаалагдсан.</span>
             <button onClick={() => onLegal("contact")} className="hover:text-white">Холбоо барих</button>
           </div>
         </div>

@@ -39,7 +39,7 @@ export function DeliveredCelebration({ order, userPhone, onRate, onFeedback, onD
     if (fired.current) return;
     fired.current = true;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const colors = ["#e8531c", "#ffb01f", "#12a150", "#ffffff"];
+    const colors = ["#ff6028", "#ffb01f", "#12a150", "#ffffff"];
     confetti({ particleCount: 90, spread: 70, origin: { y: 0.35 }, colors });
     const t = setTimeout(() => confetti({ particleCount: 50, spread: 100, origin: { y: 0.3 }, colors }), 350);
     return () => clearTimeout(t);

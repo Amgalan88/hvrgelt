@@ -23,3 +23,5 @@ export const SOCIAL = {
 };
 
 export const SITE = "hvrgelt.mn";
+/** Үйлчилгээ үзүүлэгч хуулийн этгээд (логон дээрх) */
+export const COMPANY = "«Морьтой Бэрс» ХХК";

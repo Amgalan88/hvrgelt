@@ -8,7 +8,7 @@ import { PatternLock } from "../shared/PatternLock";
 import { pushConfigured, pushSupported, notificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribed } from "../../lib/push";
 
 const ACCENT_SWATCHES: { key: AccentColor; label: string; color: string }[] = [
-  { key: "orange", label: "Улбар шар", color: "#e8531c" },
+  { key: "orange", label: "Улбар шар", color: "#ff6028" },
   { key: "blue", label: "Хөх", color: "#3b82f6" },
   { key: "green", label: "Ногоон", color: "#10b981" },
   { key: "violet", label: "Ягаан час", color: "#a855f7" },

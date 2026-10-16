@@ -12,8 +12,8 @@
   --font-display: 'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-code: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  --brand: #e8531c;
-  --brand-strong: #c9430f;
+  --brand: #ff6028;
+  --brand-strong: #d9480f;
 
   --background: #f7f5f2;
   --foreground: #16181d;
@@ -21,13 +21,13 @@
   --card-foreground: #16181d;
   --popover: #ffffff;
   --popover-foreground: #16181d;
-  --primary: #e8531c;
+  --primary: #ff6028;
   --primary-foreground: #ffffff;
   --secondary: #efece7;
   --secondary-foreground: #16181d;
   --muted: #efece7;
   --muted-foreground: #646976;
-  --accent: #e8531c;
+  --accent: #ff6028;
   --accent-foreground: #ffffff;
   --destructive: #d92d20;
   --destructive-foreground: #ffffff;
@@ -38,28 +38,28 @@
   --switch-background: #d9d5ce;
   --font-weight-medium: 600;
   --font-weight-normal: 400;
-  --ring: #e8531c;
+  --ring: #ff6028;
   --radius: 0.75rem;
   --shadow-card: 0 1px 2px rgba(22, 24, 29, 0.04), 0 4px 14px rgba(22, 24, 29, 0.05);
   --map-filter: none;
 
-  --chart-1: #e8531c;
+  --chart-1: #ff6028;
   --chart-2: #12a150;
   --chart-3: #2563eb;
   --chart-4: #f59e0b;
   --chart-5: #8b5cf6;
   --sidebar: #ffffff;
   --sidebar-foreground: #16181d;
-  --sidebar-primary: #e8531c;
+  --sidebar-primary: #ff6028;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #efece7;
   --sidebar-accent-foreground: #16181d;
   --sidebar-border: rgba(22, 24, 29, 0.09);
-  --sidebar-ring: #e8531c;
+  --sidebar-ring: #ff6028;
 }
 
 .dark {
-  --brand: #ff6a33;
+  --brand: #ff6028;
   --brand-strong: #ff8a5c;
 
   --background: #0b0d12;
@@ -92,6 +92,9 @@
   --sidebar-accent-foreground: #f2f3f5;
   --sidebar-border: rgba(255, 255, 255, 0.08);
 }
+
+/* Цайвар горимд улбар шар жижиг бичиг уншигдахуйц бараан өнгөөр (товч, дэвсгэр тод хэвээр) */
+:root:not(.dark):not(.accent-blue):not(.accent-green):not(.accent-violet) .text-primary { color: var(--brand-strong) }
 
 /* Цайвар горимд картууд дэвсгэрээс зөөлөн тодорно */
 :root:not(.dark) .bg-card {
