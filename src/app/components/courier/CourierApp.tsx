@@ -5,6 +5,7 @@ import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronR
 import type { Order, CourierUser, CourierDocs } from "../shared/types";
 import type { CourierAccount } from "../shared/store";
 import { CourierDocsForm } from "./CourierDocsForm";
+import { VEHICLE_ICON, missingDocs } from "../../lib/vehicles";
 import { alertNewOrder } from "../../lib/alert";
 import { useUser } from "../shared/UserContext";
 import { Logo } from "../shared/Logo";
@@ -43,7 +44,6 @@ interface CourierAppProps {
   onSetOnline: (online: boolean) => Promise<void>;
 }
 
-const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
 export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true, courierAccounts, onClaim, onSetOnline }: CourierAppProps) {
   const [tab, setTab] = useState<"active" | "done" | "docs">("active");
@@ -126,7 +126,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
     plate: account?.plate,
     verified: account?.verified ?? false,
   };
-  const docsMissing = !docs.photoUrl || !docs.licensePhotoUrl || !docs.carPhotoUrl || !docs.plate;
+  const docsMissing = missingDocs(account?.vehicle, docs).length > 0;
 
   // ── Захиалгыг хүлээн авах ──
   // Үйлчлүүлэгчийн утасны дугаар зөвхөн захиалгыг хүлээн авсны дараа
@@ -220,7 +220,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
 
         {/* Баримт бичиг */}
         {tab === "docs" && (
-          <CourierDocsForm docs={docs} phone={courierInfo?.phone ?? ""} onSave={onSaveDocs} />
+          <CourierDocsForm key={account?.vehicle} docs={docs} vehicle={account?.vehicle} phone={courierInfo?.phone ?? ""} onSave={onSaveDocs} />
         )}
 
         {/* Active orders — PRIMARY FOCUS */}

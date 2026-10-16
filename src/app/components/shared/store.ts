@@ -1,4 +1,5 @@
 import { DEFAULT_TARIFF, TARIFF_SETTINGS_KEY, parseTariff, type Tariff } from "../../lib/pricing";
+import type { Vehicle } from "../../lib/vehicles";
 import { createMockInvoice, type QpayBank } from "../../lib/mockQpay";
 import { useState, useCallback, useEffect } from "react";
 import type { Order, OrderStatus, CourierUser, CourierDocs, PartnerProduct, OrderRating, BasketItem } from "./types";
@@ -66,7 +67,7 @@ export interface CourierAccount {
   phone: string;
   authMethod: AuthMethod;
   authKey: string;
-  vehicle: "мотоцикл" | "автомашин" | "дугуй" | "мопед";
+  vehicle: Vehicle;
   available: boolean;
   rating: number;
   totalDeliveries: number;
@@ -1043,6 +1044,13 @@ export function useStore() {
       if (docs.licenseExpiry !== undefined) patch.license_expiry = docs.licenseExpiry;
       if (docs.carPhotoUrl !== undefined) patch.car_photo_url = docs.carPhotoUrl;
       if (docs.plate !== undefined) patch.plate = docs.plate;
+      // Хэрэгсэл сольсон бол шаардах баримт өөрчлөгдөнө — дахин шалгуулна
+      if (docs.vehicle !== undefined) {
+        patch.vehicle = docs.vehicle;
+        patch.verified = false;
+        patch.verified_at = null;
+        patch.available = false;
+      }
       const { error } = await supabase.from("couriers").update(patch).eq("id", id);
       if (error) throw error;
       await refreshCouriers();

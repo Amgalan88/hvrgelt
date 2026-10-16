@@ -305,6 +305,7 @@ function Inner() {
             const c = store.courierAccounts.find((x) => x.id === courierId);
             if (!c) return undefined;
             return {
+              vehicle: c.vehicle,
               photoUrl: c.photoUrl,
               licensePhotoUrl: c.licensePhotoUrl,
               licenseNo: c.licenseNo,

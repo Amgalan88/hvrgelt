@@ -1,3 +1,4 @@
+import type { Vehicle } from "../../lib/vehicles";
 export type OrderStatus =
   | "шинэ"
   | "үнэ батлах"          // оператор үнэ тогтоов — үйлчлүүлэгч батална
@@ -79,7 +80,7 @@ export interface CourierUser {
   id: string;
   name: string;
   phone: string;
-  vehicle: "мотоцикл" | "автомашин" | "дугуй" | "мопед";
+  vehicle: Vehicle;
   available: boolean;
   rating: number;
   totalDeliveries: number;
@@ -89,6 +90,8 @@ export interface CourierUser {
 
 /** Жолоочийн баримт бичиг — үйлчлүүлэгчид харагдах 5 мэдээлэл */
 export interface CourierDocs {
+  /** Шаардах баримт хэрэгслээс хамаарна (lib/vehicles.ts) */
+  vehicle?: Vehicle;
   photoUrl?: string;
   licensePhotoUrl?: string;
   licenseNo?: string;

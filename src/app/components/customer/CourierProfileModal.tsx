@@ -4,6 +4,7 @@ import { IdCard, Car, Hash, Phone, Star, X, BadgeCheck } from "lucide-react";
 import { courierProfile } from "./courierProfiles";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import type { CourierDocs } from "../shared/types";
+import { isMotorized, hasPlate } from "../../lib/vehicles";
 
 interface CourierProfileModalProps {
   courierId: string;
@@ -39,7 +40,17 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
     licenseExpiry: docs?.licenseExpiry || mock.licenseExpiry,
   };
   const isMock = !docs?.photoUrl && !docs?.licensePhotoUrl && !docs?.carPhotoUrl;
-  const [panel, setPanel] = useState<PanelKey>("license");
+  // Явган, дугуй хүргэгчид үнэмлэх, улсын дугаар байхгүй — хамаарахгүй товчийг нууна
+  const vehicle = docs?.vehicle;
+  if (vehicle) p.vehicle = vehicle;
+  const orbit = ORBIT.filter((o) => {
+    if (isMock || !vehicle) return true;
+    if (o.key === "license") return isMotorized(vehicle) && !!docs?.licensePhotoUrl;
+    if (o.key === "car") return !!docs?.carPhotoUrl;
+    if (o.key === "plate") return hasPlate(vehicle) && !!docs?.plate;
+    return true;
+  });
+  const [panel, setPanel] = useState<PanelKey>(orbit[0].key);
 
   return (
     <div
@@ -78,8 +89,8 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
               )}
             </div>
 
-            {ORBIT.map((o, i) => {
-              const angle = (-90 + i * (360 / ORBIT.length)) * (Math.PI / 180);
+            {orbit.map((o, i) => {
+              const angle = (-90 + i * (360 / orbit.length)) * (Math.PI / 180);
               const Icon = o.icon;
               const active = panel === o.key;
               return (
@@ -114,7 +125,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
           <div className="text-center">
             <p className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {p.vehicle} · {p.experience} жил туршлагатай · {p.deliveries} хүргэлт
+              {isMock ? `${p.vehicle} · ${p.experience} жил туршлагатай · ${p.deliveries} хүргэлт` : p.vehicle}
             </p>
           </div>
 

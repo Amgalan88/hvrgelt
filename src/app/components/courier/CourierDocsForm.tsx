@@ -1,21 +1,36 @@
 import { useRef, useState } from "react";
-import { Camera, IdCard, Car, Hash, Loader2, CheckCircle, ShieldAlert, Save } from "lucide-react";
+import { Camera, IdCard, Car, Bike, Hash, Loader2, CheckCircle, ShieldAlert, Save } from "lucide-react";
 import type { CourierDocs } from "../shared/types";
 import { storePhoto } from "../../lib/photo";
+import { VEHICLES, VEHICLE_ICON, docItems, missingDocs, type DocKey, type Vehicle } from "../../lib/vehicles";
 
 interface CourierDocsFormProps {
   docs: CourierDocs;
+  /** Одоогийн тээврийн хэрэгсэл — шаардах баримт үүнээс хамаарна */
+  vehicle?: Vehicle;
   phone: string;
-  onSave: (docs: CourierDocs) => Promise<void>;
+  /** vehicle-ийг зөвхөн сольсон үед дамжуулна — солиход дахин баталгаажуулна */
+  onSave: (docs: CourierDocs & { vehicle?: Vehicle }) => Promise<void>;
 }
 
+type PhotoKey = "photoUrl" | "licensePhotoUrl" | "carPhotoUrl";
+const PHOTO_KEYS: DocKey[] = ["photoUrl", "licensePhotoUrl", "carPhotoUrl"];
+const PLACEHOLDER: Partial<Record<DocKey, string>> = {
+  plate: "1234 УБА",
+  licenseNo: "82-441907",
+  licenseClass: "B",
+  licenseExpiry: "2029.04.18",
+};
+
 /**
- * Жолоочийн баримт бичиг — үйлчлүүлэгчид харагдах 5 мэдээлэл:
- * цээж зураг, жолооны үнэмлэх, машины зураг, улсын дугаар, утас.
- * Супер админ шалгаж баталгаажуулах хүртэл захиалга хуваарилагдахгүй.
+ * Хүргэгчийн баримт бичиг. Шаардлага нь тээврийн хэрэгслээс хамаарна
+ * (lib/vehicles.ts): явган, дугуй бол цээж зураг л хангалттай; моторт
+ * хэрэгсэлд жолооны үнэмлэх, хэрэгслийн зураг, улсын дугаар.
+ * Супер админ шалгаж баталгаажуулах хүртэл захиалгын санал ирэхгүй.
  */
-export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
+export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }: CourierDocsFormProps) {
   const [form, setForm] = useState<CourierDocs>(docs);
+  const [vehicle, setVehicle] = useState<Vehicle | undefined>(initialVehicle);
   const [busy, setBusy] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -27,7 +42,13 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
     carPhotoUrl: useRef<HTMLInputElement>(null),
   };
 
-  async function pick(key: "photoUrl" | "licensePhotoUrl" | "carPhotoUrl", file?: File) {
+  const items = docItems(vehicle);
+  const photoItems = items.filter((d) => PHOTO_KEYS.includes(d.key));
+  const textItems = items.filter((d) => !PHOTO_KEYS.includes(d.key));
+  const missing = missingDocs(vehicle, form);
+  const vehicleChanged = vehicle !== initialVehicle;
+
+  async function pick(key: PhotoKey, file?: File) {
     if (!file) return;
     setBusy(key);
     setError("");
@@ -47,7 +68,8 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
     setSaving(true);
     setError("");
     try {
-      await onSave(form);
+      await onSave(vehicleChanged ? { ...form, vehicle } : form);
+      if (vehicleChanged) setForm((f) => ({ ...f, verified: false }));
       setSaved(true);
     } catch {
       setError("Хадгалахад алдаа гарлаа. Дахин оролдоно уу.");
@@ -56,63 +78,82 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
     }
   }
 
-  const photoFields: { key: "photoUrl" | "licensePhotoUrl" | "carPhotoUrl"; label: string; icon: typeof Camera }[] = [
-    { key: "photoUrl",        label: "Цээж зураг",       icon: Camera },
-    { key: "licensePhotoUrl", label: "Жолооны үнэмлэх",  icon: IdCard },
-    { key: "carPhotoUrl",     label: "Машины зураг",     icon: Car },
-  ];
-
-  const missing = photoFields.filter((f) => !form[f.key]).length + (form.plate ? 0 : 1);
-
   return (
     <div className="space-y-3">
       {/* Баталгаажуулалтын төлөв */}
-      {form.verified ? (
+      {form.verified && !vehicleChanged ? (
         <div className="bg-green-500/10 border border-green-500/25 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-green-500">Баталгаажсан</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Танд захиалга хуваарилагдана.</p>
+            <p className="text-sm font-medium text-green-600 dark:text-green-400">Баталгаажсан</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Ажилд гарвал танд ойр захиалгын санал ирнэ.</p>
           </div>
         </div>
       ) : (
         <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-500">Баталгаажаагүй байна</p>
+            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Баталгаажаагүй байна</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {missing > 0
-                ? `Дутуу ${missing} мэдээллийг оруулаад хадгална уу. Админ шалгасны дараа захиалга авч эхэлнэ.`
+              {missing.length > 0
+                ? `Дутуу: ${missing.join(", ")}. Оруулаад хадгална уу — админ шалгасны дараа захиалга авч эхэлнэ.`
                 : "Мэдээлэл бүрэн. Админ шалгаж баталгаажуулах хүртэл хүлээнэ үү."}
             </p>
           </div>
         </div>
       )}
 
+      {/* Тээврийн хэрэгсэл — шаардах баримтыг тодорхойлно */}
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <Bike className="w-4 h-4 text-primary" />
+          <p className="text-sm font-medium">Юугаар хүргэх вэ</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {VEHICLES.map((v) => (
+            <button
+              key={v}
+              onClick={() => { setVehicle(v); setSaved(false); }}
+              aria-pressed={vehicle === v}
+              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                vehicle === v ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              <span className="text-lg leading-none">{VEHICLE_ICON[v]}</span> {v}
+            </button>
+          ))}
+        </div>
+        {vehicleChanged && form.verified && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">Хэрэгсэл солибол админ дахин шалгаж баталгаажуулна.</p>
+        )}
+      </div>
+
       {/* Зурагнууд */}
-      {photoFields.map((f) => {
-        const Icon = f.icon;
-        const url = form[f.key];
+      {photoItems.map((f) => {
+        const key = f.key as PhotoKey;
+        const Icon = key === "photoUrl" ? Camera : key === "licensePhotoUrl" ? IdCard : vehicle === "дугуй" ? Bike : Car;
+        const url = form[key];
         return (
-          <div key={f.key} className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+          <div key={key} className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
             <div className="flex items-center gap-2">
               <Icon className="w-4 h-4 text-primary" />
               <p className="text-sm font-medium">{f.label}</p>
+              {!f.required && <span className="text-[11px] text-muted-foreground">заавал биш</span>}
               {url && <CheckCircle className="w-3.5 h-3.5 text-green-500 ml-auto" />}
             </div>
             <input
-              ref={refs[f.key]}
+              ref={refs[key]}
               type="file"
               accept="image/*"
-              capture={f.key === "photoUrl" ? "user" : "environment"}
+              capture={key === "photoUrl" ? "user" : "environment"}
               className="hidden"
-              onChange={(e) => pick(f.key, e.target.files?.[0])}
+              onChange={(e) => pick(key, e.target.files?.[0])}
             />
             {url ? (
               <div className="space-y-2">
                 <img src={url} alt={f.label} className="w-full h-40 object-cover rounded-xl border border-border" />
                 <button
-                  onClick={() => refs[f.key].current?.click()}
+                  onClick={() => refs[key].current?.click()}
                   className="w-full border border-border text-muted-foreground py-2 rounded-xl text-xs hover:text-foreground hover:border-primary/40 transition-colors"
                 >
                   Зураг солих
@@ -120,36 +161,37 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
               </div>
             ) : (
               <button
-                onClick={() => refs[f.key].current?.click()}
-                disabled={busy === f.key}
+                onClick={() => refs[key].current?.click()}
+                disabled={busy === key}
                 className="w-full border border-dashed border-border rounded-xl py-6 flex flex-col items-center gap-1.5 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors disabled:opacity-50"
               >
-                {busy === f.key ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className="w-5 h-5" />}
-                <span className="text-xs">{busy === f.key ? "Хавсаргаж байна..." : "Зураг авах / сонгох"}</span>
+                {busy === key ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className="w-5 h-5" />}
+                <span className="text-xs">
+                  {busy === key ? "Хавсаргаж байна..." : key === "photoUrl" ? "Нүүр тод харагдах зураг авах" : "Зураг авах / сонгох"}
+                </span>
               </button>
             )}
           </div>
         );
       })}
 
-      {/* Текст талбарууд */}
+      {/* Текст талбарууд — моторт хэрэгсэлд */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Hash className="w-4 h-4 text-primary" />
-          <p className="text-sm font-medium">Машин, үнэмлэхийн мэдээлэл</p>
-        </div>
-        {[
-          { key: "plate" as const,         label: "Улсын дугаар",      ph: "1234 УБА" },
-          { key: "licenseNo" as const,     label: "Үнэмлэхийн дугаар", ph: "82-441907" },
-          { key: "licenseClass" as const,  label: "Ангилал",           ph: "B" },
-          { key: "licenseExpiry" as const, label: "Хүчинтэй хугацаа",  ph: "2029.04.18" },
-        ].map((f) => (
+        {textItems.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Hash className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium">Хэрэгсэл, үнэмлэхийн мэдээлэл</p>
+          </div>
+        )}
+        {textItems.map((f) => (
           <div key={f.key}>
-            <label className="text-xs text-muted-foreground block mb-1.5">{f.label}</label>
+            <label className="text-xs text-muted-foreground block mb-1.5">
+              {f.label}{!f.required && " (заавал биш)"}
+            </label>
             <input
-              value={form[f.key] ?? ""}
+              value={(form[f.key] as string | undefined) ?? ""}
               onChange={(e) => { setForm({ ...form, [f.key]: e.target.value }); setSaved(false); }}
-              placeholder={f.ph}
+              placeholder={PLACEHOLDER[f.key]}
               className="w-full bg-secondary/50 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50"
             />
           </div>
@@ -177,7 +219,7 @@ export function CourierDocsForm({ docs, phone, onSave }: CourierDocsFormProps) {
       </button>
 
       <p className="text-[11px] text-muted-foreground text-center">
-        Эдгээр мэдээлэл ачаа авах үед үйлчлүүлэгчид харагдана.
+        Цээж зураг, хэрэгслийн мэдээлэл ачаа авах үед үйлчлүүлэгчид харагдана.
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { VEHICLES, VEHICLE_ICON, isMotorized, type Vehicle } from "../../lib/vehicles";
 import { motion } from "motion/react";
 import { ArrowRight, ArrowLeft, CheckCircle, Smartphone, Hash, Grid3x3, Eye, EyeOff, Lock, Truck, User } from "lucide-react";
 import { Logo as AppLogo } from "../shared/Logo";
@@ -19,7 +20,7 @@ interface LoginPageProps {
   registerCourier: (data: {
     name: string;
     phone: string;
-    vehicle: "мотоцикл" | "автомашин" | "дугуй" | "мопед";
+    vehicle: Vehicle;
     authMethod: "pin" | "pattern";
     authKey: string;
   }) => Promise<string>;
@@ -32,12 +33,7 @@ interface LoginPageProps {
 /** Нэвтрэх/бүртгүүлэх урсгалыг 2 салгана */
 type LoginMode = "customer" | "courier";
 
-const VEHICLES: { key: "мотоцикл" | "автомашин" | "дугуй" | "мопед"; emoji: string }[] = [
-  { key: "мотоцикл",  emoji: "🏍️" },
-  { key: "автомашин", emoji: "🚗" },
-  { key: "мопед",     emoji: "🛵" },
-  { key: "дугуй",     emoji: "🚲" },
-];
+const VEHICLE_CHOICES = VEHICLES.map((key) => ({ key, emoji: VEHICLE_ICON[key] }));
 
 type Screen = "phone" | "auth" | "first-setup" | "register";
 type RegStep = "info" | "choose" | "pin" | "pattern";
@@ -83,7 +79,7 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
   // Register
   const [rName, setRName]           = useState("");
   const [rPhone, setRPhone]         = useState("");
-  const [rVehicle, setRVehicle]     = useState<"мотоцикл" | "автомашин" | "дугуй" | "мопед">("мотоцикл");
+  const [rVehicle, setRVehicle]     = useState<Vehicle>("мотоцикл");
   const [regStep, setRegStep]       = useState<RegStep>("info");
   const [pinFirst, setPinFirst]     = useState("");
   const [patternFirst, setPatternFirst] = useState("");
@@ -634,21 +630,26 @@ export function LoginPage({ onLogin, resolveByPhone, addCustomer, updateAccountA
           {mode === "courier" && (
             <div>
               <label className="text-xs text-muted-foreground block mb-1.5">Тээврийн хэрэгсэл</label>
-              <div className="grid grid-cols-2 gap-2">
-                {VEHICLES.map((v) => (
+              <div className="grid grid-cols-3 gap-2">
+                {VEHICLE_CHOICES.map((v) => (
                   <button
                     key={v.key}
                     onClick={() => setRVehicle(v.key)}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
                       rVehicle === v.key
                         ? "bg-primary/10 border-primary text-primary"
                         : "bg-card border-border text-muted-foreground hover:border-primary/40"
                     }`}
                   >
-                    <span>{v.emoji}</span> {v.key}
+                    <span className="text-lg leading-none">{v.emoji}</span> {v.key}
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isMotorized(rVehicle)
+                  ? "Бүртгүүлсний дараа цээж зураг, жолооны үнэмлэх, хэрэгслийнхээ зургийг оруулна."
+                  : "Бүртгүүлсний дараа цээж зургаа л оруулахад хангалттай."}
+              </p>
             </div>
           )}
           <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1">

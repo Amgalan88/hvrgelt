@@ -13,6 +13,7 @@ import { PushToggle } from "../shared/PushToggle";
 import { useFirstVisitHelp, HelpButton, HelpModal } from "../shared/HelpGuide";
 import { serviceById, serviceLabel } from "../customer/services";
 import { ExportModal } from "./ExportModal";
+import { VEHICLE_ICON } from "../../lib/vehicles";
 
 const OPERATOR_HELP_STEPS = [
   "\"Шинэ\" tab дээр ирсэн захиалгуудыг харна.",
@@ -59,7 +60,6 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   цуцлагдсан:   "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
 type FilterTab = "бүгд" | "шинэ" | "идэвхтэй" | "дууссан";
 

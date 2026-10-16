@@ -37,9 +37,9 @@ const STEPS = [
 ];
 
 const COURIER_NEEDS: { icon: LucideIcon; text: string }[] = [
-  { icon: Bike, text: "Машин, мотоцикл, мопед эсвэл дугуй" },
+  { icon: Bike, text: "Явган, дугуй, мопед, мотоцикл эсвэл машин" },
   { icon: Smartphone, text: "Интернэттэй ухаалаг утас" },
-  { icon: IdCard, text: "Жолооны үнэмлэх, тээврийн хэрэгслийн зураг" },
+  { icon: IdCard, text: "Цээж зураг — моторт хэрэгсэлд жолооны үнэмлэх" },
 ];
 
 function FacebookIcon() {

@@ -7,6 +7,7 @@ import { useUser } from "../shared/UserContext";
 import { useState, useRef } from "react";
 import { Users, Truck, Plus, Pencil, Trash2, X, LogOut, Eye, EyeOff, CheckCircle, XCircle, Shield, MapPin, Settings, ImagePlus, Loader, Search, Smartphone, KeyRound, MessageSquare, ChevronRight } from "lucide-react";
 import { Logo } from "../shared/Logo";
+import { VEHICLES as VEHICLE_OPTIONS, VEHICLE_ICON, docItems, missingDocs, type Vehicle } from "../../lib/vehicles";
 import type { OperatorAccount, CourierAccount, CustomerAccount } from "../shared/store";
 import type { Partner, PartnerCategory } from "../customer/partners";
 import { PARTNER_CATEGORIES, PARTNER_EMOJIS } from "../customer/partners";
@@ -54,8 +55,6 @@ interface SuperadminAppProps {
   onLogout: () => void;
 }
 
-const VEHICLE_OPTIONS = ["мотоцикл", "автомашин", "дугуй", "мопед"] as const;
-const VEHICLE_ICON: Record<string, string> = { мотоцикл: "🏍️", автомашин: "🚗", дугуй: "🚲", мопед: "🛵" };
 
 // ── Generic modal shell ───────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -138,7 +137,7 @@ function CourierModal({ initial, onSave, onClose }: {
   const [username, setUsername] = useState(initial?.username ?? "");
   const [password, setPassword] = useState(initial?.password ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
-  const [vehicle, setVehicle] = useState<typeof VEHICLE_OPTIONS[number]>(initial?.vehicle ?? "мотоцикл");
+  const [vehicle, setVehicle] = useState<Vehicle>(initial?.vehicle ?? "мотоцикл");
   const [showPass, setShowPass] = useState(false);
 
   return (
@@ -155,7 +154,7 @@ function CourierModal({ initial, onSave, onClose }: {
       </Field>
       <Field label="Утасны дугаар"><Input value={phone} onChange={setPhone} placeholder="9911-2233" type="tel" /></Field>
       <Field label="Тээврийн хэрэгсэл">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {VEHICLE_OPTIONS.map((v) => (
             <button key={v} onClick={() => setVehicle(v)}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${vehicle === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}>
@@ -546,7 +545,7 @@ export function SuperadminApp({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium">{cr.name}</p>
-                      <span className="text-base">{VEHICLE_ICON[cr.vehicle]}</span>
+                      <span className="text-base" title={cr.vehicle}>{VEHICLE_ICON[cr.vehicle]}</span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-full border ${cr.active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-secondary text-muted-foreground border-border"}`}>
                         {cr.active ? "идэвхтэй" : "идэвхгүй"}
                       </span>
@@ -577,14 +576,18 @@ export function SuperadminApp({
                     </button>
                   </div>
                 </div>
-                {/* Баримт бичиг — шалгаад баталгаажуулна */}
+                {/* Баримт бичиг — хэрэгслээс хамаарах шаардлагаар шалгаад баталгаажуулна */}
+                {(() => {
+                  const need = docItems(cr.vehicle);
+                  const missing = missingDocs(cr.vehicle, cr);
+                  const photos = need.filter((d) => d.key === "photoUrl" || d.key === "licensePhotoUrl" || d.key === "carPhotoUrl");
+                  return (
                 <div className="px-4 py-3 bg-secondary/30 border-t border-border space-y-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {cr.vehicle} — {need.filter((d) => d.required).map((d) => d.label).join(", ")} шаардана
+                  </p>
                   <div className="flex gap-2">
-                    {[
-                      { url: cr.photoUrl, label: "Цээж зураг" },
-                      { url: cr.licensePhotoUrl, label: "Үнэмлэх" },
-                      { url: cr.carPhotoUrl, label: "Машин" },
-                    ].map((d) => (
+                    {photos.map((d) => ({ url: cr[d.key as "photoUrl"], label: d.label, required: d.required })).map((d) => (
                       <div key={d.label} className="flex-1">
                         {d.url ? (
                           <a href={d.url} target="_blank" rel="noreferrer">
@@ -592,7 +595,7 @@ export function SuperadminApp({
                           </a>
                         ) : (
                           <div className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center">
-                            <span className="text-[10px] text-muted-foreground">дутуу</span>
+                            <span className={`text-[10px] ${d.required ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{d.required ? "дутуу" : "заавал биш"}</span>
                           </div>
                         )}
                         <p className="text-[10px] text-muted-foreground text-center mt-1">{d.label}</p>
@@ -600,12 +603,16 @@ export function SuperadminApp({
                     ))}
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-mono">
-                      {cr.plate ? `${cr.plate} · ` : ""}{cr.licenseClass ? `${cr.licenseClass} ангилал` : "ангилал ?"}
+                    <span className={missing.length > 0 && !cr.verified ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground font-mono"}>
+                      {missing.length > 0 && !cr.verified
+                        ? `Дутуу: ${missing.join(", ")}`
+                        : [cr.plate, cr.licenseNo, cr.licenseClass && `${cr.licenseClass} ангилал`].filter(Boolean).join(" · ")}
                     </span>
                     <button
                       onClick={() => onVerifyCourier(cr.id, !cr.verified)}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      disabled={!cr.verified && missing.length > 0}
+                      title={!cr.verified && missing.length > 0 ? "Заавал баримт дутуу" : undefined}
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         cr.verified
                           ? "border border-border text-muted-foreground hover:text-foreground"
                           : "bg-blue-500 text-white hover:bg-blue-600"
@@ -615,6 +622,8 @@ export function SuperadminApp({
                     </button>
                   </div>
                 </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
