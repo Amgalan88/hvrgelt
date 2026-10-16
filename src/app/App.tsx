@@ -15,6 +15,7 @@ import { PatternLock } from "./components/shared/PatternLock";
 import { LoadingScreen } from "./components/shared/Spinner";
 import { LogOut } from "lucide-react";
 import { Logo } from "./components/shared/Logo";
+import { InstallPrompt } from "./components/shared/InstallPrompt";
 import { MockPage } from "./components/MockPage";
 import { Landing, type LegalKey } from "./components/landing/Landing";
 import { LegalPage } from "./components/landing/LegalPage";
@@ -263,6 +264,9 @@ function Inner() {
           />
         </div>
       )}
+
+      {/* Нэвтэрсний дараа апп суулгаагүй бол нэг удаа асууна */}
+      {!session.viaAdmin && <InstallPrompt role={session.role} />}
 
       {session.role === "superadmin" && (
         <SuperadminApp

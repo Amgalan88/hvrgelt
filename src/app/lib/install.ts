@@ -51,6 +51,14 @@ export function isIOS(): boolean {
   return /iPad|iPhone|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
 }
 
+/**
+ * Facebook, Messenger, Instagram зэрэг апп доторх хөтөч — апп суулгах,
+ * push мэдэгдэл авах боломжгүй. Холбоосыг ихэвчлэн эндээс нээдэг.
+ */
+export function isInAppBrowser(): boolean {
+  return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|Line\/|MicroMessenger|TikTok|Snapchat/i.test(navigator.userAgent);
+}
+
 export type InstallMode = "prompt" | "ios" | "installed" | "unavailable";
 
 /** Энэ төхөөрөмж дээр апп-ыг яаж суулгах вэ */
