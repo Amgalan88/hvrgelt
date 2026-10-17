@@ -9,7 +9,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY                             — захиалгыг төлөгдсөн болгоход
 //
 // Хүсэлтүүд (нэг функц — Vercel-ийн зөвлөмжийн дагуу):
-//   POST /api/payments?action=create   { orderId }    → нэхэмжлэх (url эсвэл QR)
+//   POST /api/payments?action=create   { orderId }    → Byl checkout (url) эсвэл QPay QR
 //   POST /api/payments?action=check    { paymentId }  → провайдероос лавлаж баталгаажуулна
 //   POST /api/payments?action=webhook  (Byl)          → Byl-Signature шалгаж баталгаажуулна
 //
@@ -45,27 +45,58 @@ function hhmm() {
 }
 
 // ── Byl ────────────────────────────────────────────────────────────────
-// https://byl.mn/docs/en/api/invoices.html , https://byl.mn/docs/en/webhook.html
+// https://byl.mn/docs/en/api/checkouts.html , https://byl.mn/docs/en/webhook.html
+//
+// Checkout ашиглана: төлсний дараа Byl үйлчлүүлэгчийг success_url-аар апп
+// руу автоматаар буцаана, имэйл асуухгүй. Checkout үүсгэж чадахгүй бол
+// энгийн нэхэмжлэх (invoice) рүү шилжинэ. DB-д checkout-ийг "checkout:<id>"
+// гэж хадгалж ялгана.
 
 const BYL = "https://byl.mn/api/v1";
+const CHECKOUT = "checkout:";
+const bylProject = () => `${BYL}/projects/${encodeURIComponent(env("BYL_PROJECT_ID"))}`;
+const bylHeaders = () => ({ Authorization: `Bearer ${env("BYL_API_TOKEN")}`, Accept: "application/json", "Content-Type": "application/json" });
 
-async function bylCreate(orderId: string, amount: number) {
-  const res = await fetch(`${BYL}/projects/${encodeURIComponent(env("BYL_PROJECT_ID"))}/invoices`, {
+async function bylCreate(orderId: string, amount: number, paymentId: string, returnUrl: string) {
+  const title = `Дархан хүргэлт — захиалга #${orderId}`;
+  const res = await fetch(`${bylProject()}/checkouts`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${env("BYL_API_TOKEN")}`, Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ amount, description: `Дархан хүргэлт — захиалга #${orderId}`.slice(0, 255) }),
+    headers: bylHeaders(),
+    body: JSON.stringify({
+      items: [{ price_data: { unit_amount: amount, product_data: { name: title.slice(0, 120) } }, quantity: 1 }],
+      success_url: `${returnUrl}?paid=${encodeURIComponent(orderId)}`,
+      cancel_url: returnUrl,
+      client_reference_id: paymentId.slice(0, 48),
+      email_collection: false,
+      phone_number_collection: false,
+    }),
   });
-  if (!res.ok) throw new Error(`Byl нэхэмжлэх үүсгэж чадсангүй: ${res.status} ${await res.text()}`);
-  const { data } = await res.json();
+  if (res.ok) {
+    const { data } = await res.json();
+    if (data?.id && data?.url) {
+      return { invoiceId: CHECKOUT + String(data.id), checkoutUrl: data.url as string, qrText: undefined as string | undefined, qrImage: undefined as string | undefined, raw: data };
+    }
+  } else {
+    console.warn("byl checkout", res.status, await res.text());
+  }
+  // Checkout бүтэлгүйтвэл энгийн нэхэмжлэх
+  const inv = await fetch(`${bylProject()}/invoices`, {
+    method: "POST",
+    headers: bylHeaders(),
+    body: JSON.stringify({ amount, description: title.slice(0, 255) }),
+  });
+  if (!inv.ok) throw new Error(`Byl нэхэмжлэх үүсгэж чадсангүй: ${inv.status} ${await inv.text()}`);
+  const { data } = await inv.json();
   return { invoiceId: String(data.id), checkoutUrl: data.url as string, qrText: undefined as string | undefined, qrImage: undefined as string | undefined, raw: data };
 }
 
 async function bylPaid(invoiceId: string, minAmount: number): Promise<boolean> {
-  const res = await fetch(`${BYL}/projects/${encodeURIComponent(env("BYL_PROJECT_ID"))}/invoices/${encodeURIComponent(invoiceId)}`, {
-    headers: { Authorization: `Bearer ${env("BYL_API_TOKEN")}`, Accept: "application/json" },
-  });
+  const isCheckout = invoiceId.startsWith(CHECKOUT);
+  const id = isCheckout ? invoiceId.slice(CHECKOUT.length) : invoiceId;
+  const res = await fetch(`${bylProject()}/${isCheckout ? "checkouts" : "invoices"}/${encodeURIComponent(id)}`, { headers: bylHeaders() });
   if (!res.ok) return false;
   const { data } = await res.json();
+  if (isCheckout) return data?.status === "complete" && Number(data.amount_total ?? minAmount) >= minAmount;
   return data?.status === "paid" && Number(data.amount) >= minAmount;
 }
 
@@ -135,7 +166,7 @@ async function markPaid(supabase: any, payment: any) {
     .eq("status", "төлбөр хүлээж байна");
 }
 
-async function create(body: { orderId?: string }) {
+async function create(body: { orderId?: string }, origin: string) {
   const prov = provider();
   if (!prov) return json({ error: "Онлайн төлбөр тохируулаагүй" }, 501);
   if (!body.orderId) return json({ error: "orderId шаардлагатай" }, 400);
@@ -165,7 +196,7 @@ async function create(body: { orderId?: string }) {
   }
 
   const paymentId = `pay-${order.id}-${Date.now()}`;
-  const inv = prov === "byl" ? await bylCreate(order.id, order.price) : await qpayCreate(order.id, order.price, paymentId);
+  const inv = prov === "byl" ? await bylCreate(order.id, order.price, paymentId, `${origin}/`) : await qpayCreate(order.id, order.price, paymentId);
   await supabase.from("payments").insert({
     id: paymentId,
     order_id: order.id,
@@ -200,16 +231,32 @@ async function check(body: { paymentId?: string }) {
 async function bylWebhook(raw: string, signature: string) {
   if (!(await bylSignatureValid(raw, signature))) return json({ error: "invalid signature" }, 401);
   const event = JSON.parse(raw);
-  if (event.type !== "invoice.paid") return json({ ok: true, ignored: event.type });
-  const inv = event.data?.object;
+  const obj = event.data?.object;
+  let invoiceId: string;
+  let amount: number;
+  if (event.type === "checkout.completed") {
+    invoiceId = CHECKOUT + String(obj?.id);
+    amount = Number(obj?.amount_total);
+  } else if (event.type === "invoice.paid") {
+    invoiceId = String(obj?.id);
+    amount = Number(obj?.amount);
+  } else {
+    return json({ ok: true, ignored: event.type });
+  }
   const supabase = db();
-  const { data: rows } = await supabase.from("payments").select("*").eq("provider", "byl").eq("invoice_id", String(inv?.id)).limit(1);
+  const { data: rows } = await supabase.from("payments").select("*").eq("provider", "byl").eq("invoice_id", invoiceId).limit(1);
   const payment = rows?.[0];
   // 200 буцаана — Byl дахин дахин илгээхгүй
   if (!payment) return json({ ok: true, note: "payment not found" });
-  if (Number(inv?.amount) < Number(payment.amount)) return json({ ok: true, note: "amount mismatch" });
+  if (!(amount >= Number(payment.amount))) return json({ ok: true, note: "amount mismatch" });
   await markPaid(supabase, payment);
   return json({ ok: true });
+}
+
+/** Төлсний дараа буцах хаяг — апп-ын нээгдсэн домэйн (www.hvrgelt.mn г.м.) */
+function appOrigin(request: Request): string {
+  const o = request.headers.get("origin") ?? "";
+  return /^https?:\/\/[^/]+$/.test(o) ? o : new URL(request.url).origin;
 }
 
 export default {
@@ -220,7 +267,7 @@ export default {
       const raw = await request.text();
       if (action === "webhook") return await bylWebhook(raw, request.headers.get("byl-signature") ?? "");
       const body = raw ? JSON.parse(raw) : {};
-      if (action === "create") return await create(body);
+      if (action === "create") return await create(body, appOrigin(request));
       if (action === "check") return await check(body);
       return json({ error: "unknown action" }, 404);
     } catch (err) {

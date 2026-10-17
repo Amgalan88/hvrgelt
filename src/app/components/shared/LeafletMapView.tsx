@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { DARKHAN_CENTER, type LatLng } from "../../lib/geo";
 
-import type { MapViewProps, MarkerKind } from "./MapView";
+import { routeLine, type MapViewProps, type MarkerKind } from "./MapView";
 
 /** Апп доторх маршрутын дүрстэй ижил: ногоон цэг → улбар шар тэмдэг, хүргэгч */
 function iconHtml(kind: MarkerKind): string {
@@ -11,7 +11,7 @@ function iconHtml(kind: MarkerKind): string {
     return `<span style="display:block;width:18px;height:18px;border-radius:50%;background:#12a150;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span>`;
   }
   if (kind === "to") {
-    return `<svg width="30" height="38" viewBox="0 0 30 38" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))"><path d="M15 1C7.3 1 1.5 6.8 1.5 14.2 1.5 24 15 37 15 37s13.5-13 13.5-22.8C28.5 6.8 22.7 1 15 1z" fill="#e8531c" stroke="#fff" stroke-width="2"/><circle cx="15" cy="14" r="5" fill="#fff"/></svg>`;
+    return `<svg width="30" height="38" viewBox="0 0 30 38" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))"><path d="M15 1C7.3 1 1.5 6.8 1.5 14.2 1.5 24 15 37 15 37s13.5-13 13.5-22.8C28.5 6.8 22.7 1 15 1z" style="fill:var(--primary)" stroke="#fff" stroke-width="2"/><circle cx="15" cy="14" r="5" fill="#fff"/></svg>`;
   }
   return `<span class="hv-courier"><span>🛵</span></span>`;
 }
@@ -24,7 +24,7 @@ function makeIcon(kind: MarkerKind) {
 }
 
 /** OpenStreetMap дээрх газрын зураг — үнэгүй, түлхүүргүй (Google тохируулаагүй үед) */
-export default function LeafletMapView({ markers = [], center, zoom = 15, pick, onCenterChange, fit = false, className = "" }: MapViewProps) {
+export default function LeafletMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, className = "" }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -66,19 +66,28 @@ export default function LeafletMapView({ markers = [], center, zoom = 15, pick, 
 
   // Тэмдгүүд
   const markerKey = markers.map((mk) => `${mk.kind}:${mk.pos.lat.toFixed(5)},${mk.pos.lng.toFixed(5)}`).join("|");
+  const routeKey = route ? `${route.length}:${route[0]?.lat},${route[route.length - 1]?.lng}` : "";
   useEffect(() => {
     const m = map.current;
     const g = layer.current;
     if (!m || !g) return;
     g.clearLayers();
+    // Маршрут — тэмдгүүдийн доор. Өнгө нь CSS (.hv-route) — брэнд өнгийг дагана
+    const line = routeLine(markers, route);
+    if (line) {
+      const pts = line.path.map((p) => [p.lat, p.lng] as [number, number]);
+      if (!line.straight) L.polyline(pts, { className: "hv-route-casing", interactive: false }).addTo(g);
+      L.polyline(pts, { className: line.straight ? "hv-route hv-route-straight" : "hv-route", interactive: false }).addTo(g);
+    }
     markers.forEach((mk) => L.marker([mk.pos.lat, mk.pos.lng], { icon: makeIcon(mk.kind), keyboard: false }).addTo(g));
     if (fit && markers.length > 1) {
-      m.fitBounds(L.latLngBounds(markers.map((mk) => [mk.pos.lat, mk.pos.lng] as [number, number])), { padding: [40, 40], maxZoom: 16 });
+      const pts = [...markers.map((mk) => mk.pos), ...(line && !line.straight ? line.path : [])];
+      m.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng] as [number, number])), { padding: [36, 36], maxZoom: 16 });
     } else if (fit && markers.length === 1) {
       m.setView([markers[0].pos.lat, markers[0].pos.lng], 16);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markerKey, fit]);
+  }, [markerKey, routeKey, fit]);
 
   // Гаднаас absolute/fixed өгөөгүй бол relative — хоёулаа зэрэг байвал өндөр нь 0 болдог
   const position = className.split(" ").some((c) => c === "absolute" || c === "fixed") ? "" : "relative";

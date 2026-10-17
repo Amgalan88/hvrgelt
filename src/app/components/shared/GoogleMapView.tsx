@@ -1,13 +1,13 @@
 /// <reference types="google.maps" />
 import { useEffect, useRef, useState } from "react";
 import { DARKHAN_CENTER } from "../../lib/geo";
-import { MARKER_SVG, type MapViewProps, type MarkerKind } from "./MapView";
+import { markerSvg, brandColor, routeLine, type MapViewProps, type MarkerKind } from "./MapView";
 import { loadGoogleMaps, onGoogleFail } from "../../lib/googleMaps";
 
 const svgUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
 function markerIcon(kind: MarkerKind): google.maps.Icon {
-  const m = MARKER_SVG[kind];
+  const m = markerSvg(kind);
   return {
     url: svgUrl(m.svg),
     scaledSize: new google.maps.Size(m.size[0], m.size[1]),
@@ -33,10 +33,11 @@ interface Props extends MapViewProps {
 }
 
 /** Google Maps дээрх газрын зураг. MapView-ээс VITE_GOOGLE_MAPS_API_KEY байвал сонгогдоно. */
-export default function GoogleMapView({ markers = [], center, zoom = 15, pick, onCenterChange, fit = false, className = "", onFail }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, className = "", onFail }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const pins = useRef<google.maps.Marker[]>([]);
+  const lines = useRef<google.maps.Polyline[]>([]);
   const onMove = useRef(onCenterChange);
   onMove.current = onCenterChange;
   const [ready, setReady] = useState(false);
@@ -73,6 +74,8 @@ export default function GoogleMapView({ markers = [], center, zoom = 15, pick, o
       offFail();
       pins.current.forEach((p) => p.setMap(null));
       pins.current = [];
+      lines.current.forEach((l) => l.setMap(null));
+      lines.current = [];
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,9 +93,26 @@ export default function GoogleMapView({ markers = [], center, zoom = 15, pick, o
 
   // Тэмдгүүд
   const markerKey = markers.map((mk) => `${mk.kind}:${mk.pos.lat.toFixed(5)},${mk.pos.lng.toFixed(5)}`).join("|");
+  const routeKey = route ? `${route.length}:${route[0]?.lat},${route[route.length - 1]?.lng}` : "";
   useEffect(() => {
     const m = map.current;
     if (!m) return;
+    lines.current.forEach((l) => l.setMap(null));
+    lines.current = [];
+    const line = routeLine(markers, route);
+    if (line) {
+      const color = brandColor();
+      if (line.straight) {
+        // Тасархай шугам — маршрут тодорхойгүй
+        lines.current.push(new google.maps.Polyline({
+          map: m, path: line.path, clickable: false, strokeOpacity: 0,
+          icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.8, strokeColor: color, scale: 3 }, offset: "0", repeat: "12px" }],
+        }));
+      } else {
+        lines.current.push(new google.maps.Polyline({ map: m, path: line.path, clickable: false, strokeColor: "#ffffff", strokeOpacity: 0.9, strokeWeight: 8 }));
+        lines.current.push(new google.maps.Polyline({ map: m, path: line.path, clickable: false, strokeColor: color, strokeOpacity: 1, strokeWeight: 5 }));
+      }
+    }
     pins.current.forEach((p) => p.setMap(null));
     pins.current = markers.map(
       (mk) => new google.maps.Marker({ map: m, position: mk.pos, icon: markerIcon(mk.kind), clickable: false, zIndex: mk.kind === "courier" ? 3 : 1 }),
@@ -100,16 +120,17 @@ export default function GoogleMapView({ markers = [], center, zoom = 15, pick, o
     if (fit && markers.length > 1) {
       const b = new google.maps.LatLngBounds();
       markers.forEach((mk) => b.extend(mk.pos));
+      if (line && !line.straight) line.path.forEach((p) => b.extend(p));
       m.fitBounds(b, 40);
     } else if (fit && markers.length === 1) {
       m.setCenter(markers[0].pos);
       m.setZoom(16);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markerKey, fit, ready]);
+  }, [markerKey, routeKey, fit, ready]);
 
   const position = className.split(" ").some((c) => c === "absolute" || c === "fixed") ? "" : "relative";
-  const pickSvg = pick ? MARKER_SVG[pick] : null;
+  const pickSvg = pick ? markerSvg(pick) : null;
 
   return (
     <div className={`${position} overflow-hidden ${className}`}>
