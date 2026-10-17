@@ -44,6 +44,16 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
+/** PIN / pattern оруулсны дараа сервер хариулах хүртэл — гацсан мэт санагдуулахгүй */
+function BusyOverlay({ label }: { label: string }) {
+  return (
+    <div className="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
+      <Spinner className="w-9 h-9 text-primary border-[3px]" />
+      <p className="text-sm font-semibold">{label}</p>
+    </div>
+  );
+}
+
 export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", onBack }: LoginPageProps) {
   const { setPin, setPattern } = useUser();
   const [screen, setScreen] = useState<Screen>("phone");
@@ -200,6 +210,15 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
 
   // ── First-login / сэргээсэн нууцлал тохируулах ───────────────────
   async function finishSetup(method: "pin" | "pattern", key: string) {
+    if (verifying) return;
+    setVerifying(true);
+    try {
+      await finishSetupInner(method, key);
+    } finally {
+      setVerifying(false);
+    }
+  }
+  async function finishSetupInner(method: "pin" | "pattern", key: string) {
     const r = await authSetup(phone, setupOtp.current, method, key);
     if (!r.ok) {
       setSetupPinFirst(""); setSetupPatternFirst("");
@@ -238,6 +257,15 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
 
   // ── Register (сервер нууцлалыг шифрлэж хадгална) ─────────────────
   async function finishRegister(method: "pin" | "pattern", key: string): Promise<boolean> {
+    if (verifying) return false;
+    setVerifying(true);
+    try {
+      return await finishRegisterInner(method, key);
+    } finally {
+      setVerifying(false);
+    }
+  }
+  async function finishRegisterInner(method: "pin" | "pattern", key: string): Promise<boolean> {
     const r = await authRegister({
       role: mode,
       name: rName.trim(),
@@ -414,11 +442,11 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           <div className="mt-6">
             <button
               onClick={() => verifyAuth(password)}
-              disabled={!password || locked}
-              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors"
+              disabled={!password || locked || verifying}
+              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors inline-flex items-center justify-center gap-2"
               style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
             >
-              {locked ? `${countdown}с хүлээнэ үү` : "Нэвтрэх"}
+              {locked ? `${countdown}с хүлээнэ үү` : verifying ? <><Spinner className="w-4 h-4" /> Нэвтэрч байна...</> : "Нэвтрэх"}
             </button>
           </div>
         </div>
@@ -443,6 +471,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             </div>
           </div>
           {locked && <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2 text-xs text-orange-400 mb-3">{lockMsg}</div>}
+          {verifying && <BusyOverlay label="Нэвтэрч байна..." />}
           <PinPad
             title="PIN оруулах"
             subtitle="Бүртгэлийн PIN кодоо оруулна уу"
@@ -470,6 +499,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           </div>
         </div>
         {locked && <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2 text-xs text-orange-400 mb-3">{lockMsg}</div>}
+        {verifying && <BusyOverlay label="Нэвтэрч байна..." />}
         <PatternLock
           title="Pattern зурах"
           subtitle="Бүртгэлийн pattern-ээ зурна уу"
@@ -537,6 +567,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
           <Logo />
+          {verifying && <BusyOverlay label="Нэвтэрч байна..." />}
           <PinPad
             title={setupPinFirst ? "PIN баталгаажуулах" : "PIN тохируулах"}
             subtitle={setupPinFirst ? "Дахин оруулж баталгаажуулна уу" : "4 оронтой PIN оруулна уу"}
@@ -553,6 +584,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
         <Logo />
+        {verifying && <BusyOverlay label="Нэвтэрч байна..." />}
         <PatternLock
           title={setupPatternFirst ? "Pattern баталгаажуулах" : "Pattern тохируулах"}
           subtitle={setupPatternFirst ? "Дахин зуран баталгаажуулна уу" : "Дор хаяж 4 цэг холбоно уу"}
@@ -742,6 +774,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { setPinFirst(""); setRegStep("choose"); }} />
+        {verifying && <BusyOverlay label="Бүртгэж байна..." />}
         <PinPad
           title={pinFirst ? "PIN баталгаажуулах" : "PIN тохируулах"}
           subtitle={pinFirst ? "Дахин оруулж баталгаажуулна уу" : "4 оронтой PIN оруулна уу"}
@@ -756,6 +789,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
         <RegHeader onBack={() => { setPatternFirst(""); setRegStep("choose"); }} />
+        {verifying && <BusyOverlay label="Бүртгэж байна..." />}
         <PatternLock
           title={patternFirst ? "Pattern баталгаажуулах" : "Pattern тохируулах"}
           subtitle={patternFirst ? "Дахин зуран баталгаажуулна уу" : "Дор хаяж 4 цэг холбоно уу"}
