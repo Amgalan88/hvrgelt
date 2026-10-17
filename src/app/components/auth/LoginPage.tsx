@@ -12,6 +12,7 @@ import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 import { normalizePhone, isValidPhone } from "../../lib/phone";
 import { authLogin, authSetup, authRegister, applySession, type AuthResult } from "../../lib/authApi";
+import { PHONES, WORK_HOURS } from "../../lib/contact";
 
 interface LoginPageProps {
   onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
@@ -51,6 +52,59 @@ function BusyOverlay({ label }: { label: string }) {
       <Spinner className="w-9 h-9 text-primary border-[3px]" />
       <p className="text-sm font-semibold">{label}</p>
     </div>
+  );
+}
+
+/**
+ * PIN / pattern / нууц үгээ мартсан — бидэнтэй утсаар холбогдож баталгаажуулна.
+ * Захиалагч: супер админ нууцлалыг цэвэрлэнэ → дараагийн нэвтрэлтэд шинээр тохируулна.
+ * Хүргэгч, оператор: нэг удаагийн нууц үг өгнө → түүгээр орж өөрийн PIN/pattern тохируулна.
+ */
+function ForgotSheet({ role, method, phone, onClose }: { role: UserRole; method: string; phone: string; onClose: () => void }) {
+  const what = method === "pin" ? "PIN код" : method === "pattern" ? "Pattern" : "Нууц үг";
+  const staff = role !== "customer";
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-label={`${what}-аа мартсан`}
+        className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>{what}-аа мартсан уу?</p>
+        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+          Бидэн рүү залгаж <span className="font-semibold text-foreground tabular">{phone}</span> дугаар, нэрээ хэлээрэй.
+          Таныг мөн эсэхийг шалгасны дараа{" "}
+          {staff
+            ? "нэг удаагийн нууц үг өгнө. Түүгээр нэвтэрч шинэ PIN эсвэл pattern-аа тохируулна."
+            : "нууцлалыг тань цэвэрлэнэ. Дараа нь энэ дугаараар нэвтрэхэд шинэ PIN эсвэл pattern-аа шууд тохируулна."}
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">Захиалгын түүх, хаяг тань хэвээр үлдэнэ.</p>
+        <div className="mt-4 grid gap-2">
+          {PHONES.map((p) => (
+            <a
+              key={p.tel}
+              href={`tel:${p.tel}`}
+              className="flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-3 text-sm font-semibold"
+            >
+              <Smartphone className="w-4 h-4" /> {p.label}
+            </a>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground text-center mt-2">Ажлын цаг {WORK_HOURS}</p>
+        <button onClick={onClose} className="mt-4 w-full border border-border py-3 rounded-xl text-sm font-semibold">
+          Хаах
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ForgotLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="mt-4 self-center text-sm text-primary font-semibold hover:underline">
+      Мартсан уу?
+    </button>
   );
 }
 
@@ -157,6 +211,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
 
   // ── Auth: verify (сервер шалгана — апп нууц утгыг хэзээ ч мэдэхгүй) ──
   const [verifying, setVerifying] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   /** Ажилтны нэг удаагийн нууц үг — анхны PIN тохируулахад сервер дахин шалгана */
   const setupOtp = useRef("");
 
@@ -448,6 +503,10 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             >
               {locked ? `${countdown}с хүлээнэ үү` : verifying ? <><Spinner className="w-4 h-4" /> Нэвтэрч байна...</> : "Нэвтрэх"}
             </button>
+            {account.role !== "superadmin" && (
+              <div className="flex justify-center"><ForgotLink onClick={() => setForgotOpen(true)} /></div>
+            )}
+            {forgotOpen && <ForgotSheet role={account.role} method="password" phone={phone} onClose={() => setForgotOpen(false)} />}
           </div>
         </div>
       );
@@ -478,6 +537,8 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             error={authError || undefined}
             onComplete={locked ? () => {} : verifyAuth}
           />
+          <ForgotLink onClick={() => setForgotOpen(true)} />
+          {forgotOpen && <ForgotSheet role={account.role} method="pin" phone={phone} onClose={() => setForgotOpen(false)} />}
         </div>
       );
     }
@@ -506,6 +567,8 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           error={authError || undefined}
           onComplete={locked ? () => {} : verifyAuth}
         />
+        <ForgotLink onClick={() => setForgotOpen(true)} />
+        {forgotOpen && <ForgotSheet role={account.role} method="pattern" phone={phone} onClose={() => setForgotOpen(false)} />}
       </div>
     );
   }
