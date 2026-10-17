@@ -6,13 +6,14 @@
 // тавина. Хүргэгч үнийн 80%-ийг авна (CourierApp).
 //
 // Томъёо:
-//   захиалга (суурь) + км × км тутам — шатлалтай:
-//     эхний tier1Km км perKm, tier2Km хүртэл perKm2, түүнээс цааш perKm3
-//     (жш: 3 км хүртэл ₮1,500, 3–10 км ₮1,200, 10 км-ээс цааш ₮1,000)
+//   захиалга (суурь) + км × км тутам — зайн урамшуулал:
+//     нийт зай аль ангилалд орсноор БҮХ км-ийг тэр үнээр бодно
+//     (жш: 3 км хүртэл ₮1,500/км, 10 км хүрэхгүй бол ₮1,200/км,
+//      10 км ба түүнээс дээш ₮1,000/км — 9 км = 9 × ₮1,200)
 //   + гараас гарт (орж авах, оруулж өгөх)
 //   + яаралтай (20 минутын дотор)
 //   + хэврэг
-//   → шат бүрийн км-ийн төлбөр ₮100-аар дээш бөөрөнхийлнө
+//   → км-ийн төлбөр ₮100-аар дээш бөөрөнхийлнө
 //
 // Зай: машины замын бодит урт (lib/route.ts — Google Routes, эсвэл OSRM).
 // Маршрут олдохгүй бол хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт).
@@ -30,15 +31,15 @@ export interface Tariff {
   enabled: boolean;
   /** Захиалга бүрийн суурь төлбөр */
   base: number;
-  /** Км тутам — эхний tier1Km км */
+  /** Км тутам — нийт зай tier1Km хүртэл бол */
   perKm: number;
-  /** 1-р шатны хил (км) */
+  /** Богино зайны дээд хил (км, орно) */
   tier1Km: number;
-  /** Км тутам — tier1Km-ээс tier2Km хүртэл */
+  /** Км тутам — нийт зай tier2Km хүрэхгүй бол */
   perKm2: number;
-  /** 2-р шатны хил (км) */
+  /** Хол зай эхлэх хил (км, орно) */
   tier2Km: number;
-  /** Км тутам — tier2Km-ээс цааш */
+  /** Км тутам — нийт зай tier2Km ба түүнээс дээш бол */
   perKm3: number;
   /** Суурь төлбөрт багтах зай (км) — 0 бол эхний км-ээс тооцно */
   includedKm: number;
@@ -128,21 +129,21 @@ export interface Quote {
 const roundUp = (v: number) => Math.ceil(v / ROUND_TO) * ROUND_TO;
 const fmt = (n: number) => `₮${n.toLocaleString()}`;
 
+/** Нийт зайнаас хамаарах км-ийн үнэ: богино (≤ tier1Km), дунд (< tier2Km), хол (≥ tier2Km) */
+export function kmRate(t: Tariff, km: number): number {
+  if (km <= t.tier1Km) return t.perKm;
+  if (km < Math.max(t.tier1Km, t.tier2Km)) return t.perKm2;
+  return t.perKm3;
+}
+
 /** Зайгаар үнэ ба задаргаа (тариф асаалттай эсэхийг шалгахгүй — цэвэр тооцоо) */
 export function priceBreakdown(t: Tariff, km: number, extras: PriceExtras = {}): Quote {
   const lines: QuoteLine[] = [{ label: "Захиалга", amount: t.base }];
-  // Шат бүрт харгалзах км (суурьт багтах зайг хасна) — шат бүр тусдаа мөр
+  // Зайн урамшуулал: нийт зай аль ангилалд орохоор бүх км нэг үнээр
   const total = Math.round(km * 10) / 10;
-  const t1 = t.tier1Km, t2 = Math.max(t.tier1Km, t.tier2Km);
-  const tiers = [
-    { from: 0, to: t1, rate: t.perKm },
-    { from: t1, to: t2, rate: t.perKm2 },
-    { from: t2, to: Infinity, rate: t.perKm3 },
-  ];
-  for (const s of tiers) {
-    const len = Math.round((Math.min(s.to, total) - Math.max(s.from, t.includedKm)) * 10) / 10;
-    if (len > 0) lines.push({ label: `${len.toFixed(1)} км × ${fmt(s.rate)}`, amount: roundUp(len * s.rate) });
-  }
+  const rate = kmRate(t, total);
+  const billKm = Math.max(0, Math.round((total - t.includedKm) * 10) / 10);
+  if (billKm > 0) lines.push({ label: `${billKm.toFixed(1)} км × ${fmt(rate)}`, amount: roundUp(billKm * rate) });
   if (extras.handToHand && t.handToHand > 0) lines.push({ label: "Гараас гарт", amount: t.handToHand });
   if (extras.urgent && t.urgentExtra > 0) lines.push({ label: "Яаралтай", amount: t.urgentExtra });
   if (extras.fragile && t.fragileExtra > 0) lines.push({ label: "Хэврэг", amount: t.fragileExtra });

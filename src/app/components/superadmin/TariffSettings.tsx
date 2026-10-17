@@ -9,22 +9,22 @@ interface TariffSettingsProps {
 
 type FieldKey = "base" | "perKm" | "tier1Km" | "perKm2" | "tier2Km" | "perKm3" | "includedKm" | "handToHand" | "urgentExtra" | "fragileExtra";
 
-// 2 баганаар: км тутам ба түүний шатны хил хажуу хажуудаа
+// 2 баганаар: км үнэ ба тэр ангиллын хил хажуу хажуудаа
 const FIELDS: { key: FieldKey; label: string; unit: string; hint: string }[] = [
   { key: "base", label: "Захиалга", unit: "₮", hint: "Захиалга бүрийн суурь төлбөр" },
   { key: "includedKm", label: "Суурьт багтах зай", unit: "км", hint: "0 бол эхний км-ээс тооцно" },
-  { key: "perKm", label: "Км тутам — 1-р шат", unit: "₮", hint: "Эхний км-үүдэд" },
-  { key: "tier1Km", label: "1-р шат хүртэл", unit: "км", hint: "Жш: 3 км хүртэл" },
-  { key: "perKm2", label: "Км тутам — 2-р шат", unit: "₮", hint: "1-р шатнаас 2-р шат хүртэл" },
-  { key: "tier2Km", label: "2-р шат хүртэл", unit: "км", hint: "Жш: 10 км хүртэл" },
-  { key: "perKm3", label: "Км тутам — 3-р шат", unit: "₮", hint: "2-р шатнаас цааш" },
+  { key: "perKm", label: "Км үнэ — богино зай", unit: "₮", hint: "Нийт зай доорх хил хүртэл бол бүх км" },
+  { key: "tier1Km", label: "Богино зай хүртэл", unit: "км", hint: "Жш: 3 км хүртэл (3 орно)" },
+  { key: "perKm2", label: "Км үнэ — дунд зай", unit: "₮", hint: "Хол зайд хүрэхгүй бол бүх км" },
+  { key: "tier2Km", label: "Хол зай эхлэх", unit: "км", hint: "Жш: 10 км ба түүнээс дээш" },
+  { key: "perKm3", label: "Км үнэ — хол зай", unit: "₮", hint: "Нийт зай хол бол бүх км" },
   { key: "handToHand", label: "Гараас гарт", unit: "₮", hint: "Орж авах, оруулж өгөх" },
   { key: "urgentExtra", label: "Яаралтай", unit: "₮", hint: `Яаралтай ачааны нэмэлт (${URGENT_MINUTES} мин дотор)` },
   { key: "fragileExtra", label: "Хэврэг", unit: "₮", hint: "Хэврэг ачааны нэмэлт" },
 ];
 
 /** Тоон үзүүлэлтээр урьдчилан харах зай */
-const PREVIEW_KM = [2, 5, 10, 15];
+const PREVIEW_KM = [3, 5, 9, 12];
 
 /** Байршлаар шууд үнэ бодох тариф — 20кг хүртэлх бараа хүргэлт */
 export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
@@ -108,7 +108,7 @@ export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
           ))}
         </div>
         <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
-          Зай = машины замын урт (зам олдохгүй бол шулуун зай × {ROAD_FACTOR}). Км-ийг шат шатаар нь бодно: жш 12 км = эхний {draft.tier1Km} км × ₮{draft.perKm.toLocaleString()} + дараагийнх × ₮{draft.perKm2.toLocaleString()} + {Math.max(draft.tier1Km, draft.tier2Km)} км-ээс цааш × ₮{draft.perKm3.toLocaleString()}. Шат бүрийн төлбөр ₮{ROUND_TO}-аар дээш бөөрөнхийлөгдөнө. Хүргэгч нийт үнийн 80%-ийг авна.
+          Зай = машины замын урт (зам олдохгүй бол шулуун зай × {ROAD_FACTOR}). Урамшуулал: нийт зай аль ангилалд орохоор бүх км тэр үнээр — {draft.tier1Km} км хүртэл ₮{draft.perKm.toLocaleString()}, {Math.max(draft.tier1Km, draft.tier2Km)} км хүрэхгүй ₮{draft.perKm2.toLocaleString()}, түүнээс дээш ₮{draft.perKm3.toLocaleString()} (жш 9 км = 9 × ₮{draft.perKm2.toLocaleString()}). Км-ийн төлбөр ₮{ROUND_TO}-аар дээш бөөрөнхийлөгдөнө. Хүргэгч нийт үнийн 80%-ийг авна.
         </p>
       </div>
 
