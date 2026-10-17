@@ -6,17 +6,19 @@
 // тавина. Хүргэгч үнийн 80%-ийг авна (CourierApp).
 //
 // Томъёо:
-//   захиалга (суурь) + км × км тутам
+//   захиалга (суурь) + км × км тутам — шатлалтай:
+//     эхний tier1Km км perKm, tier2Km хүртэл perKm2, түүнээс цааш perKm3
+//     (жш: 3 км хүртэл ₮1,500, 3–10 км ₮1,200, 10 км-ээс цааш ₮1,000)
 //   + гараас гарт (орж авах, оруулж өгөх)
 //   + яаралтай (20 минутын дотор)
 //   + хэврэг
-//   → ₮100-аар дээш бөөрөнхийлнө
+//   → шат бүрийн км-ийн төлбөр ₮100-аар дээш бөөрөнхийлнө
 //
-// Зай: машины замын бодит урт (lib/route.ts, OSRM). Маршрут олдохгүй бол
-// хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт).
+// Зай: машины замын бодит урт (lib/route.ts — Google Routes, эсвэл OSRM).
+// Маршрут олдохгүй бол хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт).
 //
-// Сервер (api/payments.ts) нэхэмжлэх үүсгэхдээ үнэ нь шулуун зайгаар бодсон
-// доод хязгаараас бага биш эсэхийг шалгана — апп-аас хуурамч бага үнэ ирэхээс.
+// Үнийг апп бодож захиалгад хадгална — сервер (api/payments.ts) дахин
+// шалгадаггүй.
 //
 // Тарифыг супер админ "Тохиргоо → Шууд үнэ"-ээс өөрчилж/унтрааж болно.
 
@@ -27,8 +29,16 @@ export interface Tariff {
   enabled: boolean;
   /** Захиалга бүрийн суурь төлбөр */
   base: number;
-  /** Км тутам */
+  /** Км тутам — эхний tier1Km км */
   perKm: number;
+  /** 1-р шатны хил (км) */
+  tier1Km: number;
+  /** Км тутам — tier1Km-ээс tier2Km хүртэл */
+  perKm2: number;
+  /** 2-р шатны хил (км) */
+  tier2Km: number;
+  /** Км тутам — tier2Km-ээс цааш */
+  perKm3: number;
   /** Суурь төлбөрт багтах зай (км) — 0 бол эхний км-ээс тооцно */
   includedKm: number;
   /** Гараас гарт — орж авах, оруулж өгөх */
@@ -54,6 +64,10 @@ export const DEFAULT_TARIFF: Tariff = {
   enabled: true,
   base: 1500,
   perKm: 1500,
+  tier1Km: 3,
+  perKm2: 1200,
+  tier2Km: 10,
+  perKm3: 1000,
   includedKm: 0,
   handToHand: 2000,
   urgentExtra: 1500,
@@ -71,6 +85,11 @@ export function parseTariff(raw?: string | null): Tariff {
       enabled: typeof t.enabled === "boolean" ? t.enabled : DEFAULT_TARIFF.enabled,
       base: num(t.base, DEFAULT_TARIFF.base),
       perKm: num(t.perKm, DEFAULT_TARIFF.perKm),
+      // Шатлал нэмэгдэхээс өмнө хадгалсан тарифт эдгээр байхгүй — анхдагчийг авна
+      tier1Km: num(t.tier1Km, DEFAULT_TARIFF.tier1Km),
+      perKm2: num(t.perKm2, DEFAULT_TARIFF.perKm2),
+      tier2Km: num(t.tier2Km, DEFAULT_TARIFF.tier2Km),
+      perKm3: num(t.perKm3, DEFAULT_TARIFF.perKm3),
       includedKm: num(t.includedKm, DEFAULT_TARIFF.includedKm),
       handToHand: num(t.handToHand, DEFAULT_TARIFF.handToHand),
       urgentExtra: num(t.urgentExtra, DEFAULT_TARIFF.urgentExtra),
@@ -110,9 +129,19 @@ const fmt = (n: number) => `₮${n.toLocaleString()}`;
 
 /** Зайгаар үнэ ба задаргаа (тариф асаалттай эсэхийг шалгахгүй — цэвэр тооцоо) */
 export function priceBreakdown(t: Tariff, km: number, extras: PriceExtras = {}): Quote {
-  const billKm = Math.max(0, Math.round((km - t.includedKm) * 10) / 10);
   const lines: QuoteLine[] = [{ label: "Захиалга", amount: t.base }];
-  if (billKm > 0) lines.push({ label: `${billKm.toFixed(1)} км × ${fmt(t.perKm)}`, amount: roundUp(billKm * t.perKm) });
+  // Шат бүрт харгалзах км (суурьт багтах зайг хасна) — шат бүр тусдаа мөр
+  const total = Math.round(km * 10) / 10;
+  const t1 = t.tier1Km, t2 = Math.max(t.tier1Km, t.tier2Km);
+  const tiers = [
+    { from: 0, to: t1, rate: t.perKm },
+    { from: t1, to: t2, rate: t.perKm2 },
+    { from: t2, to: Infinity, rate: t.perKm3 },
+  ];
+  for (const s of tiers) {
+    const len = Math.round((Math.min(s.to, total) - Math.max(s.from, t.includedKm)) * 10) / 10;
+    if (len > 0) lines.push({ label: `${len.toFixed(1)} км × ${fmt(s.rate)}`, amount: roundUp(len * s.rate) });
+  }
   if (extras.handToHand && t.handToHand > 0) lines.push({ label: "Гараас гарт", amount: t.handToHand });
   if (extras.urgent && t.urgentExtra > 0) lines.push({ label: "Яаралтай", amount: t.urgentExtra });
   if (extras.fragile && t.fragileExtra > 0) lines.push({ label: "Хэврэг", amount: t.fragileExtra });
