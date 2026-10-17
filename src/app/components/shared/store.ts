@@ -446,7 +446,9 @@ export function useStore() {
   const resolveByPhone = useCallback(async (rawPhone: string): Promise<AccountLookup | null> => {
     // Сервер хайна — PIN, нууц үг апп руу ирэхгүй
     const r = await authLookup(normalizePhone(rawPhone));
-    if (r.status === 0 || r.status >= 500) throw new Error(r.error ?? "network");
+    // Зөвхөн сервер тодорхой "олдсонгүй" гэвэл бүртгүүлэх рүү — 404 (локал vite dev-д /api байхгүй),
+    // 403/429, JSON биш хариу зэргийг "бүртгэлгүй" гэж андуурвал бүртгэлтэй хүнээс нэр асууна
+    if (r.status !== 200 || typeof r.found !== "boolean") throw new Error(r.error ?? "network");
     if (!r.found || !r.role || !r.id) return null;
     return { role: r.role, id: r.id, name: r.name ?? "", authMethod: (r.authMethod ?? "pin") as AuthMethod };
   }, []);
