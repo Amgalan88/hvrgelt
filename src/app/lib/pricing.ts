@@ -9,7 +9,8 @@
 //   захиалга (суурь) + км × км тутам — зайн урамшуулал:
 //     нийт зай аль ангилалд орсноор БҮХ км-ийг тэр үнээр бодно
 //     (жш: 3 км хүртэл ₮1,500/км, 10 км хүрэхгүй бол ₮1,200/км,
-//      10 км ба түүнээс дээш ₮1,000/км — 9 км = 9 × ₮1,200)
+//      10 км ба түүнээс дээш ₮1,000/км — 9 км = 9 × ₮1,200).
+//     Хилийн дараа үнэ өмнөх ангиллын дээд дүнгээс доош буухгүй (3.1 км ≥ 3 км).
 //   + гараас гарт (орж авах, оруулж өгөх)
 //   + яаралтай (20 минутын дотор)
 //   + хэврэг
@@ -136,6 +137,15 @@ export function kmRate(t: Tariff, km: number): number {
   return t.perKm3;
 }
 
+/** Өмнөх ангиллын хамгийн их км-ийн төлбөр — хилээс цааш үнэ үүнээс доош буухгүй */
+function kmChargeFloor(t: Tariff, km: number): number {
+  const t1 = t.tier1Km, t2 = Math.max(t.tier1Km, t.tier2Km);
+  const bill = (d: number) => Math.max(0, d - t.includedKm);
+  if (km <= t1) return 0;
+  if (km < t2) return roundUp(bill(t1) * t.perKm);
+  return Math.max(roundUp(bill(t1) * t.perKm), roundUp(bill(t2) * t.perKm2));
+}
+
 /** Зайгаар үнэ ба задаргаа (тариф асаалттай эсэхийг шалгахгүй — цэвэр тооцоо) */
 export function priceBreakdown(t: Tariff, km: number, extras: PriceExtras = {}): Quote {
   const lines: QuoteLine[] = [{ label: "Захиалга", amount: t.base }];
@@ -143,7 +153,17 @@ export function priceBreakdown(t: Tariff, km: number, extras: PriceExtras = {}):
   const total = Math.round(km * 10) / 10;
   const rate = kmRate(t, total);
   const billKm = Math.max(0, Math.round((total - t.includedKm) * 10) / 10);
-  if (billKm > 0) lines.push({ label: `${billKm.toFixed(1)} км × ${fmt(rate)}`, amount: roundUp(billKm * rate) });
+  if (billKm > 0) {
+    // Хилийн дараа хямд үнэ эхэлсэн ч өмнөх ангиллын дээд дүнгээс доош буухгүй —
+    // 3.1 км нь 3 км-ээс хямд гарахгүй (цэгээ холдуулж үнэ бууруулахаас сэргийлнэ)
+    const floor = kmChargeFloor(t, total);
+    const charge = roundUp(billKm * rate);
+    lines.push(
+      charge >= floor
+        ? { label: `${billKm.toFixed(1)} км × ${fmt(rate)}`, amount: charge }
+        : { label: `${billKm.toFixed(1)} км`, amount: floor },
+    );
+  }
   if (extras.handToHand && t.handToHand > 0) lines.push({ label: "Гараас гарт", amount: t.handToHand });
   if (extras.urgent && t.urgentExtra > 0) lines.push({ label: "Яаралтай", amount: t.urgentExtra });
   if (extras.fragile && t.fragileExtra > 0) lines.push({ label: "Хэврэг", amount: t.fragileExtra });
