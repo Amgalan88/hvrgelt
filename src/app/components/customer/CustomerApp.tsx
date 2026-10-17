@@ -147,6 +147,8 @@ const ICON_MAP = {
 const QUICK_EMOJIS = ["📦", "🧳", "🛒", "☕", "🏪", "📄", "🎁", "🍱", "💊", "👕"];
 
 interface CustomerAppProps {
+  /** Захиалга авч эхэлсэн эсэх — хаалттай бол "Нээлт тун удахгүй" */
+  ordersOpen?: boolean;
   orders: Order[];
   partners: Partner[];
   products: PartnerProduct[];
@@ -304,7 +306,7 @@ function RoutePreview({
   );
 }
 
-export function CustomerApp({ orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ ordersOpen = true, orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders, photoUrl } = useUser();
   const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
@@ -517,8 +519,17 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
     setOrderStep("confirm");
   }
 
+  // Нээлтийн өмнө: бүртгүүлж, апп-ыг үзэж болно — захиалга илгээхэд мэдэгдэнэ.
+  // Супер админ role-оор үзэж байвал туршиж болно.
+  const [soonOpen, setSoonOpen] = useState(false);
+  const blockedBeforeLaunch = () => {
+    if (ordersOpen || viewAs) return false;
+    setSoonOpen(true);
+    return true;
+  };
+
   async function handleConfirm() {
-    if (placing) return;
+    if (placing || blockedBeforeLaunch()) return;
     setPlacing(true);
     try {
       const id = await onAddOrder({
@@ -555,7 +566,7 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
 
   // One-tap order from a saved quick-order shortcut
   async function placeQuickOrder(qo: QuickOrder) {
-    if (placingId) return;
+    if (placingId || blockedBeforeLaunch()) return;
     setPlacingId(qo.id);
     try {
       const id = await onAddOrder({
@@ -1649,6 +1660,38 @@ export function CustomerApp({ orders, partners, products, bankInfo, courierDocs,
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      {/* Нээлт тун удахгүй */}
+      <AnimatePresence>
+        {soonOpen && (
+          <motion.div
+            className="fixed inset-0 z-[130] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSoonOpen(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-label="Нээлт тун удахгүй"
+              className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
+              initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
+              transition={{ type: "spring", damping: 26, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img src="/logo-full.png" alt="" className="w-20 h-20 rounded-full mx-auto shadow-lg" />
+              <p className="text-xl font-extrabold mt-4">Нээлт тун удахгүй</p>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Бид захиалга авахад бэлтгэж байна. Бүртгэл тань хадгалагдсан — нээгдмэгц энэ апп-аас шууд захиалж болно.
+              </p>
+              <button
+                onClick={() => setSoonOpen(false)}
+                className="mt-5 w-full bg-primary text-primary-foreground py-3.5 rounded-2xl font-bold"
+              >
+                Ойлголоо
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <ConfirmDialog

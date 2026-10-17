@@ -52,6 +52,9 @@ interface SuperadminAppProps {
   /** Байршлаар шууд үнэ бодох тариф */
   tariff: Tariff;
   onUpdateTariff: (t: Tariff) => Promise<void>;
+  /** Захиалга авч эхэлсэн эсэх (нээлт) */
+  ordersOpen: boolean;
+  onSetOrdersOpen: (open: boolean) => Promise<void>;
   /** Бусад role-ын дэлгэцийг шалгах сонгогчийг нээнэ */
   onViewAs: () => void;
   onLogout: () => void;
@@ -391,7 +394,7 @@ export function SuperadminApp({
   onResetCustomerAuth,
   onAddPartner, onUpdatePartner, onDeletePartner, onSetPartnerLocation,
   onVerifyCourier, onUpdatePartnerAccess, feedback, onHandleFeedback,
-  bankInfo, onUpdateBankInfo, tariff, onUpdateTariff,
+  bankInfo, onUpdateBankInfo, tariff, onUpdateTariff, ordersOpen, onSetOrdersOpen,
   onViewAs, onLogout,
 }: SuperadminAppProps) {
   const { theme, toggleTheme } = useUser();
@@ -870,6 +873,29 @@ export function SuperadminApp({
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </button>
+
+            {/* Нээлт — захиалга авч эхлэх */}
+            <div className={`rounded-2xl p-4 flex items-center gap-3 border ${ordersOpen ? "bg-green-500/10 border-green-500/30" : "bg-amber-500/10 border-amber-500/30"}`}>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                  {ordersOpen ? "Захиалга авч байна" : "Нээлтийн өмнө — захиалга хаалттай"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ordersOpen
+                    ? "Хэрэглэгчид захиалга өгч болно."
+                    : "Хэрэглэгч бүртгүүлж болно, захиалга өгөхөд «Нээлт тун удахгүй» гэж харагдана. Хүргэгч хэвийн."}
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={ordersOpen}
+                aria-label="Захиалга авах"
+                onClick={() => void onSetOrdersOpen(!ordersOpen).catch(() => alert("Хадгалж чадсангүй. Дахин оролдоно уу."))}
+                className={`relative w-14 h-8 rounded-full shrink-0 transition-colors ${ordersOpen ? "bg-green-500" : "bg-switch-background"}`}
+              >
+                <span className={`absolute top-1 left-0 w-6 h-6 rounded-full bg-white shadow transition-transform ${ordersOpen ? "translate-x-7" : "translate-x-1"}`} />
+              </button>
+            </div>
 
             <TariffSettings tariff={tariff} onSave={onUpdateTariff} />
 

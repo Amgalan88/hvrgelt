@@ -308,6 +308,8 @@ function Inner() {
           onUpdateBankInfo={store.updateBankInfo}
           tariff={store.tariff}
           onUpdateTariff={store.updateTariff}
+          ordersOpen={store.ordersOpen}
+          onSetOrdersOpen={store.setOrdersOpen}
           onViewAs={() => setSwitcherOpen(true)}
           onLogout={requestLogout}
         />
@@ -315,6 +317,7 @@ function Inner() {
 
       {session.role === "customer" && (
         <CustomerApp
+          ordersOpen={store.ordersOpen}
           orders={store.orders}
           partners={store.partners}
           products={store.products}

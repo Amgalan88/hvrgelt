@@ -280,6 +280,8 @@ export function useStore() {
   const [bankInfo, setBankInfo] = useState<string>("");
   /** migration 22 ажилласан — DB хаалттай, Supabase session заавал */
   const [authRequired, setAuthRequired] = useState(false);
+  /** Захиалга авч эхэлсэн эсэх — нээлтийн өмнө хаалттай (settings.orders_open = "1" бол нээлттэй) */
+  const [ordersOpen, setOrdersOpenState] = useState(false);
   const [tariff, setTariff] = useState<Tariff>(DEFAULT_TARIFF);
   const [loading, setLoading] = useState(true);
 
@@ -372,10 +374,11 @@ export function useStore() {
   }, []);
 
   const refreshSettings = useCallback(async () => {
-    const { data } = await supabase.from("settings").select("key, value").in("key", ["bank_info", TARIFF_SETTINGS_KEY, "auth_required"]);
+    const { data } = await supabase.from("settings").select("key, value").in("key", ["bank_info", TARIFF_SETTINGS_KEY, "auth_required", "orders_open"]);
     for (const row of data ?? []) {
       if (row.key === "bank_info") setBankInfo(row.value ?? "");
       if (row.key === "auth_required") setAuthRequired(row.value === "1");
+      if (row.key === "orders_open") setOrdersOpenState(row.value === "1");
       if (row.key === TARIFF_SETTINGS_KEY) setTariff(parseTariff(row.value));
     }
   }, []);
@@ -672,6 +675,13 @@ export function useStore() {
   );
 
   /** Шууд үнийн тариф (супер админ) */
+  /** Супер админ: захиалга авч эхлэх / түр зогсоох */
+  const setOrdersOpen = useCallback(async (open: boolean) => {
+    const { error } = await supabase.from("settings").upsert({ key: "orders_open", value: open ? "1" : "0" });
+    if (error) throw error;
+    setOrdersOpenState(open);
+  }, []);
+
   const updateTariff = useCallback(async (t: Tariff) => {
     const { error } = await supabase.from("settings").upsert({ key: TARIFF_SETTINGS_KEY, value: JSON.stringify(t) });
     if (error) throw error;
@@ -1102,6 +1112,8 @@ export function useStore() {
     feedback,
     bankInfo,
     authRequired,
+    ordersOpen,
+    setOrdersOpen,
     tariff,
     loading,
     operatorAccounts,
