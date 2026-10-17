@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { Layers } from "lucide-react";
 import type { LatLng } from "../../lib/geo";
 import { GOOGLE_KEY, googleFailed } from "../../lib/googleMaps";
 
@@ -27,7 +28,21 @@ export interface MapViewProps {
   onCenterChange?: (c: LatLng) => void;
   /** Бүх тэмдэг харагдахаар томруулна */
   fit?: boolean;
+  /**
+   * Бүтэн дэлгэцийн газрын зураг, баруун талыг нь самбар (px) далдална:
+   * тэмдгүүдийг үлдсэн хэсэгт багтааж, товчнуудыг зүүн тийш шилжүүлнэ.
+   */
+  panelRight?: number;
+  /** Хиймэл дагуулын зураг (нэртэй) — MapView өөрөө тавина */
+  satellite?: boolean;
+  /** Давхарга солих товч харуулах эсэх (анхдагч: тийм) */
+  layerToggle?: boolean;
   className?: string;
+}
+
+const LAYER_KEY = "hvrgelt_map_layer";
+function readLayer(): boolean {
+  try { return localStorage.getItem(LAYER_KEY) !== "map"; } catch { return true; }
 }
 
 /** Сонгосон брэнд өнгө (Тохиргоо → Өнгө) — тэмдэг, маршрутын шугамд */
@@ -70,17 +85,35 @@ export function routeLine(markers: MapMarker[], route?: LatLng[] | null): { path
 const LeafletMapView = lazy(() => import("./LeafletMapView"));
 const GoogleMapView = lazy(() => import("./GoogleMapView"));
 
-export default function MapView(props: MapViewProps) {
+export default function MapView({ layerToggle = true, className = "", ...props }: MapViewProps) {
   // Google ачаалагдахгүй бол (түлхүүр буруу, billing идэвхгүй) OSM руу шилжинэ
   const [googleFailedHere, setGoogleFailed] = useState(false);
   const useGoogle = !!GOOGLE_KEY && !googleFailedHere && !googleFailed();
+  // Хиймэл дагуул анхдагч — хэрэглэгчийн сонголтыг төхөөрөмж дээр санана
+  const [satellite, setSatellite] = useState(readLayer);
+  function toggle() {
+    setSatellite((s) => {
+      try { localStorage.setItem(LAYER_KEY, s ? "map" : "satellite"); } catch { /* noop */ }
+      return !s;
+    });
+  }
+  const pinned = className.split(" ").some((c) => c === "absolute" || c === "fixed");
+  const inner = { ...props, satellite, className: "absolute inset-0" };
   return (
-    <Suspense fallback={<div className={`${props.className ?? ""} bg-secondary animate-pulse`} />}>
-      {useGoogle ? (
-        <GoogleMapView {...props} onFail={() => setGoogleFailed(true)} />
-      ) : (
-        <LeafletMapView {...props} />
+    <div className={`${pinned ? "" : "relative"} overflow-hidden ${className}`}>
+      <Suspense fallback={<div className="absolute inset-0 bg-secondary animate-pulse" />}>
+        {useGoogle ? <GoogleMapView {...inner} onFail={() => setGoogleFailed(true)} /> : <LeafletMapView {...inner} />}
+      </Suspense>
+      {layerToggle && (
+        <button
+          type="button"
+          onClick={toggle}
+          className="absolute left-2.5 top-2.5 z-[600] inline-flex items-center gap-1.5 rounded-full bg-card/95 text-foreground border border-border shadow-md px-3 py-1.5 text-xs font-semibold"
+          aria-label={satellite ? "Энгийн газрын зураг" : "Хиймэл дагуулын зураг"}
+        >
+          <Layers className="w-3.5 h-3.5 text-primary" /> {satellite ? "Газрын зураг" : "Хиймэл дагуул"}
+        </button>
       )}
-    </Suspense>
+    </div>
   );
 }

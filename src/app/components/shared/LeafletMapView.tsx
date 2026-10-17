@@ -24,10 +24,11 @@ function makeIcon(kind: MarkerKind) {
 }
 
 /** OpenStreetMap дээрх газрын зураг — үнэгүй, түлхүүргүй (Google тохируулаагүй үед) */
-export default function LeafletMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, className = "" }: MapViewProps) {
+export default function LeafletMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, panelRight = 0, satellite = false, className = "" }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
+  const tiles = useRef<{ map: L.TileLayer; sat: L.LayerGroup } | null>(null);
   const onMove = useRef(onCenterChange);
   onMove.current = onCenterChange;
 
@@ -37,11 +38,21 @@ export default function LeafletMapView({ markers = [], route, center, zoom = 15,
     const start = center ?? markers[0]?.pos ?? DARKHAN_CENTER;
     const m = L.map(el.current, { zoomControl: false, attributionControl: true }).setView([start.lat, start.lng], zoom);
     m.attributionControl.setPrefix(false);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
-    }).addTo(m);
-    L.control.zoom({ position: "bottomright" }).addTo(m);
+    });
+    // Хиймэл дагуул (Esri) + зам, газрын нэр
+    const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+    const sat = L.layerGroup([
+      L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "© Esri" }),
+      L.tileLayer(esri + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
+      L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
+    ]);
+    (satellite ? sat : osm).addTo(m);
+    tiles.current = { map: osm, sat };
+    L.control.zoom({ position: panelRight ? "bottomleft" : "bottomright" }).addTo(m);
+    if (panelRight) m.attributionControl.setPosition("bottomleft");
     layer.current = L.layerGroup().addTo(m);
     m.on("moveend", () => {
       const c = m.getCenter();
@@ -53,9 +64,17 @@ export default function LeafletMapView({ markers = [], route, center, zoom = 15,
     return () => {
       m.remove();
       map.current = null;
+      tiles.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Хиймэл дагуул ↔ энгийн
+  useEffect(() => {
+    const m = map.current, t = tiles.current;
+    if (!m || !t) return;
+    if (satellite) { m.removeLayer(t.map); t.sat.addTo(m); } else { m.removeLayer(t.sat); t.map.addTo(m); }
+  }, [satellite]);
 
   // Гаднаас төв өөрчлөгдвөл (жишээ нь "Миний байршил") шилжинэ
   const centerKey = center ? `${center.lat.toFixed(6)},${center.lng.toFixed(6)}` : "";
@@ -82,7 +101,7 @@ export default function LeafletMapView({ markers = [], route, center, zoom = 15,
     markers.forEach((mk) => L.marker([mk.pos.lat, mk.pos.lng], { icon: makeIcon(mk.kind), keyboard: false }).addTo(g));
     if (fit && markers.length > 1) {
       const pts = [...markers.map((mk) => mk.pos), ...(line && !line.straight ? line.path : [])];
-      m.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng] as [number, number])), { padding: [36, 36], maxZoom: 16 });
+      m.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lng] as [number, number])), { paddingTopLeft: [36, 36], paddingBottomRight: [36 + panelRight, 36], maxZoom: 16 });
     } else if (fit && markers.length === 1) {
       m.setView([markers[0].pos.lat, markers[0].pos.lng], 16);
     }
@@ -94,7 +113,7 @@ export default function LeafletMapView({ markers = [], route, center, zoom = 15,
 
   return (
     <div className={`${position} overflow-hidden ${className}`}>
-      <div ref={el} className="absolute inset-0 hv-map" />
+      <div ref={el} className={`absolute inset-0 hv-map ${satellite ? "hv-sat" : ""}`} />
       {pick && (
         // Төвийн тогтмол тэмдэг — газрын зургийг доор нь чирнэ
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-[500]">

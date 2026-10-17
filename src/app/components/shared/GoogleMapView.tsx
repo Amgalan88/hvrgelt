@@ -33,7 +33,7 @@ interface Props extends MapViewProps {
 }
 
 /** Google Maps дээрх газрын зураг. MapView-ээс VITE_GOOGLE_MAPS_API_KEY байвал сонгогдоно. */
-export default function GoogleMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, className = "", onFail }: Props) {
+export default function GoogleMapView({ markers = [], route, center, zoom = 15, pick, onCenterChange, fit = false, panelRight = 0, satellite = false, className = "", onFail }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const pins = useRef<google.maps.Marker[]>([]);
@@ -56,10 +56,12 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 15, 
           zoom,
           disableDefaultUI: true,
           zoomControl: true,
+          zoomControlOptions: panelRight ? { position: g.maps.ControlPosition.LEFT_BOTTOM } : undefined,
           clickableIcons: false,
           // Цэг сонгохдоо нэг хуруугаар чирнэ; жижиг урьдчилсан зураг хуудсыг гүйлгэхэд саад болохгүй
-          gestureHandling: pick ? "greedy" : "cooperative",
+          gestureHandling: pick || panelRight ? "greedy" : "cooperative",
           styles: dark ? DARK_STYLE : undefined,
+          mapTypeId: satellite ? "hybrid" : "roadmap",
         });
         m.addListener("idle", () => {
           const c = m.getCenter();
@@ -80,6 +82,14 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 15, 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Хиймэл дагуул ↔ энгийн
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    m.setMapTypeId(satellite ? "hybrid" : "roadmap");
+    m.setOptions({ styles: !satellite && document.documentElement.classList.contains("dark") ? DARK_STYLE : undefined });
+  }, [satellite, ready]);
 
   // Гаднаас төв өөрчлөгдвөл (жишээ нь "Миний байршил") шилжинэ
   const centerKey = center ? `${center.lat.toFixed(6)},${center.lng.toFixed(6)}` : "";
@@ -121,7 +131,7 @@ export default function GoogleMapView({ markers = [], route, center, zoom = 15, 
       const b = new google.maps.LatLngBounds();
       markers.forEach((mk) => b.extend(mk.pos));
       if (line && !line.straight) line.path.forEach((p) => b.extend(p));
-      m.fitBounds(b, 40);
+      m.fitBounds(b, { top: 50, bottom: 50, left: 50, right: 50 + panelRight });
     } else if (fit && markers.length === 1) {
       m.setCenter(markers[0].pos);
       m.setZoom(16);

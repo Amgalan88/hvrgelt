@@ -32,6 +32,20 @@ import { useRoute } from "../../lib/route";
 
 const MapView = lazy(() => import("../shared/MapView"));
 
+/** Компьютер / таблет (md+) — газрын зураг бүтэн дэлгэцээр, самбар баруун талд */
+const DESKTOP_MQ = "(min-width: 768px)";
+const PANEL_PX = 416 + 24; // самбарын өргөн (26rem) + захын зай
+function useIsDesktop(): boolean {
+  const [desk, setDesk] = useState(() => typeof window !== "undefined" && window.matchMedia(DESKTOP_MQ).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_MQ);
+    const on = () => setDesk(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return desk;
+}
+
 const CUSTOMER_HELP_STEPS = [
   "Утасны дугаараа оруулж нэг л удаа бүртгүүлнэ.",
   "\"Хаашаа хүргэх вэ?\" дээр авах болон хүргэх хаягаа бичнэ.",
@@ -241,8 +255,8 @@ function PriceCard({
 function BottomBar({ children }: { children: ReactNode }) {
   return (
     // Доод цэсний голын "Захиалах" товч 1.25rem дээш цухуйдаг тул түүнээс дээр байрлана
-    <div className="fixed inset-x-0 z-30 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] pointer-events-none">
-      <div className="max-w-sm mx-auto px-4 pt-5 pb-1 bg-gradient-to-t from-background via-background to-transparent pointer-events-auto">
+    <div className="fixed inset-x-0 z-30 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] md:left-auto md:right-6 md:w-[26rem] md:bottom-[7.75rem] pointer-events-none">
+      <div className="max-w-sm md:max-w-none mx-auto px-4 pt-5 pb-1 bg-gradient-to-t from-background via-background to-transparent pointer-events-auto">
         {children}
       </div>
     </div>
@@ -260,6 +274,7 @@ function RoutePreview({
   toPos?: LatLng | null;
   courier?: CourierLocation | null;
 }) {
+  const desktop = useIsDesktop();
   const markers: MapMarker[] = [];
   if (isLatLng(fromPos)) markers.push({ pos: fromPos, kind: "from" });
   if (isLatLng(toPos)) markers.push({ pos: toPos, kind: "to" });
@@ -270,9 +285,9 @@ function RoutePreview({
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      {markers.length > 0 && (
-        <Suspense fallback={<div className="h-44 bg-secondary animate-pulse" />}>
-          <MapView className="h-44" markers={markers} route={route?.path} fit />
+      {markers.length > 0 && !desktop && (
+        <Suspense fallback={<div className="h-60 bg-secondary animate-pulse" />}>
+          <MapView className="h-60" markers={markers} route={route?.path} fit />
         </Suspense>
       )}
       {courier && (
@@ -518,6 +533,17 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   }, [trackCourierId]);
   const activeCount = orders.filter((o) => o.customerId === userId && !["хүргэгдсэн", "цуцлагдсан"].includes(o.status)).length;
 
+  // Компьютер дээр: ард нь бүтэн дэлгэцийн газрын зураг — хянаж байвал тухайн захиалга, үгүй бол бөглөж буй маршрут
+  const desktop = useIsDesktop();
+  const tracking = tab === "order" && orderStep === "tracking" && myOrder && myOrder.status !== "цуцлагдсан";
+  const bgFrom = tracking ? (myOrder.fromLat != null ? { lat: myOrder.fromLat, lng: myOrder.fromLng! } : null) : isLatLng(fromPos) ? fromPos : null;
+  const bgTo = tracking ? (myOrder.toLat != null ? { lat: myOrder.toLat, lng: myOrder.toLng! } : null) : isLatLng(toPos) ? toPos : null;
+  const { route: bgRoute } = useRoute(desktop ? bgFrom : null, desktop ? bgTo : null);
+  const bgMarkers: MapMarker[] = [];
+  if (bgFrom) bgMarkers.push({ pos: bgFrom, kind: "from" });
+  if (bgTo) bgMarkers.push({ pos: bgTo, kind: "to" });
+  if (tracking && courierLoc) bgMarkers.push({ pos: courierLoc, kind: "courier" });
+
   function handleEstimate() {
     if (!fromAddr.trim() || !toAddr.trim()) return;
     setOrderStep("confirm");
@@ -735,7 +761,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
     <div className="min-h-dvh bg-background text-foreground flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       {/* Апп-ын дээд мөр */}
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border pt-[env(safe-area-inset-top)]">
-        <div className="max-w-sm mx-auto h-14 px-4 flex items-center justify-between">
+        <div className="max-w-sm md:max-w-none mx-auto h-14 px-4 md:px-6 flex items-center justify-between">
           {tab === "order" ? <Logo size="sm" /> : <p className="text-[17px] font-bold">{TAB_TITLE[tab]}</p>}
           <div className="flex items-center gap-1">
             <HelpButton onClick={() => setHelpOpen(true)} />
@@ -750,8 +776,17 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
         </div>
       </header>
 
+      {/* Компьютер: бүтэн дэлгэцийн газрын зураг (самбарын ард) */}
+      {desktop && (
+        <div className="fixed inset-x-0 bottom-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-0">
+          <Suspense fallback={<div className="absolute inset-0 bg-secondary animate-pulse" />}>
+            <MapView className="absolute inset-0" markers={bgMarkers} route={bgRoute?.path} fit={bgMarkers.length > 0} zoom={14} panelRight={PANEL_PX} />
+          </Suspense>
+        </div>
+      )}
+
       {/* Main content */}
-      <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56">
+      <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56 md:fixed md:z-20 md:right-6 md:top-[calc(3.5rem+1.5rem)] md:bottom-6 md:w-[26rem] md:max-w-none md:mx-0 md:overflow-y-auto md:overscroll-contain md:rounded-3xl md:border md:border-border md:bg-background md:shadow-2xl md:pb-52">
        <AnimatePresence mode="wait">
         <motion.div
           key={tab}
@@ -1714,8 +1749,8 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
       />
 
       {/* Доод цэс — голд нь үргэлж харагдах "Захиалах" */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-sm mx-auto grid grid-cols-5 h-[4.75rem]">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)] md:left-auto md:right-6 md:bottom-6 md:w-[26rem] md:rounded-b-3xl md:border md:pb-0">
+        <div className="max-w-sm md:max-w-none mx-auto grid grid-cols-5 h-[4.75rem]">
           {([
             { key: "order" as AppTab, label: "Нүүр", icon: Home, badge: 0 },
             { key: "places" as AppTab, label: "Газрууд", icon: Store, badge: 0 },
