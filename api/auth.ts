@@ -74,11 +74,13 @@ async function attemptsFor(db: SupabaseClient, phone: string) {
   if (error) return memAttempts.get(phone) ?? { count: 0, until: 0 };
   return { count: data?.count ?? 0, until: data?.locked_until ? new Date(data.locked_until).getTime() : 0 };
 }
-async function recordAttempt(db: SupabaseClient, phone: string, ok: boolean) {
-  const cur = await attemptsFor(db, phone);
+async function recordAttempt(db: SupabaseClient, phone: string, ok: boolean, known?: { count: number; until: number }) {
+  const cur = known ?? (await attemptsFor(db, phone));
   const count = ok ? 0 : cur.count + 1;
   const until = !ok && count >= MAX_ATTEMPTS ? Date.now() + LOCK_MS : 0;
   memAttempts.set(phone, { count: until ? 0 : count, until });
+  // Зөв оруулсан, өмнө нь буруу оролдлогогүй бол бичих зүйлгүй
+  if (ok && cur.count === 0 && !cur.until) return { count, until };
   await db
     .from("auth_attempts")
     .upsert({ phone, count: until ? 0 : count, locked_until: until ? new Date(until).toISOString() : null, updated_at: new Date().toISOString() })
@@ -101,18 +103,26 @@ async function findAccount(db: SupabaseClient, phone: string): Promise<Account |
   if (phone && phone === normalizePhone(env("SUPERADMIN_PHONE") || "99739959")) {
     return { role: "superadmin", table: null, id: SUPERADMIN.id, name: SUPERADMIN.name, authMethod: "password", secret: null };
   }
+  // Сервер өгөгдлийн сангаас хол байдаг тул 4 хүснэгтийг зэрэг асууна
+  // (дараалан асуувал хүсэлт бүр хүлээлгэнэ). Давуу эрэмбэ хэвээр.
   const pick = "id, name, auth_method, auth_key";
-  const { data: op, error: e1 } = await db.from("operators").select(pick).eq("phone", phone).eq("active", true).limit(1);
-  if (e1) throw e1;
-  if (op?.[0]) return { role: "operator", table: "operators", id: op[0].id, name: op[0].name, authMethod: op[0].auth_method, secret: op[0].auth_key };
-  const { data: cr, error: e2 } = await db.from("couriers").select(pick).eq("phone", phone).eq("active", true).limit(1);
-  if (e2) throw e2;
-  if (cr?.[0]) return { role: "courier", table: "couriers", id: cr[0].id, name: cr[0].name, authMethod: cr[0].auth_method, secret: cr[0].auth_key };
-  const { data: pr } = await db.from("partners").select(pick).eq("phone", phone).eq("active", true).limit(1);
-  if (pr?.[0]?.auth_key) return { role: "partner", table: "partners", id: pr[0].id, name: pr[0].name, authMethod: pr[0].auth_method ?? "password", secret: pr[0].auth_key };
-  const { data: cu, error: e4 } = await db.from("customers").select(pick).eq("phone", phone).limit(1);
-  if (e4) throw e4;
-  if (cu?.[0]) return { role: "customer", table: "customers", id: cu[0].id, name: cu[0].name, authMethod: cu[0].auth_method, secret: cu[0].auth_key };
+  const [op, cr, pr, cu] = await Promise.all([
+    db.from("operators").select(pick).eq("phone", phone).eq("active", true).limit(1),
+    db.from("couriers").select(pick).eq("phone", phone).eq("active", true).limit(1),
+    db.from("partners").select(pick).eq("phone", phone).eq("active", true).limit(1),
+    db.from("customers").select(pick).eq("phone", phone).limit(1),
+  ]);
+  if (op.error) throw op.error;
+  const o = op.data?.[0];
+  if (o) return { role: "operator", table: "operators", id: o.id, name: o.name, authMethod: o.auth_method, secret: o.auth_key };
+  if (cr.error) throw cr.error;
+  const c = cr.data?.[0];
+  if (c) return { role: "courier", table: "couriers", id: c.id, name: c.name, authMethod: c.auth_method, secret: c.auth_key };
+  const p = pr.data?.[0];
+  if (p?.auth_key) return { role: "partner", table: "partners", id: p.id, name: p.name, authMethod: p.auth_method ?? "password", secret: p.auth_key };
+  if (cu.error) throw cu.error;
+  const u = cu.data?.[0];
+  if (u) return { role: "customer", table: "customers", id: u.id, name: u.name, authMethod: u.auth_method, secret: u.auth_key };
   return null;
 }
 
@@ -203,10 +213,8 @@ async function lookup(db: SupabaseClient, b: Body) {
 async function login(db: SupabaseClient, b: Body) {
   const phone = normalizePhone(b.phone);
   const key = String(b.key ?? "");
-  const lock = await attemptsFor(db, phone);
+  const [lock, acc] = await Promise.all([attemptsFor(db, phone), findAccount(db, phone)]);
   if (lock.until > Date.now()) return json({ error: "Олон удаа буруу оруулсан. Түр хүлээгээд дахин оролдоно уу.", lockedUntil: lock.until }, 429);
-
-  const acc = await findAccount(db, phone);
   if (!acc) return json({ error: "Бүртгэл олдсонгүй" }, 404);
 
   let ok: boolean;
@@ -217,7 +225,7 @@ async function login(db: SupabaseClient, b: Body) {
   } else {
     ok = acc.authMethod !== "reset" && verifySecret(key, acc.secret);
   }
-  const r = await recordAttempt(db, phone, ok);
+  const r = await recordAttempt(db, phone, ok, lock);
   if (!ok) {
     return json(
       { error: r.until ? "5 удаа буруу оруулсан. 10 минут хүлээнэ үү." : "Буруу байна", attemptsLeft: Math.max(0, MAX_ATTEMPTS - r.count), lockedUntil: r.until || undefined },
