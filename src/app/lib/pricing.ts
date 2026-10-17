@@ -12,8 +12,11 @@
 //   + хэврэг
 //   → ₮100-аар дээш бөөрөнхийлнө
 //
-// Зай: хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт). Google
-// Routes API холбовол бодит замын урт руу солино.
+// Зай: машины замын бодит урт (lib/route.ts, OSRM). Маршрут олдохгүй бол
+// хоёр цэгийн шулуун зай × 1.3 (хотын замын ойролцоо урт).
+//
+// Сервер (api/payments.ts) нэхэмжлэх үүсгэхдээ үнэ нь шулуун зайгаар бодсон
+// доод хязгаараас бага биш эсэхийг шалгана — апп-аас хуурамч бага үнэ ирэхээс.
 //
 // Тарифыг супер админ "Тохиргоо → Шууд үнэ"-ээс өөрчилж/унтрааж болно.
 
@@ -131,7 +134,9 @@ export function quoteDelivery(
   from: LatLng | null | undefined,
   to: LatLng | null | undefined,
   extras: PriceExtras = {},
+  /** Машины замын бодит урт (км); байхгүй бол шулуун зай × 1.3 */
+  routeKm?: number | null,
 ): Quote | null {
   if (!t.enabled || !serviceId || !AUTO_PRICE_SERVICES.includes(serviceId) || !from || !to) return null;
-  return priceBreakdown(t, roadKm(from, to), extras);
+  return priceBreakdown(t, routeKm ?? roadKm(from, to), extras);
 }

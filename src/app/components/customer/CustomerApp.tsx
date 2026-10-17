@@ -28,6 +28,7 @@ import { AddressSearch } from "./AddressSearch";
 import type { PlaceResult } from "../../lib/places";
 import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, currentPosition, geoErrorText, type GeoError, type LatLng, type CourierLocation } from "../../lib/geo";
 import type { MapMarker } from "../shared/MapView";
+import { useRoute } from "../../lib/route";
 
 const MapView = lazy(() => import("../shared/MapView"));
 
@@ -263,14 +264,15 @@ function RoutePreview({
   if (isLatLng(fromPos)) markers.push({ pos: fromPos, kind: "from" });
   if (isLatLng(toPos)) markers.push({ pos: toPos, kind: "to" });
   if (courier) markers.push({ pos: courier, kind: "courier" });
-  // Үнийн тооцоотой ижил зай (замын тойм)
-  const km = isLatLng(fromPos) && isLatLng(toPos) ? roadKm(fromPos, toPos) : null;
+  // Үнийн тооцоотой ижил зай: машины замаар (кэштэй — дахин хүсэлт явахгүй), олдохгүй бол тойм
+  const { route } = useRoute(isLatLng(fromPos) ? fromPos : null, isLatLng(toPos) ? toPos : null);
+  const km = route?.km ?? (isLatLng(fromPos) && isLatLng(toPos) ? roadKm(fromPos, toPos) : null);
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       {markers.length > 0 && (
         <Suspense fallback={<div className="h-44 bg-secondary animate-pulse" />}>
-          <MapView className="h-44" markers={markers} fit />
+          <MapView className="h-44" markers={markers} route={route?.path} fit />
         </Suspense>
       )}
       {courier && (
@@ -493,12 +495,14 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
     return list;
   }, [partners, savedAddresses, orders, userId]);
 
-  // Байршлаар шууд үнэ — тариф асаалттай, үйлчилгээ дэмжигдсэн, хоёр цэг заасан үед
+  // Байршлаар шууд үнэ — тариф асаалттай, үйлчилгээ дэмжигдсэн, хоёр цэг заасан үед.
+  // Зай нь машины замын урт (lib/route.ts); маршрут тооцоологдож байхад захиалахгүй — үнэ үсрэхээс
+  const { route: orderRoute, loading: routeLoading } = useRoute(isLatLng(fromPos) ? fromPos : null, isLatLng(toPos) ? toPos : null);
   const quote = quoteDelivery(tariff, serviceId, fromPos, toPos, {
     urgent: cargo.urgent,
     fragile: cargo.fragile,
     handToHand: cargo.handToHand,
-  });
+  }, orderRoute?.km);
   const autoPriceService = tariff.enabled && AUTO_PRICE_SERVICES.includes(serviceId);
   // 20кг хүртэлх бараа — жингээ сонгоно (5/10/15/20 кг хүртэл)
   const needsWeightChoice = serviceId === "goods";
@@ -529,7 +533,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   };
 
   async function handleConfirm() {
-    if (placing || blockedBeforeLaunch()) return;
+    if (placing || (quote && routeLoading) || blockedBeforeLaunch()) return;
     setPlacing(true);
     try {
       const id = await onAddOrder({
@@ -1170,7 +1174,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                 <BottomBar>
                   <button
                     onClick={handleConfirm}
-                    disabled={placing}
+                    disabled={placing || (!!quote && routeLoading)}
                     className="w-full bg-primary text-primary-foreground py-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/25 disabled:opacity-60"
                   >
                     {placing ? <Spinner className="w-5 h-5" /> : quote ? <>₮{quote.price.toLocaleString()} — Захиалах <ArrowRight className="w-4 h-4" /></> : <>Хүргэлт захиалах <ArrowRight className="w-4 h-4" /></>}
