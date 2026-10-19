@@ -29,6 +29,7 @@ import type { PlaceResult } from "../../lib/places";
 import { routeUrl, isLatLng, distanceKm, watchCourierLocation, agoText, currentPosition, geoErrorText, type GeoError, type LatLng, type CourierLocation } from "../../lib/geo";
 import type { MapMarker } from "../shared/MapView";
 import { useRoute } from "../../lib/route";
+import { LAUNCH_DATE, LAUNCH_SHORT } from "../../lib/contact";
 
 const MapView = lazy(() => import("../shared/MapView"));
 
@@ -1711,16 +1712,17 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
           >
             <motion.div
               role="dialog"
-              aria-label="Нээлт тун удахгүй"
+              aria-label={`${LAUNCH_DATE}-нд нээгдэнэ`}
               className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
               initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
               transition={{ type: "spring", damping: 26, stiffness: 320 }}
               onClick={(e) => e.stopPropagation()}
             >
               <img src="/logo-full.png" alt="" className="w-20 h-20 rounded-full mx-auto shadow-lg" />
-              <p className="text-xl font-extrabold mt-4">Нээлт тун удахгүй</p>
+              <p className="mt-4 inline-flex items-center rounded-full bg-primary/12 text-primary px-4 py-1 text-3xl font-extrabold tabular tracking-tight">{LAUNCH_SHORT}</p>
+              <p className="text-xl font-extrabold mt-3">{LAUNCH_DATE}-нд нээгдэнэ</p>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Бид захиалга авахад бэлтгэж байна. Бүртгэл тань хадгалагдсан — нээгдмэгц энэ апп-аас шууд захиалж болно.
+                Бид захиалга авахад бэлтгэж байна. Бүртгэл тань хадгалагдсан — {LAUNCH_SHORT}-нээс энэ апп-аас шууд захиалж болно.
               </p>
               <button
                 onClick={() => setSoonOpen(false)}

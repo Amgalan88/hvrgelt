@@ -15,6 +15,10 @@ export const PHONES: ContactPhone[] = [
 ];
 
 export const WORK_HOURS = "08:00 – 22:00";
+
+/** Нээлтийн өдөр — захиалга авч эхлэх (Супер админ «Захиалга авах»-ыг асаана) */
+export const LAUNCH_DATE = "11 сарын 11";
+export const LAUNCH_SHORT = "11.11";
 export const CITY = "Дархан хот";
 
 export const SOCIAL = {

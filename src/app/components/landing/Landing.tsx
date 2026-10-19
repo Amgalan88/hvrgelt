@@ -6,7 +6,7 @@ import {
 import { Logo, LogoMark } from "../shared/Logo";
 import { SERVICES } from "../customer/services";
 import { SERVICE_ICON } from "../customer/serviceIcons";
-import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE, COMPANY } from "../../lib/contact";
+import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE, COMPANY, LAUNCH_SHORT } from "../../lib/contact";
 
 export type LegalKey = "terms" | "privacy" | "about" | "contact";
 
@@ -16,6 +16,8 @@ interface LandingProps {
   /** Захиалагчаар эсвэл хүргэгчээр эхлэх */
   onStart: (mode: "customer" | "courier") => void;
   onLegal: (page: LegalKey) => void;
+  /** Нээлтийн өмнө (захиалга хаалттай) — нээлтийн өдрийг харуулна */
+  prelaunch?: boolean;
 }
 
 
@@ -105,11 +107,28 @@ function PhonePreview() {
 }
 
 /** Нийтэд нээлттэй нүүр хуудас — нэвтрээгүй зочинд харагдана */
-export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
+export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: LandingProps) {
   const year = new Date().getFullYear();
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
+      {/* ── Зарлал: хүргэгч бүртгэж байна ── */}
+      {!hasSession && (
+        <button
+          onClick={() => onStart("courier")}
+          className="group w-full bg-[var(--brand)] text-white px-4 py-2.5 flex items-center justify-center gap-2.5 text-sm md:text-[15px] font-bold hover:brightness-105 transition"
+        >
+          <span className="relative flex w-2.5 h-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
+            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-white" />
+          </span>
+          <span>Хүргэгч бүртгэж байна{prelaunch && <span className="font-semibold text-white/85"> · {LAUNCH_SHORT}-нд нээгдэнэ</span>}</span>
+          <span className="hidden sm:inline-flex items-center gap-1 bg-white text-[var(--brand)] rounded-full px-3 py-0.5 text-xs font-extrabold">
+            Бүртгүүлэх <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </span>
+          <ArrowRight className="sm:hidden w-4 h-4 shrink-0" />
+        </button>
+      )}
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-[#0b0d12] text-white">
         <img src="/banner.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
@@ -179,9 +198,9 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
                 {!hasSession && (
                   <button
                     onClick={() => onStart("courier")}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-7 py-3.5 md:py-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-sm md:text-base transition-colors whitespace-nowrap"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-7 py-3.5 md:py-4 rounded-2xl bg-white text-[#16181d] hover:bg-white/90 font-bold text-sm md:text-base transition-colors whitespace-nowrap"
                   >
-                    <Truck className="w-4 h-4" /> Хүргэгч болох
+                    <Truck className="w-4 h-4 text-[var(--brand)]" /> Хүргэгч болох
                   </button>
                 )}
               </div>
@@ -309,6 +328,9 @@ export function Landing({ hasSession, onStart, onLegal }: LandingProps) {
           <section id="couriers" className="py-4 md:py-8 scroll-mt-4">
             <div className="rounded-3xl bg-[#16181d] text-white overflow-hidden grid md:grid-cols-[1.4fr_1fr]">
               <div className="p-7 md:p-12 space-y-6">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] text-white px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Одоо бүртгэж байна
+                </span>
                 <h2 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(1.7rem, 4vw, 2.4rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
                   Чөлөөт цагаараа хүргэлт хийж орлого ол
                 </h2>

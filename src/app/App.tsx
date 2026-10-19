@@ -168,6 +168,7 @@ function Inner() {
     return (
       <Landing
         hasSession={!!session}
+        prelaunch={!store.ordersOpen}
         onStart={(mode) => { setLoginMode(mode); setLandingDone(true); }}
         onLegal={setLegalPage}
       />
