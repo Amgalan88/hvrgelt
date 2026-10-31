@@ -959,9 +959,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                             <span className="flex-1 min-w-0">
                               <span className="block text-lg font-bold leading-snug">{sv.label}</span>
                               <span className="block text-sm text-muted-foreground mt-0.5">{sv.desc}</span>
-                              {from != null && (
-                                <span className="block text-base font-extrabold text-primary mt-1 tabular">₮{from.toLocaleString()}-аас</span>
-                              )}
+                              <span className="block text-base font-extrabold text-primary mt-1 tabular">{from != null ? `₮${from.toLocaleString()}-аас` : "Үнэ тохиролцоно"}</span>
                             </span>
                             {active
                               ? <CheckCircle className="w-5 h-5 text-primary shrink-0" />
