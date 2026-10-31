@@ -11,8 +11,8 @@ import {
   VERIFICATION_VALID_MINUTES,
   type PhoneDb,
   type VerificationRow,
-} from "./phone-verification.ts";
-import { verifyMode } from "./verify-mn.ts";
+} from "./phone-verification.js";
+import { verifyMode } from "./verify-mn.js";
 
 const saved = { ...process.env };
 

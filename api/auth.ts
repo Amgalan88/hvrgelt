@@ -24,8 +24,8 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { consumeVerification, normalizePhone } from "../server/phone-verification.ts";
-import { phoneVerifyReady, supabasePhoneDb } from "../server/phone-db.ts";
+import { consumeVerification, normalizePhone } from "../server/phone-verification.js";
+import { phoneVerifyReady, supabasePhoneDb } from "../server/phone-db.js";
 
 const env = (k: string) => process.env[k]?.trim() || "";
 const json = (body: unknown, status = 200) =>
