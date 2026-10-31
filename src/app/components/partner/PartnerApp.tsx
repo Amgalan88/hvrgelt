@@ -171,7 +171,7 @@ export function PartnerApp({ partner, products, onAddProduct, onUpdateProduct, o
                       <p className="text-xs text-primary font-mono mt-0.5">₮{p.price.toLocaleString()} / {p.unit}</p>
                       <button
                         onClick={() => onUpdateProduct(p.id, { inStock: !p.inStock })}
-                        className={`text-[11px] mt-1 px-2 py-0.5 rounded-full border ${
+                        className={`text-xs mt-1 px-2 py-0.5 rounded-full border ${
                           p.inStock
                             ? "bg-green-500/15 border-green-500/30 text-green-500"
                             : "bg-secondary border-border text-muted-foreground"

@@ -62,7 +62,7 @@ export function OfferCards({ offers, onClaim }: OfferCardsProps) {
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">{sv?.label ?? "Хүргэлт"}{o.distance > 0 ? ` · ${o.distance.toFixed(1)} км зам` : ""}</p>
                 <p className="text-2xl font-extrabold tabular mt-0.5">₮{Math.round(o.price * COURIER_SHARE).toLocaleString()}</p>
-                <p className="text-[11px] text-muted-foreground">таны орлого</p>
+                <p className="text-xs text-muted-foreground">таны орлого</p>
               </div>
               {kmToPickup != null && (
                 <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary px-2.5 py-1.5 rounded-xl">
@@ -76,10 +76,10 @@ export function OfferCards({ offers, onClaim }: OfferCardsProps) {
             </div>
             {(o.urgent || o.handToHand || o.fragile || o.weightKg) && (
               <div className="flex flex-wrap gap-1.5">
-                {o.weightKg ? <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground">{o.weightKg} кг хүртэл</span> : null}
-                {o.urgent && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/12 text-red-600 dark:text-red-300"><Zap className="w-3 h-3" /> Яаралтай</span>}
-                {o.handToHand && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-300"><HandHelping className="w-3 h-3" /> Гараас гарт</span>}
-                {o.fragile && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3 h-3" /> Хэврэг</span>}
+                {o.weightKg ? <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground">{o.weightKg} кг хүртэл</span> : null}
+                {o.urgent && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-500/12 text-red-600 dark:text-red-300"><Zap className="w-3 h-3" /> Яаралтай</span>}
+                {o.handToHand && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-300"><HandHelping className="w-3 h-3" /> Гараас гарт</span>}
+                {o.fragile && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3 h-3" /> Хэврэг</span>}
               </div>
             )}
             <button

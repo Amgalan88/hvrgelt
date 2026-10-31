@@ -26,7 +26,7 @@ export function InstallButton({ variant = "inline", className = "" }: InstallBut
       {variant === "hero" && (
         <button
           onClick={onClick}
-          className={`inline-flex items-center gap-1.5 text-sm font-semibold text-white/85 hover:text-white underline-offset-4 hover:underline ${className}`}
+          className={`inline-flex items-center min-h-11 gap-1.5 text-sm font-semibold text-white/85 hover:text-white underline-offset-4 hover:underline ${className}`}
         >
           <Download className="w-4 h-4" /> Апп суулгах
         </button>

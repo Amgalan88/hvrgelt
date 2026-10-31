@@ -113,7 +113,7 @@ export function PartnerShop({ partner, products, initial, onClose, onConfirm }: 
 
         <div className="border-t border-border p-4 space-y-3 shrink-0">
           {partner.paymentQrUrl && (
-            <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+            <p className="text-sm text-muted-foreground flex items-start gap-1.5">
               <QrCode className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               Барааны төлбөрийг тухайн газарт QR-аар төлнө. Хүргэлтийн төлбөр тусдаа.
             </p>

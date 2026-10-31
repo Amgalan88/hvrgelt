@@ -103,7 +103,7 @@ export function PaymentPanel({ order, createPayment, checkPayment, test = false,
               <p className="text-sm font-semibold">{intent.provider === "byl" ? "Онлайн төлөх — QPay, карт" : `${intent.provider.toUpperCase()}-ээр төлөх`}</p>
             </div>
             {intent.test && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
                 <FlaskConical className="w-3 h-3" /> ТУРШИЛТ
               </span>
             )}
@@ -113,7 +113,7 @@ export function PaymentPanel({ order, createPayment, checkPayment, test = false,
             <div className="text-center">
               <img src={qrSrc} alt="Төлбөрийн QR" className="w-48 h-48 mx-auto rounded-2xl bg-white p-2 border border-border" />
               {intent.invoiceId && (
-                <p className="text-[11px] text-muted-foreground mt-1.5 font-mono">Нэхэмжлэх {intent.invoiceId}</p>
+                <p className="text-xs text-muted-foreground mt-1.5 font-mono">Нэхэмжлэх {intent.invoiceId}</p>
               )}
             </div>
           )}
@@ -136,7 +136,7 @@ export function PaymentPanel({ order, createPayment, checkPayment, test = false,
                         {b.name.slice(0, 1)}
                       </span>
                     )}
-                    <span className="text-[11px] leading-tight text-center line-clamp-2">{b.name.replace(" банк", "")}</span>
+                    <span className="text-xs leading-tight text-center line-clamp-2">{b.name.replace(" банк", "")}</span>
                   </button>
                 ))}
               </div>
@@ -167,7 +167,7 @@ export function PaymentPanel({ order, createPayment, checkPayment, test = false,
             <RefreshCw className={`w-4 h-4 ${confirming ? "animate-spin" : ""}`} /> Төлбөрөө шалгах
           </button>
           {checkMsg && <p className="text-xs text-amber-600 dark:text-amber-400 text-center">{checkMsg}</p>}
-          <p className="text-[11px] text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center">
             {intent.test
               ? "Туршилтын горим — жинхэнэ мөнгө шилжихгүй. Банк сонгоод төлбөрийг дуурайна."
               : "Төлбөр орсныг систем автоматаар шалгана. Хэдэн секунд болж магадгүй."}
@@ -257,7 +257,7 @@ function TestBankSheet({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
                 <FlaskConical className="w-3 h-3" /> ТУРШИЛТЫН БАНК
               </span>
               {step === "confirm" && (
@@ -287,7 +287,7 @@ function TestBankSheet({
                 >
                   {step === "paying" ? <><Loader2 className="w-4 h-4 animate-spin" /> Гүйлгээ хийж байна...</> : "Төлөх"}
                 </button>
-                <p className="text-[11px] text-muted-foreground text-center mt-3">Жинхэнэ мөнгө шилжихгүй — зөвхөн урсгал турших зорилготой.</p>
+                <p className="text-sm text-muted-foreground text-center mt-3">Жинхэнэ мөнгө шилжихгүй — зөвхөн урсгал турших зорилготой.</p>
               </>
             )}
           </motion.div>

@@ -59,7 +59,7 @@ export function LegalPage({ page, onBack }: { page: LegalKey; onBack: () => void
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-border">
         <div className="max-w-xl mx-auto px-4 py-3">
-          <button onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors -ml-1 pr-2 py-1">
+          <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-sm text-muted-foreground hover:text-foreground transition-colors -ml-1 pr-2">
             <ChevronLeft className="w-4 h-4" /> Буцах
           </button>
         </div>

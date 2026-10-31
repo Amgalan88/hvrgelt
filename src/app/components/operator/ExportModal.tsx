@@ -78,7 +78,7 @@ export function ExportModal({ orders, onClose }: ExportModalProps) {
             ].map((s) => (
               <div key={s.label} className="bg-secondary/50 border border-border rounded-xl p-2.5 text-center">
                 <p className={`text-lg font-bold ${s.color}`} style={{ fontFamily: "var(--font-display)" }}>{s.value}</p>
-                <p className="text-[11px] text-muted-foreground">{s.label}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             ))}
           </div>

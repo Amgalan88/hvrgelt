@@ -149,8 +149,8 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
             <div className="flex items-center gap-2">
               <Icon className="w-4 h-4 text-primary" />
               <p className="text-sm font-medium">{f.label}</p>
-              {!f.required && <span className="text-[11px] text-muted-foreground">заавал биш</span>}
-              {f.private && <span className="text-[11px] text-muted-foreground">зөвхөн админ харна</span>}
+              {!f.required && <span className="text-xs text-muted-foreground">заавал биш</span>}
+              {f.private && <span className="text-xs text-muted-foreground">зөвхөн админ харна</span>}
               {url && <CheckCircle className="w-3.5 h-3.5 text-green-500 ml-auto" />}
             </div>
             <input
@@ -188,7 +188,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
       })}
 
       {photoItems.length > 0 && (
-        <p className="text-[11px] text-muted-foreground text-center -mt-1">Зураг оруулмагц автоматаар хадгалагдана.</p>
+        <p className="text-xs text-muted-foreground text-center -mt-1">Зураг оруулмагц автоматаар хадгалагдана.</p>
       )}
 
       {/* Текст талбарууд — моторт хэрэгсэлд */}
@@ -236,7 +236,7 @@ export function CourierDocsForm({ docs, vehicle: initialVehicle, phone, onSave }
       </button>
       )}
 
-      <p className="text-[11px] text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center">
         Цээж зураг, хэрэгслийн мэдээлэл ачаа авах үед үйлчлүүлэгчид харагдана.
       </p>
     </div>

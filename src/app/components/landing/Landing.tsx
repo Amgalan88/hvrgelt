@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { InstallButton } from "../shared/InstallApp";
 import { motion } from "motion/react";
 import {
   ArrowRight, Phone, Clock, MapPin, Truck, Package, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
 } from "lucide-react";
 import { Logo, LogoMark } from "../shared/Logo";
-import { SERVICES } from "../customer/services";
+import { SERVICES, SERVICE_CATEGORIES, categoryOf, isFeaturedService, type Service, type ServiceCategory } from "../customer/services";
 import { SERVICE_ICON } from "../customer/serviceIcons";
 import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE, COMPANY, LAUNCH_SHORT } from "../../lib/contact";
+import { startingPrice, type Tariff } from "../../lib/pricing";
 
 export type LegalKey = "terms" | "privacy" | "about" | "contact";
 
@@ -18,9 +20,9 @@ interface LandingProps {
   onLegal: (page: LegalKey) => void;
   /** Нээлтийн өмнө (захиалга хаалттай) — нээлтийн өдрийг харуулна */
   prelaunch?: boolean;
+  /** null = тариф ачаалагдаагүй. Үнэгүй бол карт дээр үнэ харуулахгүй. */
+  tariff?: Tariff | null;
 }
-
-
 
 const FACTS: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Zap, title: "30 секунд", body: "захиалга өгөхөд" },
@@ -64,19 +66,19 @@ function PhonePreview() {
   return (
     <div className="relative mx-auto w-[280px] rounded-[2.6rem] bg-[#0b0d12] p-[10px] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10" aria-hidden>
       <div className="rounded-[2rem] overflow-hidden bg-[#f7f5f2] text-[#16181d]">
-        <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[10px] font-semibold">
+        <div className="flex items-center justify-between px-5 pt-3 pb-1 text-xs font-semibold">
           <span>9:41</span>
           <span className="w-16 h-4 rounded-full bg-[#0b0d12]" />
           <span>5G</span>
         </div>
         <div className="flex items-center gap-1.5 px-4 py-2">
-          <LogoMark size={20} />
-          <span className="text-[11px] font-extrabold tracking-tight">Дархан <span style={{ color: "#ff6028" }}>хүргэлт</span></span>
+          <LogoMark size={22} />
+          <span className="text-sm font-extrabold tracking-tight">Дархан <span style={{ color: "#ff6028" }}>хүргэлт</span></span>
         </div>
         <div className="mx-3 rounded-2xl bg-[#16181d] text-white p-3.5">
-          <p className="text-[9px] text-white/55 text-right">Алхам 1/4</p>
-          <p className="text-[17px] font-extrabold leading-tight mt-0.5">Юу хүргүүлэх вэ?</p>
-          <p className="text-[9.5px] text-white/60 mt-1">Үйлчилгээгээ сонгоно уу</p>
+          <p className="text-xs text-white/75 text-right">Алхам 1/4</p>
+          <p className="text-lg font-extrabold leading-tight mt-0.5">Юу хүргүүлэх вэ?</p>
+          <p className="text-xs text-white/75 mt-1">Үйлчилгээгээ сонгоно уу</p>
           <div className="grid grid-cols-4 gap-1 mt-2.5">
             <span className="h-[3px] rounded-full bg-[#ff6028]" />
             <span className="h-[3px] rounded-full bg-white/15" />
@@ -89,14 +91,14 @@ function PhonePreview() {
             const Icon = SERVICE_ICON[sv.id] ?? Package;
             return (
               <div key={sv.id} className={`flex items-center gap-2 px-2.5 py-2 ${i === 0 ? "bg-[#ff6028]/[0.06]" : ""}`}>
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${i === 0 ? "bg-[#ff6028]/15 text-[#ff6028]" : "bg-[#efece7] text-[#16181d]"}`}>
-                  <Icon className="w-3.5 h-3.5" />
+                <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${i === 0 ? "bg-[#ff6028]/15 text-[#ff6028]" : "bg-[#efece7] text-[#16181d]"}`}>
+                  <Icon className="w-4 h-4" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[10px] font-semibold leading-tight truncate">{sv.label}</span>
-                  <span className="block text-[8.5px] text-[#646976] truncate">{sv.desc}</span>
+                  <span className="block text-xs font-semibold leading-tight truncate">{sv.label}</span>
+                  <span className="block text-xs text-[#646976] truncate">{sv.desc}</span>
                 </span>
-                <ArrowRight className="w-3 h-3 text-[#646976]" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#646976]" />
               </div>
             );
           })}
@@ -106,24 +108,97 @@ function PhonePreview() {
   );
 }
 
+/** Гурван дугаарыг нэг «Залгах» товч дотор */
+function CallButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="w-full max-w-md">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full min-h-12 rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 flex items-center justify-center gap-2 font-bold text-base transition-colors"
+      >
+        <Phone className="w-5 h-5 text-[var(--brand)]" /> Залгах
+      </button>
+      {open && (
+        <div className="mt-2 grid gap-2" role="group" aria-label="Утасны дугаарууд">
+          {PHONES.map((p) => (
+            <a
+              key={p.tel}
+              href={`tel:${p.tel}`}
+              className="min-h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center font-bold tabular text-base hover:bg-white/20"
+            >
+              {p.label}
+            </a>
+          ))}
+        </div>
+      )}
+      <p className="text-sm text-white/75 mt-2">Өдөр бүр {WORK_HOURS}</p>
+    </div>
+  );
+}
+
+function ServiceTile({
+  sv, featured, tariff, onClick,
+}: {
+  sv: Service;
+  featured: boolean;
+  tariff?: Tariff | null;
+  onClick: () => void;
+}) {
+  const Icon = SERVICE_ICON[sv.id] ?? Package;
+  const from = startingPrice(tariff, sv.id);
+  const box = featured ? "w-24 h-24" : "w-[72px] h-[72px]";
+  const icon = featured ? "w-11 h-11" : "w-9 h-9";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex text-left bg-card border border-border rounded-2xl hover:border-primary/50 hover:shadow-md transition-all ${
+        featured ? "flex-col p-5 gap-4" : "items-center gap-4 p-4"
+      }`}
+    >
+      <span className={`${box} rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors`}>
+        <Icon className={icon} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-lg font-bold leading-snug">{sv.label}</span>
+        <span className="block text-sm text-muted-foreground mt-1 leading-snug">{sv.desc}</span>
+        {from != null && (
+          <span className="block text-lg font-extrabold text-primary mt-2 tabular">₮{from.toLocaleString()}-аас</span>
+        )}
+      </span>
+      {!featured && (
+        <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+      )}
+    </button>
+  );
+}
+
 /** Нийтэд нээлттэй нүүр хуудас — нэвтрээгүй зочинд харагдана */
-export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: LandingProps) {
+export function Landing({ hasSession, onStart, onLegal, prelaunch = false, tariff = null }: LandingProps) {
   const year = new Date().getFullYear();
+  const [cat, setCat] = useState<"all" | ServiceCategory>("all");
+  const pool = cat === "all" ? SERVICES : SERVICES.filter((sv) => categoryOf(sv.id) === cat);
+  const featured = pool.filter((sv) => isFeaturedService(sv.id));
+  const rest = pool.filter((sv) => !isFeaturedService(sv.id));
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
       {/* ── Зарлал: хүргэгч бүртгэж байна ── */}
       {!hasSession && (
         <button
+          type="button"
           onClick={() => onStart("courier")}
-          className="group w-full bg-[var(--brand)] text-white px-4 py-2.5 flex items-center justify-center gap-2.5 text-sm md:text-[15px] font-bold hover:brightness-105 transition"
+          className="group w-full min-h-11 bg-[var(--brand)] text-white px-4 py-2.5 flex items-center justify-center gap-2.5 text-sm md:text-base font-bold hover:brightness-105 transition"
         >
           <span className="relative flex w-2.5 h-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
             <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-white" />
           </span>
           <span>Хүргэгч бүртгэж байна{prelaunch && <span className="font-semibold text-white/85"> · {LAUNCH_SHORT}-нд нээгдэнэ</span>}</span>
-          <span className="hidden sm:inline-flex items-center gap-1 bg-white text-[var(--brand)] rounded-full px-3 py-0.5 text-xs font-extrabold">
+          <span className="hidden sm:inline-flex items-center gap-1 bg-white text-[var(--brand)] rounded-full px-3 min-h-8 text-sm font-extrabold">
             Бүртгүүлэх <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </span>
           <ArrowRight className="sm:hidden w-4 h-4 shrink-0" />
@@ -144,12 +219,13 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
           <nav className="flex items-center justify-between pt-5 pb-3 md:py-5">
             <Logo textColor="#fff" />
             <div className="flex items-center gap-2 md:gap-6">
-              <a href="#services" className="hidden md:inline text-sm text-white/75 hover:text-white">Үйлчилгээ</a>
-              <a href="#how" className="hidden md:inline text-sm text-white/75 hover:text-white">Хэрхэн ажилладаг</a>
-              <a href="#couriers" className="hidden md:inline text-sm text-white/75 hover:text-white">Хүргэгч болох</a>
+              <a href="#services" className="hidden md:inline-flex items-center min-h-11 text-sm text-white/75 hover:text-white">Үйлчилгээ</a>
+              <a href="#how" className="hidden md:inline-flex items-center min-h-11 text-sm text-white/75 hover:text-white">Хэрхэн ажилладаг</a>
+              <a href="#couriers" className="hidden md:inline-flex items-center min-h-11 text-sm text-white/75 hover:text-white">Хүргэгч болох</a>
               <button
+                type="button"
                 onClick={() => onStart("customer")}
-                className="text-sm font-semibold bg-white text-[#16181d] hover:bg-white/90 px-4 py-2 rounded-full transition-colors"
+                className="min-h-11 text-sm font-semibold bg-white text-[#16181d] hover:bg-white/90 px-4 rounded-2xl transition-colors"
               >
                 {hasSession ? "Апп руу" : "Нэвтрэх"}
               </button>
@@ -157,8 +233,8 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
           </nav>
           {/* Утсан дээр — компьютерын цэсийн ижил холбоосууд */}
           <div className="md:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[["#services", "Үйлчилгээ"], ["#how", "Хэрхэн ажилладаг"], ["#couriers", "Хүргэгч болох"]].map(([href, label]) => (
-              <a key={href} href={href} className="shrink-0 text-xs font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-3 py-1.5">{label}</a>
+            {([["#services", "Үйлчилгээ"], ["#how", "Хэрхэн ажилладаг"], ["#couriers", "Хүргэгч болох"]] as const).map(([href, label]) => (
+              <a key={href} href={href} className="shrink-0 min-h-11 inline-flex items-center text-sm font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-4">{label}</a>
             ))}
           </div>
 
@@ -177,7 +253,7 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                   height={112}
                   className="w-24 h-24 md:w-28 md:h-28 rounded-full shadow-2xl ring-4 ring-white/15 shrink-0"
                 />
-                <p className="text-sm text-white/70">Дархан хотын 65 жилийн ойд зориулав</p>
+                <p className="text-sm text-white/75">Дархан хотын 65 жилийн ойд зориулав</p>
               </div>
               <h1 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(2.5rem, 7vw, 4.4rem)", lineHeight: 0.98, letterSpacing: "-0.04em" }}>
                 Хурдан.<br />Найдвартай.<br />
@@ -187,39 +263,29 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                 Илгээмжээс эхлээд крантай машин хүртэл — нэг апп-аас захиалж, хүргэгчээ газрын зураг дээр хянаарай.
               </p>
 
-              <div className="flex flex-row gap-2.5 md:gap-3 pt-1">
+              <div className="flex flex-col items-start gap-1 max-w-md w-full">
                 <motion.button
+                  type="button"
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onStart("customer")}
-                  className="flex-1 md:flex-none bg-[var(--brand)] text-white px-4 md:px-7 py-3.5 md:py-4 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm md:text-base hover:brightness-105 transition whitespace-nowrap"
+                  className="w-full h-14 min-h-14 bg-[var(--brand)] text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-base hover:brightness-105 transition"
                 >
                   {hasSession ? "Үргэлжлүүлэх" : "Захиалга өгөх"} <ArrowRight className="w-5 h-5" />
                 </motion.button>
                 {!hasSession && (
                   <button
+                    type="button"
                     onClick={() => onStart("courier")}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-7 py-3.5 md:py-4 rounded-2xl bg-white text-[#16181d] hover:bg-white/90 font-bold text-sm md:text-base transition-colors whitespace-nowrap"
+                    className="min-h-11 inline-flex items-center gap-1.5 px-1 text-base font-semibold text-white underline underline-offset-4 hover:text-white/90"
                   >
-                    <Truck className="w-4 h-4 text-[var(--brand)]" /> Хүргэгч болох
+                    Хүргэгч болох
                   </button>
                 )}
               </div>
 
-              {/* Утсаар захиалах — гурван дугаар бүгд */}
-              <div className="pt-2">
-                <p className="text-xs text-white/55 mb-2">Утсаар захиалах · {WORK_HOURS}</p>
-                <div className="grid grid-cols-3 md:flex md:flex-wrap gap-2">
-                  {PHONES.map((p) => (
-                    <a
-                      key={p.tel}
-                      href={`tel:${p.tel}`}
-                      className="inline-flex items-center justify-center gap-1 md:gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 px-2 md:px-3.5 py-2 text-xs md:text-sm font-bold tabular transition-colors whitespace-nowrap"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-[var(--brand)]" /> {p.label}
-                    </a>
-                  ))}
-                </div>
-                <InstallButton variant="hero" className="mt-4" />
+              <div className="pt-1">
+                <CallButton />
+                <InstallButton variant="hero" className="mt-2 min-h-11" />
               </div>
             </motion.div>
 
@@ -245,7 +311,7 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
             >
               <Icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="font-bold text-[15px] leading-tight">{title}</p>
+                <p className="font-bold text-base leading-tight">{title}</p>
                 <p className="text-sm text-muted-foreground leading-snug mt-0.5">{body}</p>
               </div>
             </div>
@@ -264,27 +330,41 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
               Есөн төрлийн үйлчилгээ нэг дор. Сонгосон үйлчилгээндээ тохирох хүргэгч эсвэл техник томилогдоно.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-10">
-            {SERVICES.map((sv) => {
-              const Icon = SERVICE_ICON[sv.id] ?? Package;
+
+          <div className="flex gap-2 overflow-x-auto mt-8 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Үйлчилгээний ангилал">
+            {SERVICE_CATEGORIES.map((c) => {
+              const on = cat === c.id;
               return (
                 <button
-                  key={sv.id}
-                  onClick={() => onStart("customer")}
-                  className="group flex items-center gap-4 bg-card border border-border rounded-2xl p-4 text-left hover:border-primary/50 hover:shadow-md transition-all"
+                  key={c.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setCat(c.id)}
+                  className={`shrink-0 min-h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${
+                    on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground hover:border-primary/40"
+                  }`}
                 >
-                  <span className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Icon className="w-5 h-5" />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block font-semibold leading-snug">{sv.label}</span>
-                    <span className="block text-sm text-muted-foreground mt-0.5 leading-snug">{sv.desc}</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  {c.label}
                 </button>
               );
             })}
           </div>
+
+          {featured.length > 0 && (
+            <div className={`grid gap-3 mt-4 ${featured.length > 1 ? "sm:grid-cols-2 lg:grid-cols-3" : "max-w-md"}`}>
+              {featured.map((sv) => (
+                <ServiceTile key={sv.id} sv={sv} featured tariff={tariff} onClick={() => onStart("customer")} />
+              ))}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+              {rest.map((sv) => (
+                <ServiceTile key={sv.id} sv={sv} featured={false} tariff={tariff} onClick={() => onStart("customer")} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ── Хэрхэн ажилладаг — логоны маршрутын зураасаар ── */}
@@ -316,7 +396,7 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                     )}
                   </span>
                   <p className="font-bold text-lg leading-tight">{s.title}</p>
-                  <p className="text-muted-foreground mt-2 leading-relaxed text-[15px]">{s.body}</p>
+                  <p className="text-muted-foreground mt-2 leading-relaxed text-base">{s.body}</p>
                 </li>
               );
             })}
@@ -326,9 +406,9 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
         {/* ── Хүргэгч болох ── */}
         {!hasSession && (
           <section id="couriers" className="py-4 md:py-8 scroll-mt-4">
-            <div className="rounded-3xl bg-[#16181d] text-white overflow-hidden grid md:grid-cols-[1.4fr_1fr]">
+            <div className="rounded-2xl bg-[#16181d] text-white overflow-hidden grid md:grid-cols-[1.4fr_1fr]">
               <div className="p-7 md:p-12 space-y-6">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] text-white px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] text-white px-3.5 min-h-8 text-xs font-extrabold uppercase tracking-wide">
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Одоо бүртгэж байна
                 </span>
                 <h2 className="text-white" style={{ fontWeight: 800, fontSize: "clamp(1.7rem, 4vw, 2.4rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
@@ -336,17 +416,18 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                 </h2>
                 <ul className="space-y-3">
                   {COURIER_NEEDS.map(({ icon: Icon, text }) => (
-                    <li key={text} className="flex items-center gap-3 text-white/85">
-                      <span className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                        <Icon className="w-4 h-4" />
+                    <li key={text} className="flex items-center gap-3 text-base text-white/85">
+                      <span className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5" />
                       </span>
                       {text}
                     </li>
                   ))}
                 </ul>
                 <button
+                  type="button"
                   onClick={() => onStart("courier")}
-                  className="inline-flex items-center gap-2 bg-white text-[#16181d] font-bold px-6 py-3.5 rounded-2xl hover:bg-white/90 transition-colors"
+                  className="inline-flex items-center gap-2 min-h-14 bg-white text-[#16181d] font-bold px-6 rounded-2xl hover:bg-white/90 transition-colors"
                 >
                   Хүргэгчээр бүртгүүлэх <ArrowRight className="w-4 h-4" />
                 </button>
@@ -356,7 +437,7 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                   Хүссэн цагтаа
                 </p>
                 <p className="text-lg font-semibold mt-3">ажилд гарч, ойрхон захиалга аваарай</p>
-                <p className="text-white/60 text-sm mt-2 leading-relaxed">
+                <p className="text-white/75 text-base mt-2 leading-relaxed">
                   Хүргэлт бүрийн орлогоо апп дээрээ шууд харна. Баримт бичиг баталгаажсаны дараа захиалга авч эхэлнэ.
                 </p>
               </div>
@@ -375,8 +456,8 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                 Оператор утсаар захиалгыг тань хүлээн авч, апп-д бүртгэнэ.
               </p>
               <div className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-sm text-muted-foreground">
-                <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> Өдөр бүр {WORK_HOURS}</span>
-                <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {CITY}</span>
+                <span className="flex items-center gap-2 min-h-11"><Clock className="w-4 h-4" /> Өдөр бүр {WORK_HOURS}</span>
+                <span className="flex items-center gap-2 min-h-11"><MapPin className="w-4 h-4" /> {CITY}</span>
               </div>
             </div>
             <div className="grid sm:grid-cols-3 gap-3">
@@ -384,10 +465,10 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
                 <a
                   key={p.tel}
                   href={`tel:${p.tel}`}
-                  className="group flex sm:flex-col items-center sm:items-start justify-between gap-3 bg-card border border-border rounded-2xl p-5 hover:border-primary/50 hover:shadow-md transition-all"
+                  className="group flex sm:flex-col items-center sm:items-start justify-between gap-3 bg-card border border-border rounded-2xl p-5 min-h-14 hover:border-primary/50 hover:shadow-md transition-all"
                 >
-                  <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Phone className="w-4 h-4" />
+                  <span className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Phone className="w-5 h-5" />
                   </span>
                   <span className="flex-1 sm:flex-none font-extrabold text-xl tabular tracking-tight">{p.label}</span>
                   <span className="text-sm font-semibold text-primary">Залгах</span>
@@ -399,54 +480,56 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false }: Lan
       </main>
 
       {/* ── Footer ── */}
-      <footer className="bg-[#0b0d12] text-white/70">
+      <footer className="bg-[#0b0d12] text-white/75">
         <div className="max-w-6xl mx-auto px-5 md:px-8 py-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="space-y-4">
             <Logo textColor="#fff" />
             <p className="text-sm leading-relaxed max-w-xs">Дархан хотын хүргэлтийн платформ. Үйлчлүүлэгч, хүргэгч, дэлгүүрүүдийг нэг дор холбоно.</p>
             <div className="flex items-center gap-2">
               <a href={SOCIAL.facebook} target="_blank" rel="noreferrer" aria-label="Facebook"
-                className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
+                className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
                 <FacebookIcon />
               </a>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" aria-label="Instagram"
-                className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
+                className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors">
                 <InstagramIcon />
               </a>
             </div>
           </div>
           <div>
-            <p className="text-white font-semibold mb-3">Үйлчилгээ</p>
-            <ul className="space-y-2 text-sm">
+            <p className="text-white font-semibold mb-1">Үйлчилгээ</p>
+            <ul className="text-sm">
               {SERVICES.slice(0, 5).map((sv) => (
-                <li key={sv.id}><button onClick={() => onStart("customer")} className="hover:text-white text-left">{sv.label}</button></li>
+                <li key={sv.id}>
+                  <button type="button" onClick={() => onStart("customer")} className="min-h-11 flex items-center hover:text-white text-left">{sv.label}</button>
+                </li>
               ))}
             </ul>
           </div>
           <div>
-            <p className="text-white font-semibold mb-3">Компани</p>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => onLegal("about")} className="hover:text-white">Бидний тухай</button></li>
-              <li><button onClick={() => onStart("courier")} className="hover:text-white">Хүргэгч болох</button></li>
-              <li><button onClick={() => onLegal("terms")} className="hover:text-white">Үйлчилгээний нөхцөл</button></li>
-              <li><button onClick={() => onLegal("privacy")} className="hover:text-white">Нууцлалын бодлого</button></li>
+            <p className="text-white font-semibold mb-1">Компани</p>
+            <ul className="text-sm">
+              <li><button type="button" onClick={() => onLegal("about")} className="min-h-11 flex items-center hover:text-white">Бидний тухай</button></li>
+              <li><button type="button" onClick={() => onStart("courier")} className="min-h-11 flex items-center hover:text-white">Хүргэгч болох</button></li>
+              <li><button type="button" onClick={() => onLegal("terms")} className="min-h-11 flex items-center hover:text-white">Үйлчилгээний нөхцөл</button></li>
+              <li><button type="button" onClick={() => onLegal("privacy")} className="min-h-11 flex items-center hover:text-white">Нууцлалын бодлого</button></li>
             </ul>
           </div>
           <div>
-            <p className="text-white font-semibold mb-3">Холбоо барих</p>
-            <ul className="space-y-2 text-sm">
+            <p className="text-white font-semibold mb-1">Холбоо барих</p>
+            <ul className="text-sm">
               {PHONES.map((p) => (
-                <li key={p.tel}><a href={`tel:${p.tel}`} className="hover:text-white tabular">{p.label}</a></li>
+                <li key={p.tel}><a href={`tel:${p.tel}`} className="min-h-11 flex items-center hover:text-white tabular">{p.label}</a></li>
               ))}
-              <li className="pt-1">Өдөр бүр {WORK_HOURS}</li>
-              <li>{CITY}</li>
+              <li className="min-h-11 flex items-center">Өдөр бүр {WORK_HOURS}</li>
+              <li className="min-h-11 flex items-center">{CITY}</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-white/10">
-          <div className="max-w-6xl mx-auto px-5 md:px-8 py-5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50">
+          <div className="max-w-6xl mx-auto px-5 md:px-8 py-4 flex flex-wrap items-center justify-between gap-2 text-sm text-white/75">
             <span>© {year} {COMPANY} · {SITE}. Бүх эрх хуулиар хамгаалагдсан.</span>
-            <button onClick={() => onLegal("contact")} className="hover:text-white">Холбоо барих</button>
+            <button type="button" onClick={() => onLegal("contact")} className="min-h-11 hover:text-white">Холбоо барих</button>
           </div>
         </div>
       </footer>
