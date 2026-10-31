@@ -6,10 +6,10 @@
 //
 // sessionId хөтөч рүү хэзээ ч явахгүй. purpose=phone үед Authorization: Bearer.
 
-import { phoneVerifyReady, supabasePhoneDb } from "../server/phone-db.ts";
-import { refreshVerification, startVerification, type Purpose, type StartError, type VerifyRole } from "../server/phone-verification.ts";
-import { verifyMode } from "../server/verify-mn.ts";
-import { adminClient } from "../server/supabase-admin.ts";
+import { phoneVerifyReady, supabasePhoneDb } from "../server/phone-db.js";
+import { refreshVerification, startVerification, type Purpose, type StartError, type VerifyRole } from "../server/phone-verification.js";
+import { verifyMode } from "../server/verify-mn.js";
+import { adminClient } from "../server/supabase-admin.js";
 import { createClient } from "@supabase/supabase-js";
 
 const json = (body: unknown, status = 200) =>
@@ -85,7 +85,7 @@ export default {
         res.error === "phoneTaken" && purpose === "phone"
           ? "Энэ дугаар өөр бүртгэлд байна"
           : MESSAGES[res.error];
-      return json({ ok: false, error }, { status: res.error === "tooMany" ? 429 : 400 });
+      return json({ ok: false, error }, res.error === "tooMany" ? 429 : 400);
     } catch (err) {
       console.error("phone-verify", err);
       return json({ error: "Серверийн алдаа. Дахин оролдоно уу." }, 500);

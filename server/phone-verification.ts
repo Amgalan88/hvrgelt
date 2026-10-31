@@ -1,7 +1,7 @@
 // Утас баталгаажуулалтын логик (Verify.MN). UI текстгүй — алдааны кодыг буцаана.
 // aicargo lib/phone-verification.ts-тэй ижил дүрэм, hvrgelt-ийн үүрэгт тааруулсан.
 import crypto from "node:crypto";
-import { createSession, getStatus, newCode, verifyMode, type VerifyStatus } from "./verify-mn.ts";
+import { createSession, getStatus, newCode, verifyMode, type VerifyStatus } from "./verify-mn.js";
 
 export const VERIFICATION_VALID_MINUTES = 60;
 export const MAX_ATTEMPTS = 3;

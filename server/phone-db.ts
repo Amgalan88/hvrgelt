@@ -1,6 +1,6 @@
 // phone_verifications хүснэгт — зөвхөн service role. RLS нээлттэй, policy байхгүй.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AccountHit, PhoneDb, VerificationRow } from "./phone-verification.ts";
+import type { AccountHit, PhoneDb, VerificationRow } from "./phone-verification.js";
 
 const TABLES = [
   ["operators", "operator"],
