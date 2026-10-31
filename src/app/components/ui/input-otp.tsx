@@ -9,6 +9,8 @@ import { cn } from "./utils";
 function InputOTP({
   className,
   containerClassName,
+  inputMode = "numeric",
+  autoComplete = "one-time-code",
   ...props
 }: React.ComponentProps<typeof OTPInput> & {
   containerClassName?: string;
@@ -16,6 +18,8 @@ function InputOTP({
   return (
     <OTPInput
       data-slot="input-otp"
+      inputMode={inputMode}
+      autoComplete={autoComplete}
       containerClassName={cn(
         "flex items-center gap-2 has-disabled:opacity-50",
         containerClassName,

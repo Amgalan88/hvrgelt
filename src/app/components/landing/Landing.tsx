@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { InstallButton } from "../shared/InstallApp";
 import { motion } from "motion/react";
 import {
-  ArrowRight, Phone, Clock, MapPin, Truck, Package, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
+  ArrowRight, ChevronRight, Phone, Clock, MapPin, Truck, Package, Zap, BadgeCheck, Smartphone, Bike, IdCard, Navigation, type LucideIcon,
 } from "lucide-react";
 import { Logo, LogoMark } from "../shared/Logo";
 import { SERVICES, SERVICE_CATEGORIES, categoryOf, isFeaturedService, type Service, type ServiceCategory } from "../customer/services";
 import { SERVICE_ICON } from "../customer/serviceIcons";
+import { ServiceThumb } from "../customer/ServiceThumb";
 import { PHONES, WORK_HOURS, CITY, SOCIAL, SITE, COMPANY, LAUNCH_SHORT } from "../../lib/contact";
 import { startingPrice, type Tariff } from "../../lib/pricing";
 
@@ -64,8 +65,8 @@ function InstagramIcon() {
 function PhonePreview() {
   const rows = SERVICES.slice(0, 5);
   return (
-    <div className="relative mx-auto w-[280px] rounded-[2.6rem] bg-[#0b0d12] p-[10px] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10" aria-hidden>
-      <div className="rounded-[2rem] overflow-hidden bg-[#f7f5f2] text-[#16181d]">
+    <div className="relative mx-auto w-[280px] rounded-2xl bg-[#0b0d12] p-[10px] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10" aria-hidden>
+      <div className="rounded-2xl overflow-hidden bg-[#f7f5f2] text-[#16181d]">
         <div className="flex items-center justify-between px-5 pt-3 pb-1 text-xs font-semibold">
           <span>9:41</span>
           <span className="w-16 h-4 rounded-full bg-[#0b0d12]" />
@@ -139,6 +140,52 @@ function CallButton() {
   );
 }
 
+/** Хэвтээ цэс тасархай харагдахад ирмэг бүдгэрч, гүйлгэхийг илтгэнэ. */
+function EdgeScroll({ children }: { children: ReactNode }) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const measure = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setEdge({
+        left: el.scrollLeft > 2,
+        right: max - el.scrollLeft > 2,
+      });
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, []);
+
+  const mask = `linear-gradient(to right, ${edge.left ? "transparent" : "#000"} 0, #000 16px, #000 calc(100% - 36px), ${edge.right ? "transparent" : "#000"} 100%)`;
+
+  return (
+    <div className="relative">
+      <div
+        ref={scroller}
+        className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ maskImage: mask, WebkitMaskImage: mask }}
+      >
+        {children}
+      </div>
+      {edge.right && (
+        <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center text-white" aria-hidden>
+          <ChevronRight className="w-5 h-5 drop-shadow" />
+        </span>
+      )}
+      {edge.right && <span className="sr-only">Хажуу тийш гүйлгэж бусад цэсийг харна</span>}
+    </div>
+  );
+}
+
 function ServiceTile({
   sv, featured, tariff, onClick,
 }: {
@@ -147,7 +194,6 @@ function ServiceTile({
   tariff?: Tariff | null;
   onClick: () => void;
 }) {
-  const Icon = SERVICE_ICON[sv.id] ?? Package;
   const from = startingPrice(tariff, sv.id);
   const box = featured ? "w-24 h-24" : "w-[72px] h-[72px]";
   const icon = featured ? "w-11 h-11" : "w-9 h-9";
@@ -159,8 +205,8 @@ function ServiceTile({
         featured ? "flex-col p-5 gap-4" : "items-center gap-4 p-4"
       }`}
     >
-      <span className={`${box} rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors`}>
-        <Icon className={icon} />
+      <span className={`${box} rounded-2xl overflow-hidden bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors`}>
+        <ServiceThumb id={sv.id} iconClassName={icon} />
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-lg font-bold leading-snug">{sv.label}</span>
@@ -231,11 +277,13 @@ export function Landing({ hasSession, onStart, onLegal, prelaunch = false, tarif
               </button>
             </div>
           </nav>
-          {/* Утсан дээр — компьютерын цэсийн ижил холбоосууд */}
-          <div className="md:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {([["#services", "Үйлчилгээ"], ["#how", "Хэрхэн ажилладаг"], ["#couriers", "Хүргэгч болох"]] as const).map(([href, label]) => (
-              <a key={href} href={href} className="shrink-0 min-h-11 inline-flex items-center text-sm font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-4">{label}</a>
-            ))}
+          {/* Утсан дээр — компьютерын цэсийн ижил холбоосууд. Хажуу тийш гүйлгэнэ. */}
+          <div className="md:hidden">
+            <EdgeScroll>
+              {([["#services", "Үйлчилгээ"], ["#how", "Хэрхэн ажилладаг"], ["#couriers", "Хүргэгч болох"]] as const).map(([href, label]) => (
+                <a key={href} href={href} className="shrink-0 min-h-11 inline-flex items-center text-sm font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-4">{label}</a>
+              ))}
+            </EdgeScroll>
           </div>
 
           <div className="grid md:grid-cols-[1.15fr_1fr] gap-10 items-center pt-8 pb-10 md:pt-14 md:pb-20">

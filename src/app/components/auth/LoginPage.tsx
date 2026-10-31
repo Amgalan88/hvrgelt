@@ -47,6 +47,13 @@ const MAX_ATTEMPTS     = 5;
 
 const SAVED_PHONE_KEY = "hvrgelt_last_phone";
 
+/** Буцах — хамгийн багадаа 44px. Өмнө нь py-1-тэй ~28px байсан. */
+const backBtn =
+  "inline-flex items-center min-h-11 gap-1.5 px-1 -ml-1 text-sm text-muted-foreground hover:text-foreground mb-6 self-start";
+/** Идэвхгүй үед бүдэг улбар биш, саарал. */
+const primaryBtn =
+  "w-full min-h-11 bg-primary text-primary-foreground py-3.5 rounded-2xl font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100 disabled:cursor-not-allowed disabled:hover:bg-secondary";
+
 /** PIN / pattern оруулсны дараа сервер хариулах хүртэл — гацсан мэт санагдуулахгүй */
 function BusyOverlay({ label }: { label: string }) {
   return (
@@ -87,14 +94,14 @@ function ForgotSheet({ role, method, phone, onClose }: { role: UserRole; method:
             <a
               key={p.tel}
               href={`tel:${p.tel}`}
-              className="flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-3 text-sm font-semibold"
+              className="flex items-center justify-center gap-2 min-h-11 bg-primary/10 text-primary rounded-xl py-3 text-sm font-semibold"
             >
               <Smartphone className="w-4 h-4" /> {p.label}
             </a>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground text-center mt-2">Ажлын цаг {WORK_HOURS}</p>
-        <button onClick={onClose} className="mt-4 w-full border border-border py-3 rounded-xl text-sm font-semibold">
+        <p className="text-xs text-muted-foreground text-center mt-2">Ажлын цаг {WORK_HOURS}</p>
+        <button onClick={onClose} className="mt-4 w-full min-h-11 border border-border py-3 rounded-xl text-sm font-semibold">
           Хаах
         </button>
       </div>
@@ -104,7 +111,7 @@ function ForgotSheet({ role, method, phone, onClose }: { role: UserRole; method:
 
 function ForgotLink({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="mt-4 self-center text-sm text-primary font-semibold hover:underline">
+    <button onClick={onClick} className="mt-2 self-center min-h-11 px-3 inline-flex items-center text-sm text-primary font-semibold hover:underline">
       Мартсан уу?
     </button>
   );
@@ -458,7 +465,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-6 max-w-sm mx-auto w-full">
         {onBack ? (
-          <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start -ml-1 py-1">
+          <button onClick={onBack} className={backBtn}>
             <ArrowLeft className="w-4 h-4" /> Нүүр хуудас
           </button>
         ) : <div className="h-6" />}
@@ -493,7 +500,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             {savedPhone && !phone && (
               <button
                 onClick={() => { setPhone(savedPhone); setPhoneError(""); }}
-                className="mt-3 w-full flex items-center justify-between bg-secondary/60 hover:bg-secondary rounded-xl px-3.5 py-2.5 text-sm transition-colors"
+                className="mt-3 w-full min-h-11 flex items-center justify-between bg-secondary/60 hover:bg-secondary rounded-xl px-3.5 py-2.5 text-sm transition-colors"
               >
                 <span className="flex items-center gap-2 text-muted-foreground">
                   <Smartphone className="w-4 h-4" /> Сүүлд нэвтэрсэн
@@ -508,11 +515,11 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           <button
             onClick={handlePhoneSubmit}
             disabled={!isValidPhone(phone) || submitting}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            className={primaryBtn}
           >
             {submitting ? <Spinner className="w-4 h-4" /> : <>Үргэлжлүүлэх <ArrowRight className="w-4 h-4" /></>}
           </button>
-          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
             Оператор, партнёр, админ бүгд энэ дэлгэцээс өөрийн дугаараар нэвтэрнэ
           </p>
         </div>
@@ -532,7 +539,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     if (authStep === "password") {
       return (
         <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-          <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+          <button onClick={() => setScreen("phone")} className={backBtn}>
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
           <Logo />
@@ -558,9 +565,9 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
                   type={showPass ? "text" : "password"}
                   placeholder="••••••••"
                   autoFocus
-                  className="w-full bg-card border border-border rounded-xl px-4 py-3 pr-10 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-primary/50 transition-colors"
                 />
-                <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? "Нууц үг нуух" : "Нууц үг харах"} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-muted-foreground">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -573,7 +580,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             <button
               onClick={() => verifyAuth(password)}
               disabled={!password || locked || verifying}
-              className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors inline-flex items-center justify-center gap-2"
+              className={primaryBtn}
               style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
             >
               {locked ? `${countdown}с хүлээнэ үү` : verifying ? <><Spinner className="w-4 h-4" /> Нэвтэрч байна...</> : "Нэвтрэх"}
@@ -591,7 +598,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     if (authStep === "pin") {
       return (
         <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-          <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+          <button onClick={() => setScreen("phone")} className={backBtn}>
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
           <Logo />
@@ -621,7 +628,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     // Pattern
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-        <button onClick={() => setScreen("phone")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+        <button onClick={() => setScreen("phone")} className={backBtn}>
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
         <Logo />
@@ -701,7 +708,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     if (setupStep === "pin") {
       return (
         <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-          <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+          <button onClick={() => setSetupStep("choose")} className={backBtn}>
             <ArrowLeft className="w-4 h-4" /> Буцах
           </button>
           <Logo />
@@ -718,7 +725,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
 
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-        <button onClick={() => setSetupStep("choose")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+        <button onClick={() => setSetupStep("choose")} className={backBtn}>
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
         <Logo />
@@ -743,7 +750,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             else if (resetStep === "choose") { setResetVerification(null); setResetStep("verify"); }
             else setScreen("auth");
           }}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start"
+          className={backBtn}
         >
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
@@ -764,7 +771,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             {resetVerification && resetVerification !== "skip" && (
               <button
                 onClick={() => setResetStep("choose")}
-                className="mt-6 w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-semibold"
+                className={`${primaryBtn} mt-6`}
               >
                 Үргэлжлүүлэх
               </button>
@@ -816,7 +823,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
   function RegHeader({ onBack }: { onBack: () => void }) {
     return (
       <>
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start">
+        <button onClick={onBack} className={backBtn}>
           <ArrowLeft className="w-4 h-4" /> Буцах
         </button>
         <Logo />
@@ -861,7 +868,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
                 role="radio"
                 aria-checked={mode === key}
                 onClick={() => { setMode(key); setVerificationId(null); }}
-                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 min-h-11 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mode === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -888,6 +895,8 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
                 onChange={(e) => { setRPhone(e.target.value); setVerificationId(null); }}
                 placeholder="99000000"
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
                 className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
@@ -904,12 +913,12 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
                       role="radio"
                       aria-checked={on}
                       onClick={() => setRVehicle(v.key)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${on ? "bg-primary/10" : "hover:bg-secondary/50"}`}
+                      className={`w-full min-h-11 flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${on ? "bg-primary/10" : "hover:bg-secondary/50"}`}
                     >
                       <span className="text-2xl leading-none w-8 text-center">{v.emoji}</span>
                       <span className="flex-1 min-w-0">
                         <span className={`block text-sm font-semibold capitalize ${on ? "text-primary" : ""}`}>{v.key}</span>
-                        <span className="block text-[11px] text-muted-foreground leading-snug">
+                        <span className="block text-xs text-muted-foreground leading-snug">
                           {v.needs}{v.note ? ` · ${v.note}` : ""}
                         </span>
                       </span>
@@ -933,12 +942,12 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           <button
             onClick={() => void continueToVerify()}
             disabled={!rName.trim() || !isValidPhone(rPhone) || (mode === "courier" && !rVehicle) || submitting}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            className={primaryBtn}
             style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
             Үргэлжлүүлэх <ArrowRight className="w-4 h-4" />
           </button>
-          <button onClick={() => { resetRegister(); setScreen("phone"); }} className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={() => { resetRegister(); setScreen("phone"); }} className="w-full min-h-11 text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
             Бүртгэлтэй юу? <span className="text-primary underline">Нэвтрэх</span>
           </button>
         </div>
@@ -970,7 +979,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           <button
             onClick={() => setRegStep("choose")}
             disabled={!verified}
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 font-semibold"
+            className={primaryBtn}
           >
             {verified ? "Үргэлжлүүлэх" : "Эхлээд утсаа баталгаажуулна уу"}
           </button>

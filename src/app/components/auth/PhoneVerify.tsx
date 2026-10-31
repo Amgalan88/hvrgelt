@@ -12,6 +12,10 @@ type Stage = "idle" | "starting" | "pending" | "verified" | "expired";
 
 const POLL_MS = 3000;
 
+/** Идэвхгүй үед саарал, хамгийн багадаа 44px. */
+const actionBtn =
+  "shrink-0 min-h-11 min-w-11 px-3 rounded-xl text-sm font-semibold disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100 disabled:cursor-not-allowed";
+
 export function PhoneVerify({
   phone,
   onPhone,
@@ -156,12 +160,12 @@ export function PhoneVerify({
               type="button"
               onClick={() => void start()}
               disabled={stage === "starting" || clean.length !== 8}
-              className="shrink-0 bg-primary text-primary-foreground px-3 rounded-xl text-sm font-semibold disabled:opacity-40"
+              className={`${actionBtn} bg-primary text-primary-foreground disabled:hover:bg-secondary`}
             >
               {stage === "starting" ? "..." : "Баталгаажуулах"}
             </button>
           ) : stage === "verified" && lockPhone ? null : (
-            <button type="button" onClick={reset} className="shrink-0 border border-border px-3 rounded-xl text-sm">
+            <button type="button" onClick={reset} className={`${actionBtn} border border-border`}>
               {lockPhone ? "Цуцлах" : "Солих"}
             </button>
           )}
@@ -179,14 +183,22 @@ export function PhoneVerify({
           <p>
             <strong className="tabular">{clean}</strong> дугаараасаа <strong>{session.shortcode}</strong> руу энэ кодыг SMS-ээр илгээнэ үү.
           </p>
-          <div className="flex items-baseline justify-center gap-3 bg-card rounded-xl py-3">
+          <div className="flex items-center justify-center gap-3 bg-card rounded-xl py-3">
             <span className="text-muted-foreground font-semibold text-sm">→ {session.shortcode}</span>
-            <span className="text-3xl font-extrabold tracking-[0.18em] tabular">{session.code}</span>
+            <input
+              readOnly
+              value={session.code}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label="Илгээх код"
+              size={Math.max(4, session.code.length)}
+              className="bg-transparent border-0 p-0 text-3xl font-extrabold tracking-[0.18em] tabular text-center focus:outline-none"
+            />
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Заавал энэ дугаартай утаснаасаа илгээнэ үү (2 SIM-тэй бол тэр SIM-ээр). SMS-ийн үнэ <strong className="text-foreground">150₮</strong> — утсанд тань нэгж байх шаардлагатай.
           </p>
-          <a href={smsHref} className="flex items-center justify-center bg-primary text-primary-foreground py-3 rounded-xl font-semibold">
+          <a href={smsHref} className="flex items-center justify-center min-h-11 bg-primary text-primary-foreground py-3 rounded-xl font-semibold">
             ✉ SMS бичих
           </a>
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -208,7 +220,7 @@ export function PhoneVerify({
       {stage === "expired" && (
         <p className="text-xs text-destructive">
           Хугацаа дууссан — хуучин код хүчингүй.{" "}
-          <button type="button" onClick={reset} className="underline font-semibold">Шинэ код авах</button>
+          <button type="button" onClick={reset} className="inline-flex items-center min-h-11 underline font-semibold">Шинэ код авах</button>
         </p>
       )}
     </div>
@@ -258,7 +270,7 @@ export function PhoneGate({
       <PhoneVerify key={round} purpose="phone" phone={value} onPhone={setValue} onVerified={(id) => void save(id)} />
       {saving && <p className="text-sm text-muted-foreground mt-3">Хадгалж байна…</p>}
       {error && <p className="text-xs text-destructive mt-3">{error}</p>}
-      <button type="button" onClick={onLogout} className="mt-auto pt-8 text-sm text-muted-foreground">Гарах</button>
+      <button type="button" onClick={onLogout} className="mt-auto min-h-11 text-sm text-muted-foreground">Гарах</button>
     </div>
   );
 }
@@ -308,7 +320,7 @@ export function PhoneManage({
           <button
             type="button"
             onClick={() => { setOpen(true); setValue(normalizePhone(phone)); setError(""); }}
-            className={`text-xs px-3 py-1.5 rounded-lg border ${verified ? "border-border text-muted-foreground" : "border-primary/40 text-primary"}`}
+            className={`text-xs min-h-11 px-3 rounded-lg border ${verified ? "border-border text-muted-foreground" : "border-primary/40 text-primary"}`}
           >
             {verified ? "Дугаар солих" : "Баталгаажуулах"}
           </button>
@@ -324,7 +336,7 @@ export function PhoneManage({
           <PhoneVerify key={round} purpose="phone" phone={value} onPhone={setValue} onVerified={(id) => void save(id)} />
           {saving && <p className="text-xs text-muted-foreground">Хадгалж байна…</p>}
           {error && <p className="text-xs text-destructive">{error}</p>}
-          <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted-foreground underline">Болих</button>
+          <button type="button" onClick={() => setOpen(false)} className="inline-flex items-center min-h-11 text-xs text-muted-foreground underline">Болих</button>
         </div>
       )}
     </div>

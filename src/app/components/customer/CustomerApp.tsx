@@ -15,6 +15,7 @@ import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
 import { SERVICES, serviceById, subServiceById, visibleSubs, SERVICE_CATEGORIES, categoryOf, isFeaturedService, type Service, type ServiceCategory } from "./services";
 import { serviceIcon } from "./serviceIcons";
+import { ServiceThumb } from "./ServiceThumb";
 import { CourierProfileModal } from "./CourierProfileModal";
 import { CargoDetails, type CargoInfo } from "./CargoDetails";
 import { PaymentPanel } from "./PaymentPanel";
@@ -952,8 +953,8 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                                 : `px-3.5 py-3 ${active ? "bg-primary/[0.07]" : "hover:bg-secondary/50"}`
                             }`}
                           >
-                            <span className={`${large ? "w-[88px] h-[88px]" : "w-[72px] h-[72px]"} rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
-                              <SvcIcon id={sv.id} className={large ? "w-10 h-10" : "w-8 h-8"} />
+                            <span className={`${large ? "w-[88px] h-[88px]" : "w-[72px] h-[72px]"} rounded-2xl overflow-hidden flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+                              <ServiceThumb id={sv.id} iconClassName={large ? "w-10 h-10" : "w-8 h-8"} />
                             </span>
                             <span className="flex-1 min-w-0">
                               <span className="block text-lg font-bold leading-snug">{sv.label}</span>
