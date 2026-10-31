@@ -5,6 +5,7 @@ import { MapPin, Package, Phone, CheckCircle, LogOut, Star, TrendingUp, ChevronR
 import type { Order, CourierUser, CourierDocs } from "../shared/types";
 import type { CourierAccount } from "../shared/store";
 import { CourierDocsForm } from "./CourierDocsForm";
+import { PhoneManage } from "../auth/PhoneVerify";
 import { VEHICLE_ICON, missingDocs } from "../../lib/vehicles";
 import { alertNewOrder } from "../../lib/alert";
 import { useUser } from "../shared/UserContext";
@@ -45,10 +46,14 @@ interface CourierAppProps {
   onClaim: (orderId: string) => Promise<boolean>;
   /** Ажилд гарах / амрах */
   onSetOnline: (online: boolean) => Promise<void>;
+  phoneVerified?: boolean | null;
+  onPhoneChanged?: (phone: string) => void;
+  phoneUnverified?: boolean;
+  onRequestVerify?: () => void;
 }
 
 
-export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true, courierAccounts, onClaim, onSetOnline }: CourierAppProps) {
+export function CourierApp({ orders, courierId, courierName, courierInfo, account, onSaveDocs, onPickup, onDeliver, onLogout, shareLocation = true, courierAccounts, onClaim, onSetOnline, phoneVerified = null, onPhoneChanged, phoneUnverified = false, onRequestVerify }: CourierAppProps) {
   const [tab, setTab] = useState<"active" | "done" | "docs">("active");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<"авах" | "хүргэх" | null>(null);
@@ -88,7 +93,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
     return { id: c.id, available: c.available, active: c.active, verified: c.verified, vehicle: c.vehicle, pos: l ? { lat: l.lat, lng: l.lng } : undefined, locAt: l?.updatedAt };
   });
   const offers: Offer[] =
-    online && canWork && activeOrders.length === 0
+    online && canWork && !phoneUnverified && activeOrders.length === 0
       ? searching.flatMap((o) => {
           const pickup = o.fromLat != null && o.fromLng != null ? { lat: o.fromLat, lng: o.fromLng } : null;
           const hit = offerFor(courierId, { pickup, searchingSince: o.searchingSince, tripKm: o.distance }, dispatchCouriers);
@@ -105,6 +110,10 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
   }, [offers.map((o) => o.order.id).join(",")]);
 
   async function toggleOnline() {
+    if (phoneUnverified && !online) {
+      onRequestVerify?.();
+      return;
+    }
     setToggling(true);
     try {
       await onSetOnline(!online);
@@ -211,6 +220,15 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
       </RoleHeader>
 
       <div className="max-w-sm mx-auto w-full px-4 py-4 space-y-4">
+        {phoneUnverified && (
+          <button type="button" onClick={() => onRequestVerify?.()} className="w-full text-left rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3">
+            <p className="text-sm font-semibold">Утас баталгаажаагүй</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Явж буй хүргэлтээ дуусгана. Шинэ захиалга авахын тулд утсаа баталгаажуулна уу.</p>
+          </button>
+        )}
+        {onPhoneChanged && phoneVerified !== null && tab === "docs" && (
+          <PhoneManage phone={courierInfo?.phone ?? ""} verified={phoneVerified} onChanged={onPhoneChanged} />
+        )}
         {/* Today stats */}
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -274,6 +292,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
             <OfferCards
               offers={offers}
               onClaim={async (id) => {
+                if (phoneUnverified) { onRequestVerify?.(); return false; }
                 const ok = await onClaim(id);
                 // Санал авсан нь хүлээн авсан гэсэн үг — "Хүлээн авах"-ыг дахин дарахгүй
                 if (ok) acceptOrder(id);

@@ -1,5 +1,5 @@
 import { DEFAULT_TARIFF, TARIFF_SETTINGS_KEY, parseTariff, type Tariff } from "../../lib/pricing";
-import { authLookup, authChange, authAdminSet, authAdminReset } from "../../lib/authApi";
+import { authLookup, authChange, authAdminSet, authAdminReset, authAdminPhone } from "../../lib/authApi";
 import type { Vehicle } from "../../lib/vehicles";
 import { createMockInvoice, type QpayBank } from "../../lib/mockQpay";
 import { useState, useCallback, useEffect } from "react";
@@ -935,7 +935,11 @@ export function useStore() {
       const patch: any = {};
       if (data.name !== undefined) patch.name = data.name;
       if (data.username !== undefined) patch.username = data.username;
-      if (data.phone !== undefined) patch.phone = data.phone;
+      // Дугаарыг клиентээс биш сервер солино — баталгаажуулалт цэвэрлэгдэнэ
+      if (data.phone !== undefined) {
+        const r = await authAdminPhone(id, data.phone);
+        if (!r.ok) throw new Error(r.error ?? "Дугаар солигдсонгүй");
+      }
       if (data.vehicle !== undefined) patch.vehicle = data.vehicle;
       if (data.available !== undefined) patch.available = data.available;
       if (data.rating !== undefined) patch.rating = data.rating;
