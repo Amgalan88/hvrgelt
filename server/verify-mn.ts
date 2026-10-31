@@ -5,13 +5,14 @@ import crypto from "node:crypto";
 
 const BASE = "https://api.verify.mn";
 const MOCK_VERIFY_AFTER_MS = 4000;
+const apiKey = () => process.env.VERIFY_MN_API_KEY?.trim() ?? "";
 
 export type VerifySession = { sessionId: string; shortcode: string; text: string; expiresAt: Date; smsUri: string };
 export type VerifyStatus = "PENDING" | "VERIFIED" | "EXPIRED";
 
 // Түлхүүр байвал үргэлж жинхэнэ горим. Туршилтын горим production-д хэзээ ч асахгүй.
 export function verifyMode(): "live" | "mock" | "off" {
-  if (process.env.VERIFY_MN_API_KEY?.trim()) return "live";
+  if (apiKey()) return "live";
   if (process.env.VERIFY_MN_MOCK === "1" && process.env.VERCEL_ENV !== "production") return "mock";
   return "off";
 }
@@ -35,7 +36,7 @@ export async function createSession(phone: string, text: string, callback?: stri
   }
   const res = await fetch(`${BASE}/sessions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.VERIFY_MN_API_KEY}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey()}` },
     body: JSON.stringify({ phone, text, ...(callback ? { callback } : {}), responseSms: RESPONSE_SMS }),
   });
   if (!res.ok) throw new Error(`verify.mn ${res.status}: ${(await res.text()).slice(0, 200)}`);
