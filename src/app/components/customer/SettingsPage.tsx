@@ -1,6 +1,7 @@
 import { useUndo } from "../shared/Undo";
 import { storePhoto } from "../../lib/photo";
 import { authLogin } from "../../lib/authApi";
+import { PhoneManage } from "../auth/PhoneVerify";
 import { useState, useEffect, useRef } from "react";
 import { Home, Briefcase, MapPin, Plus, Trash2, Pencil, Moon, Sun, X, Lock, Bell, BellOff, CheckCircle, Phone, Camera } from "lucide-react";
 import { PHONES, WORK_HOURS } from "../../lib/contact";
@@ -115,6 +116,8 @@ interface SettingsPageProps {
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
+  phoneVerified?: boolean | null;
+  onPhoneChanged?: (phone: string) => void;
 }
 
 type LockFlow =
@@ -123,7 +126,7 @@ type LockFlow =
   | "pattern-new" | "pattern-confirm"
   | null;
 
-export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout }: SettingsPageProps) {
+export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogout, phoneVerified = null, onPhoneChanged }: SettingsPageProps) {
   const { photoUrl, setPhotoUrl, theme, toggleTheme, accentColor, setAccentColor, savedAddresses, addAddress, updateAddress, removeAddress, replaceAddresses, pin, setPin, pattern, setPattern } = useUser();
   const { offerUndo } = useUndo();
   const [showAdd, setShowAdd] = useState(false);
@@ -236,6 +239,10 @@ export function SettingsPage({ userId, userName, userPhone, onUpdateAuth, onLogo
       </div>
 
       {photoError && <p className="text-xs text-destructive -mt-3 px-1">{photoError}</p>}
+
+      {onPhoneChanged && (
+        <PhoneManage phone={userPhone} verified={phoneVerified} onChanged={onPhoneChanged} />
+      )}
 
       {/* Appearance */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">

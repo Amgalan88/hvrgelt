@@ -11,11 +11,12 @@ import { PinPad } from "../shared/PinPad";
 import { PatternLock } from "../shared/PatternLock";
 import { useUser } from "../shared/UserContext";
 import { normalizePhone, isValidPhone } from "../../lib/phone";
-import { authLogin, authSetup, authRegister, applySession, type AuthResult } from "../../lib/authApi";
+import { authLogin, authSetup, authRegister, authResetPin, applySession, type AuthResult } from "../../lib/authApi";
+import { PhoneVerify } from "./PhoneVerify";
 import { PHONES, WORK_HOURS } from "../../lib/contact";
 
 interface LoginPageProps {
-  onLogin: (role: UserRole, id: string, name: string, phone: string) => void;
+  onLogin: (role: UserRole, id: string, name: string, phone: string, phoneVerified?: boolean) => void;
   resolveByPhone: (phone: string) => Promise<AccountLookup | null>;
   /** Бүртгэлгүй дугаар оруулбал аль төрлөөр бүртгүүлэхийг урьдчилан сонгоно */
   initialMode?: LoginMode;
@@ -34,8 +35,9 @@ const VEHICLE_CHOICES = VEHICLES.map((key) => ({
   note: VEHICLE_REACH[key] ? `ойрхон захиалга (${VEHICLE_REACH[key].tripKm} км хүртэл)` : undefined,
 }));
 
-type Screen = "phone" | "auth" | "first-setup" | "register";
-type RegStep = "info" | "choose" | "pin" | "pattern";
+type Screen = "phone" | "auth" | "first-setup" | "register" | "reset";
+type RegStep = "info" | "verify" | "choose" | "pin" | "pattern";
+type ResetStep = "verify" | "choose" | "pin" | "pattern";
 type AuthStep = "pin" | "pattern" | "password";
 type SetupStep = "choose" | "pin" | "pattern";
 
@@ -146,6 +148,14 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
   const [pinFirst, setPinFirst]     = useState("");
   const [patternFirst, setPatternFirst] = useState("");
   const [regError, setRegError]     = useState("");
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+
+  // SMS-ээр PIN / pattern сэргээх (үйлчлүүлэгч, хүргэгч)
+  const [resetStep, setResetStep] = useState<ResetStep>("verify");
+  const [resetVerification, setResetVerification] = useState<string | null>(null);
+  const [resetPinFirst, setResetPinFirst] = useState("");
+  const [resetPatternFirst, setResetPatternFirst] = useState("");
+  const [resetError, setResetError] = useState("");
 
   // ── Countdown timer ──────────────────────────────────────────────
   useEffect(() => {
@@ -257,7 +267,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
         if (account.authMethod === "pin") { setPin(entered); setPattern(null); }
         else if (account.authMethod === "pattern") { setPattern(entered); setPin(null); }
       }
-      onLogin(account.role, account.id, account.name, normalizePhone(phone));
+      onLogin(account.role, account.id, account.name, normalizePhone(phone), r.phoneVerified);
     } finally {
       setVerifying(false);
     }
@@ -285,7 +295,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
       if (method === "pin") { setPin(key); setPattern(null); } else { setPattern(key); setPin(null); }
     }
     localStorage.setItem(SAVED_PHONE_KEY, phone);
-    onLogin(account!.role, account!.id, account!.name, normalizePhone(phone));
+    onLogin(account!.role, account!.id, account!.name, normalizePhone(phone), r.phoneVerified);
   }
 
   function handleSetupPin(pin: string) {
@@ -328,6 +338,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
       vehicle: mode === "courier" ? rVehicle ?? "явган" : undefined,
       method,
       key,
+      verificationId: verificationId && verificationId !== "skip" ? verificationId : undefined,
     });
     if (!r.ok || !r.id) {
       setRegError(r.error ?? "Бүртгэхэд алдаа гарлаа. Дахин оролдоно уу.");
@@ -338,7 +349,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
       if (method === "pin") { setPin(key); setPattern(null); } else { setPattern(key); setPin(null); }
     }
     localStorage.setItem(SAVED_PHONE_KEY, rPhone);
-    onLogin(mode, r.id, rName.trim(), normalizePhone(rPhone));
+    onLogin(mode, r.id, rName.trim(), normalizePhone(rPhone), r.phoneVerified);
     return true;
   }
 
@@ -369,6 +380,70 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     setRegStep("info");
     setPinFirst(""); setPatternFirst("");
     setRegError("");
+    setVerificationId(null);
+  }
+
+  function openForgot() {
+    if (account && (account.role === "customer" || account.role === "courier")) {
+      setResetStep("verify");
+      setResetVerification(null);
+      setResetPinFirst("");
+      setResetPatternFirst("");
+      setResetError("");
+      setScreen("reset");
+      return;
+    }
+    setForgotOpen(true);
+  }
+
+  async function continueToVerify() {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/phone-verify?ready=1").catch(() => null);
+      const d = await res?.json().catch(() => ({}));
+      // 25.sql ажиллаагүй, эсвэл локал дээр API байхгүй — хуучин бүртгэлээр үргэлжилнэ.
+      // Сервер бэлэн бол register өөрөө баталгаажуулалтыг шаардсаар байна.
+      if (!res || res.status === 404 || d?.ready === false) {
+        setVerificationId("skip");
+        setRegStep("choose");
+        return;
+      }
+      setVerificationId(null);
+      setRegStep("verify");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function finishReset(method: "pin" | "pattern", key: string) {
+    if (!resetVerification || resetVerification === "skip" || verifying) return;
+    setVerifying(true);
+    setResetError("");
+    try {
+      const r = await authResetPin({ phone: normalizePhone(phone), verificationId: resetVerification, method, key });
+      if (!r.ok) {
+        setResetError(r.error ?? "Сольж чадсангүй. Дахин оролдоно уу.");
+        setResetPinFirst("");
+        setResetPatternFirst("");
+        return;
+      }
+      const login = await authLogin(normalizePhone(phone), key);
+      if (!login.ok) {
+        setAccount((a) => (a ? { ...a, authMethod: method } : a));
+        setAuthStep(method);
+        setAuthError("PIN солигдлоо. Шинэ кодоороо нэвтэрнэ үү.");
+        setScreen("auth");
+        return;
+      }
+      await applySession(login);
+      if (account?.role === "customer") {
+        if (method === "pin") { setPin(key); setPattern(null); } else { setPattern(key); setPin(null); }
+      }
+      localStorage.setItem(SAVED_PHONE_KEY, normalizePhone(phone));
+      onLogin(account!.role, account!.id, account!.name, normalizePhone(phone), true);
+    } finally {
+      setVerifying(false);
+    }
   }
 
   // ── Logo bar ─────────────────────────────────────────────────────
@@ -504,7 +579,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
               {locked ? `${countdown}с хүлээнэ үү` : verifying ? <><Spinner className="w-4 h-4" /> Нэвтэрч байна...</> : "Нэвтрэх"}
             </button>
             {account.role !== "superadmin" && (
-              <div className="flex justify-center"><ForgotLink onClick={() => setForgotOpen(true)} /></div>
+              <div className="flex justify-center"><ForgotLink onClick={openForgot} /></div>
             )}
             {forgotOpen && <ForgotSheet role={account.role} method="password" phone={phone} onClose={() => setForgotOpen(false)} />}
           </div>
@@ -537,7 +612,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
             error={authError || undefined}
             onComplete={locked ? () => {} : verifyAuth}
           />
-          <ForgotLink onClick={() => setForgotOpen(true)} />
+          <ForgotLink onClick={openForgot} />
           {forgotOpen && <ForgotSheet role={account.role} method="pin" phone={phone} onClose={() => setForgotOpen(false)} />}
         </div>
       );
@@ -567,7 +642,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
           error={authError || undefined}
           onComplete={locked ? () => {} : verifyAuth}
         />
-        <ForgotLink onClick={() => setForgotOpen(true)} />
+        <ForgotLink onClick={openForgot} />
         {forgotOpen && <ForgotSheet role={account.role} method="pattern" phone={phone} onClose={() => setForgotOpen(false)} />}
       </div>
     );
@@ -658,9 +733,85 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     );
   }
 
+  // ── SMS-ээр PIN / pattern сэргээх ────────────────────────────────
+  if (screen === "reset" && account) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
+        <button
+          onClick={() => {
+            if (resetStep === "pin" || resetStep === "pattern") setResetStep("choose");
+            else if (resetStep === "choose") { setResetVerification(null); setResetStep("verify"); }
+            else setScreen("auth");
+          }}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 self-start"
+        >
+          <ArrowLeft className="w-4 h-4" /> Буцах
+        </button>
+        <Logo />
+        {verifying && <BusyOverlay label="Хадгалж байна..." />}
+        {resetStep === "verify" && (
+          <>
+            <h2 className="text-[1.6rem] font-extrabold leading-tight">Нууцлал сэргээх</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-6 leading-relaxed">
+              Бүртгэлтэй дугаараасаа код илгээж баталгаажуулаад шинэ PIN-ээ тавина.
+            </p>
+            <PhoneVerify
+              purpose="reset"
+              lockPhone
+              phone={normalizePhone(phone)}
+              onVerified={setResetVerification}
+            />
+            {resetVerification && resetVerification !== "skip" && (
+              <button
+                onClick={() => setResetStep("choose")}
+                className="mt-6 w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-semibold"
+              >
+                Үргэлжлүүлэх
+              </button>
+            )}
+          </>
+        )}
+        {resetStep === "choose" && (
+          <>
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>Шинэ нууцлал</h2>
+            <p className="text-muted-foreground text-sm mt-1 mb-8">PIN эсвэл pattern сонгоно уу</p>
+            <div className="space-y-3">
+              <button onClick={() => { setResetPinFirst(""); setResetStep("pin"); }} className="w-full bg-card border border-border rounded-2xl p-5 text-left font-semibold">PIN код</button>
+              <button onClick={() => { setResetPatternFirst(""); setResetStep("pattern"); }} className="w-full bg-card border border-border rounded-2xl p-5 text-left font-semibold">Pattern</button>
+            </div>
+          </>
+        )}
+        {resetStep === "pin" && (
+          <PinPad
+            title={resetPinFirst ? "PIN баталгаажуулах" : "Шинэ PIN"}
+            subtitle={resetPinFirst ? "Дахин оруулна уу" : "4 оронтой код"}
+            error={resetError || undefined}
+            onComplete={(pin) => {
+              if (!resetPinFirst) { setResetPinFirst(pin); setResetError(""); return; }
+              if (pin !== resetPinFirst) { setResetPinFirst(""); setResetError("PIN таарсангүй. Дахин оруулна уу."); return; }
+              void finishReset("pin", pin);
+            }}
+          />
+        )}
+        {resetStep === "pattern" && (
+          <PatternLock
+            title={resetPatternFirst ? "Pattern баталгаажуулах" : "Шинэ pattern"}
+            subtitle={resetPatternFirst ? "Дахин зурна уу" : "Дор хаяж 4 цэг холбоно уу"}
+            error={resetError || undefined}
+            onComplete={(pat) => {
+              if (!resetPatternFirst) { setResetPatternFirst(pat); setResetError(""); return; }
+              if (pat !== resetPatternFirst) { setResetPatternFirst(""); setResetError("Pattern таарсангүй. Дахин зурна уу."); return; }
+              void finishReset("pattern", pat);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   // ── REGISTER ──────────────────────────────────────────────────────
-  const stepLabels = ["Мэдээлэл", "Нууцлал", "Баталгаа"];
-  const stepIndex = regStep === "info" ? 0 : regStep === "choose" ? 1 : 2;
+  const stepLabels = ["Мэдээлэл", "Утас", "Нууцлал"];
+  const stepIndex = regStep === "info" ? 0 : regStep === "verify" ? 1 : 2;
 
   function RegHeader({ onBack }: { onBack: () => void }) {
     return (
@@ -709,7 +860,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
                 key={key}
                 role="radio"
                 aria-checked={mode === key}
-                onClick={() => setMode(key)}
+                onClick={() => { setMode(key); setVerificationId(null); }}
                 className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mode === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -734,7 +885,7 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
               <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={rPhone}
-                onChange={(e) => setRPhone(e.target.value)}
+                onChange={(e) => { setRPhone(e.target.value); setVerificationId(null); }}
                 placeholder="99000000"
                 type="tel"
                 className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-primary/50 transition-colors"
@@ -780,8 +931,8 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
         </div>
         <div className="mt-6 space-y-3">
           <button
-            onClick={() => setRegStep("choose")}
-            disabled={!rName.trim() || !isValidPhone(rPhone) || (mode === "courier" && !rVehicle)}
+            onClick={() => void continueToVerify()}
+            disabled={!rName.trim() || !isValidPhone(rPhone) || (mode === "courier" && !rVehicle) || submitting}
             className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
@@ -795,10 +946,43 @@ export function LoginPage({ onLogin, resolveByPhone, initialMode = "customer", o
     );
   }
 
+  if (screen === "register" && regStep === "verify") {
+    const verified = !!verificationId && verificationId !== "skip";
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
+        <RegHeader onBack={() => { setVerificationId(null); setRegStep("info"); }} />
+        <h2 className="text-[1.75rem] font-extrabold leading-tight">Утас баталгаажуулах</h2>
+        <p className="text-muted-foreground text-sm mt-1 mb-6 leading-relaxed">
+          Энэ дугаар таных гэдгийг SMS-ээр батална. Дараа нь PIN-ээ тохируулна.
+        </p>
+        <PhoneVerify
+          key={`${mode}-${normalizePhone(rPhone)}`}
+          purpose="signup"
+          role={mode}
+          lockPhone
+          phone={normalizePhone(rPhone)}
+          onVerified={(id) => {
+            setVerificationId(id);
+            if (id === "skip") setRegStep("choose");
+          }}
+        />
+        <div className="mt-6">
+          <button
+            onClick={() => setRegStep("choose")}
+            disabled={!verified}
+            className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl disabled:opacity-40 font-semibold"
+          >
+            {verified ? "Үргэлжлүүлэх" : "Эхлээд утсаа баталгаажуулна уу"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "register" && regStep === "choose") {
     return (
       <div className="min-h-dvh bg-background text-foreground flex flex-col px-5 py-8 max-w-sm mx-auto w-full" style={{ fontFamily: "var(--font-body)" }}>
-        <RegHeader onBack={() => setRegStep("info")} />
+        <RegHeader onBack={() => setRegStep(verificationId === "skip" ? "info" : "verify")} />
         <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.6rem" }}>Нууцлал сонгох</h2>
         <p className="text-muted-foreground text-sm mt-1 mb-8">Аппыг хамгаалах аргаа сонгоорой</p>
         <div className="space-y-3 flex-1">

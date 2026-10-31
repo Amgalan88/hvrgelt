@@ -20,6 +20,8 @@ export interface AuthResult {
   error?: string;
   attemptsLeft?: number;
   lockedUntil?: number;
+  phoneVerified?: boolean;
+  phone?: string;
 }
 
 async function call(action: string, body: Record<string, unknown>, withToken = false): Promise<AuthResult> {
@@ -45,8 +47,13 @@ export async function applySession(r: AuthResult) {
 export const authLookup = (phone: string) => call("lookup", { phone });
 export const authLogin = (phone: string, key: string) => call("login", { phone, key });
 export const authSetup = (phone: string, oldKey: string, method: "pin" | "pattern", key: string) => call("setup", { phone, oldKey, method, key });
-export const authRegister = (data: { role: "customer" | "courier"; name: string; phone: string; vehicle?: string; method: "pin" | "pattern"; key: string }) =>
+export const authRegister = (data: { role: "customer" | "courier"; name: string; phone: string; vehicle?: string; method: "pin" | "pattern"; key: string; verificationId?: string }) =>
   call("register", data);
+export const authResetPin = (data: { phone: string; verificationId: string; method: "pin" | "pattern"; key: string }) =>
+  call("reset-pin", data);
+export const authSetPhone = (phone: string, verificationId: string) =>
+  call("set-phone", { phone, verificationId }, true);
+export const authAdminPhone = (id: string, phone: string) => call("admin-phone", { id, phone }, true);
 export const authChange = (method: "pin" | "pattern", key: string) => call("change", { method, key }, true);
 export const authAdminSet = (table: "operators" | "couriers" | "partners", id: string, password: string) =>
   call("admin-set", { table, id, password }, true);

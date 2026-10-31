@@ -191,6 +191,12 @@ interface CustomerAppProps {
   userPhone: string;
   onUpdateAuth: (authMethod: "pin" | "pattern", authKey: string) => void;
   onLogout: () => void;
+  /** null = багана хараахан байхгүй, false = баталгаажаагүй */
+  phoneVerified?: boolean | null;
+  onPhoneChanged?: (phone: string) => void;
+  /** Явж буй захиалгыг харна, шинэ захиалга хаалттай */
+  phoneUnverified?: boolean;
+  onRequestVerify?: () => void;
 }
 
 /** Үйлчилгээний icon — emoji-ийн оронд нэг хэв маяг */
@@ -324,13 +330,21 @@ function RoutePreview({
   );
 }
 
-export function CustomerApp({ ordersOpen = true, orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout }: CustomerAppProps) {
+export function CustomerApp({ ordersOpen = true, orders, partners, products, bankInfo, courierDocs, onAddOrder, tariff, onCancelOrder, onConfirmOrder, onCreatePayment, onCheckPayment, onMarkPaid, testPayments = false, viewAs = false, onRate, onFeedback, myOrderId, setMyOrderId, userName, userId, userPhone, onUpdateAuth, onLogout, phoneVerified = null, onPhoneChanged, phoneUnverified = false, onRequestVerify }: CustomerAppProps) {
   const { savedAddresses, quickOrders, saveQuickOrders, photoUrl } = useUser();
   const { offerUndo } = useUndo();
   const [helpOpen, setHelpOpen] = useFirstVisitHelp("customer");
   const [tab, setAppTab] = useState<AppTab>("order");
+  function blockIfUnverified() {
+    if (!phoneUnverified) return false;
+    onRequestVerify?.();
+    return true;
+  }
   // Start on form always; if there's an active order go to tracking
   const [orderStep, setOrderStep] = useState<OrderStep>(myOrderId ? "tracking" : "form");
+  useEffect(() => {
+    if (phoneUnverified && myOrderId) setOrderStep("tracking");
+  }, [phoneUnverified, myOrderId]);
   const [draft] = useState(() => readDraft(userId));
   const [fromAddr, setFromAddr] = useState(draft.fromAddr ?? "");
   const [fromDetail, setFromDetail] = useState(draft.fromDetail ?? "");
@@ -560,6 +574,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   };
 
   async function handleConfirm() {
+    if (blockIfUnverified()) return;
     if (placing || (quote && routeLoading) || blockedBeforeLaunch()) return;
     setPlacing(true);
     try {
@@ -597,6 +612,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
 
   // One-tap order from a saved quick-order shortcut
   async function placeQuickOrder(qo: QuickOrder) {
+    if (blockIfUnverified()) return;
     if (placingId || blockedBeforeLaunch()) return;
     setPlacingId(qo.id);
     try {
@@ -653,6 +669,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   }
 
   async function confirmPlaceQuick() {
+    if (blockIfUnverified()) return;
     if (!confirmQO) return;
     const qo = confirmQO;
     setConfirmQO(null);
@@ -665,6 +682,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   }
 
   function confirmBasket(items: BasketItem[]) {
+    if (blockIfUnverified()) return;
     if (!shopPartner) return;
     setBasket(items);
     setBasketPartnerId(shopPartner.id);
@@ -691,6 +709,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   }
 
   function orderFromPartner(p: Partner) {
+    if (blockIfUnverified()) return;
     const fullAddr = [p.name, p.address, p.detail].filter(Boolean).join(", ");
     setFromAddr(fullAddr);
     setFromDetail("");
@@ -727,6 +746,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
 
   /** Доод цэсний "Захиалах" — хаанаас ч шинэ захиалга эхлүүлнэ */
   function startNewOrder() {
+    if (blockIfUnverified()) return;
     setAppTab("order");
     if (orderStep === "tracking") handleNewOrder();
     else if (orderStep === "confirm") setOrderStep("form");
@@ -735,6 +755,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
 
   /** Хүргэгдсэн захиалгыг ижил хаяг, үйлчилгээгээр дахин захиална */
   function repeatOrder(o: Order) {
+    if (blockIfUnverified()) return;
     setMyOrderId(null);
     setServiceId(serviceById(o.serviceId) ? o.serviceId! : SERVICES[0].id);
     setSubServiceId(o.subServiceId ?? null);
@@ -788,6 +809,16 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
 
       {/* Main content */}
       <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56 md:fixed md:z-20 md:right-6 md:top-[calc(3.5rem+1.5rem)] md:bottom-6 md:w-[26rem] md:max-w-none md:mx-0 md:overflow-y-auto md:overscroll-contain md:rounded-3xl md:border md:border-border md:bg-background md:shadow-2xl md:pb-52">
+       {phoneUnverified && (
+         <button
+           type="button"
+           onClick={() => onRequestVerify?.()}
+           className="w-full mb-3 text-left rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3"
+         >
+           <p className="text-sm font-semibold">Утас баталгаажаагүй</p>
+           <p className="text-xs text-muted-foreground mt-0.5">Явж буй захиалгаа харах боломжтой. Шинэ захиалга өгөхийн тулд утсаа баталгаажуулна уу.</p>
+         </button>
+       )}
        <AnimatePresence mode="wait">
         <motion.div
           key={tab}
@@ -1556,7 +1587,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
         {tab === "settings" && (
           <div className="space-y-4">
             <InstallButton variant="card" />
-            <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} />
+            <SettingsPage userId={userId} userName={userName} userPhone={userPhone} onUpdateAuth={onUpdateAuth} onLogout={onLogout} phoneVerified={phoneVerified} onPhoneChanged={onPhoneChanged} />
           </div>
         )}
 

@@ -13,9 +13,9 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": false,
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src"]
+  "include": ["src", "server"]
 }

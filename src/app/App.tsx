@@ -17,6 +17,9 @@ import { LogOut } from "lucide-react";
 import { Logo } from "./components/shared/Logo";
 import { InstallPrompt } from "./components/shared/InstallPrompt";
 import { authLogin, applySession, signOutSession } from "./lib/authApi";
+import { loadPhoneGate, type PhoneGateState } from "./lib/phoneStatus";
+import { PhoneGate } from "./components/auth/PhoneVerify";
+import { ACTIVE_STATUSES } from "./components/shared/types";
 import { supabase } from "./lib/supabase";
 import { MockPage } from "./components/MockPage";
 import { Landing, type LegalKey } from "./components/landing/Landing";
@@ -30,6 +33,8 @@ interface Session {
   phone: string;
   /** Супер админ энэ role-оор үзэж байна — PIN асуухгүй */
   viaAdmin?: boolean;
+  /** false = SMS баталгаажаагүй. undefined = хараахан шалгаагүй */
+  phoneVerified?: boolean;
 }
 
 const SESSION_KEY = "hvrgelt_session";
@@ -71,6 +76,15 @@ function Inner() {
   // харуулахгүй. Өмнө нь татагдах хооронд апп түгжээгүй харагддаг,
   // сүлжээний алдаа гарвал түгжээ огт идэвхждэггүй байв.
   const needsLockCheck = (s: Session | null) => s?.role === "customer" && !s.viaAdmin;
+  const needsPhone = (s: Session | null) => !!s && !s.viaAdmin && (s.role === "customer" || s.role === "courier");
+  const [phoneTry, setPhoneTry] = useState(0);
+  const [verifySheet, setVerifySheet] = useState(false);
+  const [phoneGate, setPhoneGate] = useState<PhoneGateState>(() => {
+    if (!session || session.viaAdmin || (session.role !== "customer" && session.role !== "courier")) return "ok";
+    if (session.phoneVerified === true) return "ok";
+    if (session.phoneVerified === false) return "need";
+    return "unknown";
+  });
   const [lockState, setLockState] = useState<"checking" | "ready" | "error">(
     () => (needsLockCheck(session) ? "checking" : "ready"),
   );
@@ -83,6 +97,25 @@ function Inner() {
     });
   }
 
+  useEffect(() => {
+    if (!needsPhone(session) || !session) return;
+    let cancelled = false;
+    loadPhoneGate(session.role as "customer" | "courier", session.id).then((state) => {
+      if (cancelled) return;
+      setPhoneGate(state);
+      if (state === "ok" || state === "need") {
+        setSession((cur) => {
+          if (!cur) return cur;
+          const next = { ...cur, phoneVerified: state === "ok" };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+          return next;
+        });
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, session?.role, phoneTry]);
+
   // If a customer session was restored from localStorage, load their saved data
   useEffect(() => {
     if (session?.role === "customer") {
@@ -92,14 +125,28 @@ function Inner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleLogin(role: UserRole, id: string, name: string, phone: string, viaAdmin = false) {
-    const s: Session = { role, id, name, phone, viaAdmin };
+  function handleLogin(role: UserRole, id: string, name: string, phone: string, viaAdmin = false, phoneVerified?: boolean) {
+    const s: Session = { role, id, name, phone, viaAdmin, phoneVerified };
     setSession(s);
     localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     setPinVerified(true);
     setPinError("");
     setLockState("ready"); // дөнгөж нэвтэрсэн — дахин асуух шаардлагагүй
     if (role === "customer") loadCustomer(id);
+    if (viaAdmin || (role !== "customer" && role !== "courier")) setPhoneGate("ok");
+    else if (phoneVerified === true) setPhoneGate("ok");
+    else if (phoneVerified === false) setPhoneGate("need");
+    else setPhoneGate("unknown");
+  }
+
+  function markPhoneVerified(phone: string) {
+    setSession((cur) => {
+      if (!cur) return cur;
+      const next = { ...cur, phone, phoneVerified: true };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+      return next;
+    });
+    setPhoneGate("ok");
   }
 
   /**
@@ -178,7 +225,7 @@ function Inner() {
   if (!session) {
     return (
       <LoginPage
-        onLogin={handleLogin}
+        onLogin={(role, id, name, phone, phoneVerified) => handleLogin(role, id, name, phone, false, phoneVerified)}
         resolveByPhone={store.resolveByPhone}
         initialMode={loginMode}
         onBack={() => setLandingDone(false)}
@@ -253,8 +300,39 @@ function Inner() {
   }
 
   // Logged-in screens need DB data — show a loading screen until it arrives
-  if (store.loading) {
+  if (store.loading || (needsPhone(session) && (phoneGate === "unknown" || phoneGate === "error"))) {
+    if (phoneGate === "error") {
+      return (
+        <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <Logo />
+          <p className="text-sm text-muted-foreground">Утасны баталгаажуулалтыг шалгаж чадсангүй.</p>
+          <button onClick={() => { setPhoneGate("unknown"); setPhoneTry((n) => n + 1); }} className="text-sm text-primary font-semibold">Дахин оролдох</button>
+          <button onClick={doLogout} className="text-sm text-muted-foreground">Гарах</button>
+        </div>
+      );
+    }
     return <LoadingScreen />;
+  }
+
+  const activeCustomerOrder = session.role === "customer"
+    ? store.orders.find((o) => o.customerId === session.id && ACTIVE_STATUSES.includes(o.status))
+    : undefined;
+  const activeCourierOrder = session.role === "courier"
+    ? store.orders.find((o) => o.courierId === session.id && (o.status === "томилогдсон" || o.status === "авсан"))
+    : undefined;
+  const phoneBlocked = phoneGate === "need" && needsPhone(session);
+  if (phoneBlocked && session.role === "customer" && !activeCustomerOrder) {
+    return <PhoneGate phone={session.phone} onLogout={doLogout} onDone={markPhoneVerified} />;
+  }
+  if (phoneBlocked && session.role === "courier" && !activeCourierOrder) {
+    return (
+      <PhoneGate
+        phone={session.phone}
+        onLogout={doLogout}
+        onDone={markPhoneVerified}
+        body="Хүргэлт таны дугаар дээр очно. Нэг удаа баталгаажуулсны дараа ажилд гарна."
+      />
+    );
   }
 
   return (
@@ -350,13 +428,17 @@ function Inner() {
           viewAs={!!session.viaAdmin}
           onRate={store.rateOrder}
           onFeedback={store.submitFeedback}
-          myOrderId={myOrderId}
           setMyOrderId={setMyOrderId}
           userName={session.name}
           userId={session.id}
           userPhone={session.phone}
           onUpdateAuth={(authMethod, authKey) => store.updateCustomerAuth(session.id, authMethod, authKey)}
           onLogout={requestLogout}
+          phoneVerified={phoneGate === "off" ? null : phoneGate === "ok"}
+          onPhoneChanged={markPhoneVerified}
+          phoneUnverified={phoneBlocked}
+          onRequestVerify={() => setVerifySheet(true)}
+          myOrderId={phoneBlocked && activeCustomerOrder ? activeCustomerOrder.id : myOrderId}
         />
       )}
 
@@ -391,6 +473,10 @@ function Inner() {
           courierAccounts={store.courierAccounts}
           onClaim={(orderId) => store.claimOrder(orderId, session.id)}
           onSetOnline={(on) => store.setCourierOnline(session.id, on)}
+          phoneVerified={phoneGate === "off" ? null : phoneGate === "ok"}
+          onPhoneChanged={markPhoneVerified}
+          phoneUnverified={phoneBlocked && session.role === "courier"}
+          onRequestVerify={() => setVerifySheet(true)}
         />
       )}
 
@@ -404,6 +490,16 @@ function Inner() {
           onSaveQr={(url) => store.updatePartnerAccess(session.id, { paymentQrUrl: url })}
           onLogout={requestLogout}
         />
+      )}
+
+      {verifySheet && (
+        <div className="fixed inset-0 z-[80] bg-background overflow-y-auto">
+          <PhoneGate
+            phone={session.phone}
+            onLogout={doLogout}
+            onDone={(phone) => { markPhoneVerified(phone); setVerifySheet(false); }}
+          />
+        </div>
       )}
 
       <AnimatePresence>
