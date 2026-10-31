@@ -123,7 +123,7 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
             aria-label="Арилгах"
             onPointerDown={(e) => e.preventDefault()}
             onClick={() => { onChange({ addr: "", pos: null, detail: "" }); setOpen(true); }}
-            className="shrink-0 w-8 h-8 -mr-1.5 rounded-full flex items-center justify-center text-muted-foreground"
+            className="shrink-0 w-11 h-11 -mr-1.5 rounded-full flex items-center justify-center text-muted-foreground"
           >
             <X className="w-4 h-4" />
           </button>
@@ -151,7 +151,7 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
             <ResultRow key={r.id} r={r} busy={resolving === r.id} onPick={pick} />
           ))}
           {mapResults.length > 0 && (
-            <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-muted-foreground">{SOURCE_LABEL.map}</p>
+            <p className="px-4 pt-3 pb-1 text-xs font-semibold text-muted-foreground">{SOURCE_LABEL.map}</p>
           )}
           {mapResults.map((r) => (
             <ResultRow key={r.id} r={r} busy={resolving === r.id} onPick={pick} />
@@ -178,14 +178,14 @@ export function AddressSearch({ target, value, onChange, candidates, onOpenMap, 
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={onOpenMap}
-            className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${value.pos ? "border-primary/40 bg-primary/10 text-primary" : "border-border"}`}
+            className={`flex items-center justify-center gap-1.5 min-h-11 rounded-2xl border text-sm font-semibold transition-colors ${value.pos ? "border-primary/40 bg-primary/10 text-primary" : "border-border"}`}
           >
             <MapIcon className="w-4 h-4" /> {value.pos ? "Цэгээ засах" : "Газрын зураг"}
           </button>
           <button
             onClick={onMyLocation}
             disabled={locating}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-border py-2.5 text-sm font-semibold disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 min-h-11 rounded-2xl border border-border text-sm font-semibold disabled:opacity-60"
           >
             {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4 text-primary" />} Миний байршил
           </button>
@@ -220,7 +220,7 @@ function ResultRow({ r, busy, onPick }: { r: PlaceResult; busy: boolean; onPick:
       {located ? (
         <MapPin className="w-3.5 h-3.5 text-green-600 shrink-0" aria-label="Байршилтай" />
       ) : (
-        <span className="text-[10px] text-muted-foreground shrink-0">байршилгүй</span>
+        <span className="text-xs text-muted-foreground shrink-0">байршилгүй</span>
       )}
     </button>
   );

@@ -400,16 +400,16 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                           )}
                           <div className="flex flex-wrap gap-1.5">
                             {order.weightKg != null && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг хүртэл</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary border border-border">{order.weightKg} кг хүртэл</span>
                             )}
                             {order.handToHand && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400">Гараас гарт</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400">Гараас гарт</span>
                             )}
                             {order.fragile && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хэврэг</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400">Хэврэг</span>
                             )}
                             {order.urgent && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Яаралтай</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">Яаралтай</span>
                             )}
                           </div>
                         </div>
@@ -446,7 +446,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
                         )}
                       </div>
                       {!accepted.has(order.id) && (
-                        <p className="text-[11px] text-muted-foreground -mt-2">
+                        <p className="text-xs text-muted-foreground -mt-2">
                           Захиалгыг хүлээн авсны дараа утасны дугаар нээгдэнэ.
                         </p>
                       )}
@@ -533,7 +533,7 @@ export function CourierApp({ orders, courierId, courierName, courierInfo, accoun
 
       {/* Дотоод журмын сануулга */}
       <div className="max-w-sm mx-auto w-full px-4 pb-24">
-        <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
           Захиалгыг апп-аар дамжуулан гүйцэтгэнэ. Хувийн дугаараар шууд тохирох нь
           даатгал, үнэлгээ, урамшууллаас хасагдах үндэслэл болно.
         </p>

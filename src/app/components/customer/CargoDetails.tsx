@@ -86,17 +86,17 @@ export function CargoDetails({ value, onChange, prices }: CargoDetailsProps) {
         )}
         <button onClick={() => onChange({ ...value, fragile: !value.fragile })} aria-pressed={value.fragile} className={chip(value.fragile, "amber")}>
           <AlertTriangle className="w-4 h-4" />
-          <span className="text-left leading-tight">Хэврэг{prices?.fragile ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.fragile.toLocaleString()}</span> : null}</span>
+          <span className="text-left leading-tight">Хэврэг{prices?.fragile ? <span className="block text-xs font-medium opacity-75">+₮{prices.fragile.toLocaleString()}</span> : null}</span>
         </button>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => onChange({ ...value, handToHand: !value.handToHand })} aria-pressed={!!value.handToHand} className={chip(!!value.handToHand, "amber")}>
           <HandHelping className="w-4 h-4" />
-          <span className="text-left leading-tight">Гараас гарт{prices?.handToHand ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.handToHand.toLocaleString()}</span> : null}</span>
+          <span className="text-left leading-tight">Гараас гарт{prices?.handToHand ? <span className="block text-xs font-medium opacity-75">+₮{prices.handToHand.toLocaleString()}</span> : null}</span>
         </button>
         <button onClick={() => onChange({ ...value, urgent: !value.urgent })} aria-pressed={value.urgent} className={chip(value.urgent, "red")}>
           <Zap className="w-4 h-4" />
-          <span className="text-left leading-tight">Яаралтай{prices?.urgent ? <span className="block text-[11px] font-medium opacity-75">+₮{prices.urgent.toLocaleString()}</span> : null}</span>
+          <span className="text-left leading-tight">Яаралтай{prices?.urgent ? <span className="block text-xs font-medium opacity-75">+₮{prices.urgent.toLocaleString()}</span> : null}</span>
         </button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

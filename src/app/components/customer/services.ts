@@ -164,3 +164,38 @@ export function serviceLabel(serviceId?: string, subId?: string): string {
 export function visibleSubs(service?: Service): SubService[] {
   return service ? service.subs.filter((x) => !x.hidden) : [];
 }
+
+/** Нүүр болон захиалгын ангиллын чип — 9 үйлчилгээг гурван бүлэгт */
+export type ServiceCategory = "delivery" | "freight" | "equipment";
+
+export const SERVICE_CATEGORIES: { id: "all" | ServiceCategory; label: string }[] = [
+  { id: "all", label: "Бүгд" },
+  { id: "delivery", label: "Хүргэлт" },
+  { id: "freight", label: "Ачаа" },
+  { id: "equipment", label: "Техник" },
+];
+
+const SERVICE_CATEGORY: Record<string, ServiceCategory> = {
+  goods: "delivery",
+  "goods-heavy": "delivery",
+  kids: "delivery",
+  "truck-2t": "freight",
+  "truck-big": "freight",
+  crane: "equipment",
+  vacuum: "equipment",
+  excavator: "equipment",
+  bobcat: "equipment",
+};
+
+/** Өдөр тутам хамгийн их захиалагддаг 3 үйлчилгээ — том картоор */
+export const FEATURED_SERVICE_IDS = ["goods", "goods-heavy", "truck-2t"] as const;
+
+export function categoryOf(id?: string): ServiceCategory {
+  const key = (id && LEGACY_IDS[id]) || id || "";
+  return SERVICE_CATEGORY[key] ?? "delivery";
+}
+
+export function isFeaturedService(id?: string): boolean {
+  const key = (id && LEGACY_IDS[id]) || id || "";
+  return (FEATURED_SERVICE_IDS as readonly string[]).includes(key);
+}

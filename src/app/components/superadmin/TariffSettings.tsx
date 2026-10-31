@@ -91,7 +91,7 @@ export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
               />
               <span className="text-xs text-muted-foreground">{f.unit}</span>
             </div>
-            <span className="block text-[11px] text-muted-foreground/80 mt-1 leading-tight">{f.hint}</span>
+            <span className="block text-xs text-muted-foreground/80 mt-1 leading-tight">{f.hint}</span>
           </label>
         ))}
       </div>
@@ -102,12 +102,12 @@ export function TariffSettings({ tariff, onSave }: TariffSettingsProps) {
         <div className="grid grid-cols-4 gap-1 text-center">
           {PREVIEW_KM.map((km) => (
             <div key={km}>
-              <p className="text-[11px] text-muted-foreground tabular">{km} км</p>
+              <p className="text-xs text-muted-foreground tabular">{km} км</p>
               <p className="text-sm font-bold tabular">₮{priceForKm(draft, km).toLocaleString()}</p>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
           Зай = машины замын урт (зам олдохгүй бол шулуун зай × {ROAD_FACTOR}). Урамшуулал: нийт зай аль ангилалд орохоор бүх км тэр үнээр — {draft.tier1Km} км хүртэл ₮{draft.perKm.toLocaleString()}, {Math.max(draft.tier1Km, draft.tier2Km)} км хүрэхгүй ₮{draft.perKm2.toLocaleString()}, түүнээс дээш ₮{draft.perKm3.toLocaleString()} (жш 9 км = 9 × ₮{draft.perKm2.toLocaleString()}). Км-ийн төлбөр ₮{ROUND_TO}-аар дээш бөөрөнхийлөгдөнө. Хүргэгч нийт үнийн 80%-ийг авна.
         </p>
       </div>

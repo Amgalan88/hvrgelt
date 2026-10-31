@@ -100,7 +100,7 @@ export function OrderHistory({ orders, userId, onTrack, onRepeat, onNew }: Order
           >
             {t.label}
             {t.n > 0 && (
-              <span className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] flex items-center justify-center tabular ${seg === t.key && t.key === "active" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>
+              <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs flex items-center justify-center tabular ${seg === t.key && t.key === "active" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>
                 {t.n}
               </span>
             )}
@@ -110,20 +110,20 @@ export function OrderHistory({ orders, userId, onTrack, onRepeat, onNew }: Order
 
       {list.length === 0 ? (
         <div className="flex flex-col items-center text-center py-14 px-6">
-          <span className="w-16 h-16 rounded-3xl bg-secondary flex items-center justify-center">
+          <span className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
             <Package className="w-7 h-7 text-muted-foreground" />
           </span>
-          <p className="font-semibold mt-4">{seg === "active" ? "Идэвхтэй захиалга алга" : "Дууссан захиалга алга"}</p>
-          <p className="text-sm text-muted-foreground mt-1">Хүргэлтээ захиалахад энд харагдана.</p>
-          <button onClick={onNew} className="mt-5 inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold px-5 py-3 rounded-2xl">
-            <Plus className="w-4 h-4" /> Хүргэлт захиалах
+          <p className="text-lg font-bold mt-4">{seg === "active" ? "Идэвхтэй захиалга алга" : "Дууссан захиалга алга"}</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs">Хүргэлтээ захиалахад энд харагдана.</p>
+          <button type="button" onClick={onNew} className="mt-5 w-full max-w-xs min-h-14 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold px-5 rounded-2xl text-base">
+            <Plus className="w-5 h-5" /> Захиалга өгөх
           </button>
         </div>
       ) : (
         <>
           {groups.map((g) => (
             <section key={g.day} className="space-y-2">
-              <p className="text-[13px] font-semibold text-muted-foreground px-1">{g.day}</p>
+              <p className="text-sm font-semibold text-muted-foreground px-1">{g.day}</p>
               <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
                 {g.items.map((o) => {
                   const Icon = serviceIcon(o.serviceId);
@@ -140,7 +140,7 @@ export function OrderHistory({ orders, userId, onTrack, onRepeat, onNew }: Order
                           <span className="block text-xs text-muted-foreground truncate mt-0.5">
                             {o.fromDetail || o.fromAddress}{sv ? ` · ${sv.label}` : ""}
                           </span>
-                          <span className={`inline-block mt-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
+                          <span className={`inline-block mt-1.5 text-xs font-bold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
                         </span>
                         <span className="shrink-0 text-right">
                           {o.price > 0 && <span className="block font-bold tabular">₮{o.price.toLocaleString()}</span>}
@@ -156,7 +156,7 @@ export function OrderHistory({ orders, userId, onTrack, onRepeat, onNew }: Order
                           className="w-14 shrink-0 border-l border-border flex flex-col items-center justify-center gap-0.5 text-primary active:bg-primary/10"
                         >
                           <RotateCcw className="w-4 h-4" />
-                          <span className="text-[10px] font-semibold">Дахин</span>
+                          <span className="text-xs font-semibold">Дахин</span>
                         </button>
                       )}
                     </div>

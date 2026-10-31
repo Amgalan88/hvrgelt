@@ -55,6 +55,15 @@ export interface Tariff {
 /** Шууд үнэ ажиллах үйлчилгээнүүд */
 export const AUTO_PRICE_SERVICES = ["goods"];
 
+/**
+ * Карт дээр харуулах «₮…-аас». Зөвхөн шууд үнэтэй үйлчилгээ, тариф
+ * асаалттай, суурь төлбөр байгаа үед. Үнэ зохиохгүй.
+ */
+export function startingPrice(tariff: Pick<Tariff, "enabled" | "base"> | null | undefined, serviceId: string): number | null {
+  if (!tariff?.enabled || !AUTO_PRICE_SERVICES.includes(serviceId) || !(tariff.base > 0)) return null;
+  return tariff.base;
+}
+
 /** Шулуун зайг замын урт руу ойртуулах коэффициент */
 export const ROAD_FACTOR = 1.3;
 /** Үнийг бөөрөнхийлөх алхам (₮) */

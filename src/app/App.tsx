@@ -38,6 +38,21 @@ interface Session {
 }
 
 const SESSION_KEY = "hvrgelt_session";
+
+const LEGAL_PATH: Record<string, LegalKey> = {
+  terms: "terms",
+  privacy: "privacy",
+  about: "about",
+  contact: "contact",
+};
+
+/** /terms, /privacy гэх мэт шууд хаяг — SPA rewrite-ийн дараа энэ хуудсыг нээнэ */
+function legalFromLocation(): LegalKey | null {
+  if (typeof window === "undefined") return null;
+  const seg = window.location.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
+  if (seg.length !== 1) return null;
+  return LEGAL_PATH[seg[0]] ?? null;
+}
 /** Role-оор үзэж байхад супер админы анхны session-ыг хадгалах түлхүүр */
 const ADMIN_RETURN_KEY = "hvrgelt_admin_return";
 
@@ -53,7 +68,7 @@ function Inner() {
   // Нэвтэрсэн хэрэглэгч апп нээх бүрт нүүр хуудсаар дамжихгүй
   const [landingDone, setLandingDone] = useState(() => session !== null);
   const [loginMode, setLoginMode] = useState<"customer" | "courier">("customer");
-  const [legalPage, setLegalPage] = useState<LegalKey | null>(null);
+  const [legalPage, setLegalPage] = useState<LegalKey | null>(legalFromLocation);
   const [pinVerified, setPinVerified] = useState(false);
   const [pinError, setPinError] = useState("");
   const [myOrderId, setMyOrderId] = useState<string | null>(null);
@@ -88,6 +103,30 @@ function Inner() {
   const [lockState, setLockState] = useState<"checking" | "ready" | "error">(
     () => (needsLockCheck(session) ? "checking" : "ready"),
   );
+
+  useEffect(() => {
+    const onPop = () => setLegalPage(legalFromLocation());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  function openLegal(page: LegalKey) {
+    const next = `/${page}`;
+    if (window.location.pathname.replace(/\/+$/, "") !== next) {
+      window.history.pushState({ legal: page }, "", next);
+    }
+    setLegalPage(page);
+  }
+
+  function closeLegal() {
+    const state = window.history.state as { legal?: LegalKey } | null;
+    if (state?.legal) {
+      window.history.back();
+      return;
+    }
+    setLegalPage(null);
+    if (legalFromLocation()) window.history.pushState({}, "", "/");
+  }
 
   function checkCustomerLock(id: string) {
     setLockState("checking");
@@ -207,7 +246,7 @@ function Inner() {
 
   // ── Хууль эрх зүйн хуудсууд ──────────────────────────────────────
   if (legalPage) {
-    return <LegalPage page={legalPage} onBack={() => setLegalPage(null)} />;
+    return <LegalPage page={legalPage} onBack={closeLegal} />;
   }
 
   // ── Нүүр хуудас — зөвхөн нэвтрээгүй зочинд (эсвэл гарсны дараа) ─────
@@ -216,8 +255,9 @@ function Inner() {
       <Landing
         hasSession={!!session}
         prelaunch={!store.ordersOpen}
+        tariff={store.loading ? null : store.tariff}
         onStart={(mode) => { setLoginMode(mode); setLandingDone(true); }}
-        onLegal={setLegalPage}
+        onLegal={openLegal}
       />
     );
   }

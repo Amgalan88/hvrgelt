@@ -263,7 +263,7 @@
 .hv-map .leaflet-tile-pane { filter: var(--map-filter); }
 /* Хиймэл дагуулын зургийг харанхуй горимд урвуулахгүй */
 .hv-map.hv-sat .leaflet-tile-pane { filter: none; }
-.hv-map .leaflet-control-attribution { font-size: 10px; background: color-mix(in oklab, var(--card) 80%, transparent); color: var(--muted-foreground); }
+.hv-map .leaflet-control-attribution { font-size: 12px; background: color-mix(in oklab, var(--card) 80%, transparent); color: var(--muted-foreground); }
 .hv-map .leaflet-control-attribution a { color: var(--muted-foreground); }
 .hv-map .leaflet-bar a { background: var(--card); color: var(--foreground); border-color: var(--border); }
 .hv-marker { background: transparent; border: 0; }

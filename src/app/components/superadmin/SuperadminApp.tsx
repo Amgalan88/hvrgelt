@@ -377,7 +377,7 @@ function PartnerAccess({
           >
             {done ? "Хадгалагдлаа ✓" : "Хадгалах"}
           </button>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Энэ дугаараар нэвтэрч газар өөрийн барааны жагсаалт, төлбөрийн QR-аа удирдана.
           </p>
         </div>
@@ -485,7 +485,7 @@ export function SuperadminApp({
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
               )}
               {key === "couriers" && pendingReview > 0 && (
-                <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{pendingReview}</span>
+                <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">{pendingReview}</span>
               )}
             </button>
           ))}
@@ -610,7 +610,7 @@ export function SuperadminApp({
                   const photos = need.filter((d) => d.key === "photoUrl" || d.key === "licensePhotoUrl" || d.key === "carPhotoUrl");
                   return (
                 <div className="px-4 py-3 bg-secondary/30 border-t border-border space-y-2">
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {cr.vehicle} — {need.filter((d) => d.required).map((d) => d.label).join(", ")} шаардана
                   </p>
                   <div className="flex gap-2">
@@ -622,10 +622,10 @@ export function SuperadminApp({
                           </a>
                         ) : (
                           <div className="w-full h-16 rounded-lg border border-dashed border-border flex items-center justify-center">
-                            <span className={`text-[10px] ${d.required ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{d.required ? "дутуу" : "заавал биш"}</span>
+                            <span className={`text-xs ${d.required ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{d.required ? "дутуу" : "заавал биш"}</span>
                           </div>
                         )}
-                        <p className="text-[10px] text-muted-foreground text-center mt-1">{d.label}</p>
+                        <p className="text-xs text-muted-foreground text-center mt-1">{d.label}</p>
                       </div>
                     ))}
                   </div>

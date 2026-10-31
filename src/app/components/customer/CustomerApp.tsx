@@ -7,13 +7,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ArrowRight, Package, Clock, CheckCircle, Circle, Truck, Phone, X, Star, Home, Briefcase, Search, Store, Plus, Map as MapIcon, ArrowLeft, LocateFixed, Hand, CircleX, ChevronDown, User as UserIcon } from "lucide-react";
 import type { Order, OrderStatus, CourierDocs, BasketItem, PartnerProduct } from "../shared/types";
 import type { PaymentIntent, NewOrder } from "../shared/store";
-import { quoteDelivery, roadKm, AUTO_PRICE_SERVICES, type Tariff, type Quote } from "../../lib/pricing";
+import { quoteDelivery, roadKm, AUTO_PRICE_SERVICES, startingPrice, type Tariff, type Quote } from "../../lib/pricing";
 import { useUser, type QuickOrder } from "../shared/UserContext";
 import { Spinner } from "../shared/Spinner";
 import { SettingsPage } from "./SettingsPage";
 import { OrderHistory } from "./OrderHistory";
 import { PARTNER_CATEGORIES, type Partner, type PartnerCategory } from "./partners";
-import { SERVICES, serviceById, subServiceById, visibleSubs } from "./services";
+import { SERVICES, serviceById, subServiceById, visibleSubs, SERVICE_CATEGORIES, categoryOf, isFeaturedService, type Service, type ServiceCategory } from "./services";
 import { serviceIcon } from "./serviceIcons";
 import { CourierProfileModal } from "./CourierProfileModal";
 import { CargoDetails, type CargoInfo } from "./CargoDetails";
@@ -221,7 +221,7 @@ function QuoteBreakdown({ quote }: { quote: Quote }) {
           </div>
         ))}
       </dl>
-      <p className="text-[11px] text-muted-foreground mt-3">
+      <p className="text-xs text-muted-foreground mt-3">
         ≈ {quote.km.toFixed(1)} км замаар · сонгосон байршлаар шууд тооцов
       </p>
     </div>
@@ -354,6 +354,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
   const [serviceId, setServiceId] = useState<string>(
     draft.serviceId && serviceById(draft.serviceId) ? draft.serviceId : SERVICES[0].id,
   );
+  const [serviceCat, setServiceCat] = useState<"all" | ServiceCategory>("all");
   const [subServiceId, setSubServiceId] = useState<string | null>(draft.subServiceId ?? null);
   const [cargo, setCargo] = useState<CargoInfo>({ fragile: false, urgent: false });
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -808,7 +809,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
       )}
 
       {/* Main content */}
-      <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56 md:fixed md:z-20 md:right-6 md:top-[calc(3.5rem+1.5rem)] md:bottom-6 md:w-[26rem] md:max-w-none md:mx-0 md:overflow-y-auto md:overscroll-contain md:rounded-3xl md:border md:border-border md:bg-background md:shadow-2xl md:pb-52">
+      <div className="flex-1 max-w-sm mx-auto w-full px-4 pt-4 pb-56 md:fixed md:z-20 md:right-6 md:top-[calc(3.5rem+1.5rem)] md:bottom-6 md:w-[26rem] md:max-w-none md:mx-0 md:overflow-y-auto md:overscroll-contain md:rounded-2xl md:border md:border-border md:bg-background md:shadow-2xl md:pb-52">
        {phoneUnverified && (
          <button
            type="button"
@@ -835,18 +836,18 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
             {orderStep === "form" && (
               <div className="space-y-4">
                 {/* Асуултын баннер */}
-                <div className="relative overflow-hidden rounded-3xl bg-[#16181d] text-white p-5 border border-white/5">
+                <div className="relative overflow-hidden rounded-2xl bg-[#16181d] text-white p-5 border border-white/5">
                   <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-[var(--brand)]/30 blur-2xl pointer-events-none" />
                   <div className="relative flex items-center justify-between h-8">
                     {formStep > 0 ? (
                       <button
                         onClick={() => goStep((formStep - 1) as FormStep)}
-                        className="flex items-center gap-1 text-sm text-white/70 hover:text-white -ml-1 pr-2 py-1"
+                        className="flex items-center gap-1 min-h-11 text-sm text-white/75 hover:text-white -ml-1 pr-2"
                       >
                         <ArrowLeft className="w-4 h-4" /> Буцах
                       </button>
                     ) : <span />}
-                    <span className="text-xs font-semibold text-white/60 tabular">Алхам {formStep + 1}/{WIZARD_STEPS.length}</span>
+                    <span className="text-xs font-semibold text-white/75 tabular">Алхам {formStep + 1}/{WIZARD_STEPS.length}</span>
                   </div>
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -860,7 +861,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                       <h1 className="text-white" style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.12 }}>
                         {WIZARD_STEPS[formStep].q}
                       </h1>
-                      <p className="text-white/65 text-sm mt-1.5">{WIZARD_STEPS[formStep].hint}</p>
+                      <p className="text-white/75 text-sm mt-1.5">{WIZARD_STEPS[formStep].hint}</p>
                     </motion.div>
                   </AnimatePresence>
                   <div className="relative grid gap-1.5 mt-4" style={{ gridTemplateColumns: `repeat(${WIZARD_STEPS.length}, 1fr)` }}>
@@ -916,32 +917,73 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                       </div>
                     )}
 
-                    <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
-                      {SERVICES.map((sv) => {
-                        const active = sv.id === serviceId;
+                    <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Үйлчилгээний ангилал">
+                      {SERVICE_CATEGORIES.map((c) => {
+                        const on = serviceCat === c.id;
                         return (
                           <button
-                            key={sv.id}
-                            onClick={() => { pickService(sv.id); goStep(1); }}
-                            className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors ${active ? "bg-primary/[0.07]" : "hover:bg-secondary/50"}`}
+                            key={c.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={on}
+                            onClick={() => setServiceCat(c.id)}
+                            className={`shrink-0 min-h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}
                           >
-                            <span className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}><SvcIcon id={sv.id} /></span>
-                            <span className="flex-1 min-w-0">
-                              <span className="block text-[15px] font-semibold leading-snug">
-                                {sv.label}
-                                {tariff.enabled && AUTO_PRICE_SERVICES.includes(sv.id) && (
-                                  <span className="ml-1.5 align-middle inline-block text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-300 bg-green-500/15 px-1.5 py-0.5 rounded-md">Шууд үнэ</span>
-                                )}
-                              </span>
-                              <span className="block text-xs text-muted-foreground mt-0.5">{sv.desc}</span>
-                            </span>
-                            {active
-                              ? <CheckCircle className="w-5 h-5 text-primary shrink-0" />
-                              : <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                            {c.label}
                           </button>
                         );
                       })}
                     </div>
+                    {(() => {
+                      const pool = SERVICES.filter((sv) => serviceCat === "all" || categoryOf(sv.id) === serviceCat);
+                      const lead = pool.filter((sv) => isFeaturedService(sv.id));
+                      const tail = pool.filter((sv) => !isFeaturedService(sv.id));
+                      const row = (sv: Service, large: boolean) => {
+                        const active = sv.id === serviceId;
+                        const from = startingPrice(tariff, sv.id);
+                        return (
+                          <button
+                            key={sv.id}
+                            type="button"
+                            onClick={() => { pickService(sv.id); goStep(1); }}
+                            className={`w-full flex items-center gap-3 text-left transition-colors ${
+                              large
+                                ? `rounded-2xl border p-4 ${active ? "bg-primary/[0.07] border-primary" : "bg-card border-border hover:border-primary/40"}`
+                                : `px-3.5 py-3 ${active ? "bg-primary/[0.07]" : "hover:bg-secondary/50"}`
+                            }`}
+                          >
+                            <span className={`${large ? "w-[88px] h-[88px]" : "w-[72px] h-[72px]"} rounded-2xl flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+                              <SvcIcon id={sv.id} className={large ? "w-10 h-10" : "w-8 h-8"} />
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-lg font-bold leading-snug">{sv.label}</span>
+                              <span className="block text-sm text-muted-foreground mt-0.5">{sv.desc}</span>
+                              {from != null && (
+                                <span className="block text-base font-extrabold text-primary mt-1 tabular">₮{from.toLocaleString()}-аас</span>
+                              )}
+                            </span>
+                            {active
+                              ? <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                              : <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />}
+                          </button>
+                        );
+                      };
+                      return (
+                        <div className="space-y-3">
+                          {lead.length > 0 && (
+                            <div className="space-y-2">
+                              {serviceCat === "all" && <p className="text-sm font-semibold px-1">Гол үйлчилгээ</p>}
+                              {lead.map((sv) => row(sv, true))}
+                            </div>
+                          )}
+                          {tail.length > 0 && (
+                            <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                              {tail.map((sv) => row(sv, false))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {quickOrders.length === 0 && (
                       <button onClick={openQuickAdd} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1">
@@ -1071,7 +1113,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                                 }`}
                               >
                                 <span className="text-base font-bold">{w} кг</span>
-                                <span className={`text-[11px] ${on ? "opacity-85" : "text-muted-foreground"}`}>хүртэл</span>
+                                <span className={`text-xs ${on ? "opacity-85" : "text-muted-foreground"}`}>хүртэл</span>
                               </button>
                             );
                           })}
@@ -1090,7 +1132,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                                 key={sub.id}
                                 onClick={() => setSubServiceId(on ? null : sub.id)}
                                 title={sub.desc}
-                                className={`px-3.5 py-2 rounded-full border text-sm transition-colors ${
+                                className={`min-h-11 px-4 rounded-full border text-sm transition-colors ${
                                   on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
                                 }`}
                               >
@@ -1120,7 +1162,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                           <span className="text-xs text-muted-foreground">Барааны дүн</span>
                           <span className="text-sm font-bold text-primary font-mono">₮{basketTotal.toLocaleString()}</span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground">Барааны төлбөрийг газарт нь төлнө. Хүргэлтийн үнийг оператор тогтооно.</p>
+                        <p className="text-sm text-muted-foreground">Барааны төлбөрийг газарт нь төлнө. Хүргэлтийн үнийг оператор тогтооно.</p>
                       </div>
                     )}
 
@@ -1208,13 +1250,13 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                       )}
                       <div className="flex flex-wrap gap-1.5">
                         {cargo.weightKg != null && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг хүртэл</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-secondary border border-border">{cargo.weightKg} кг хүртэл</span>
                         )}
                         {cargo.fragile && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хэврэг</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500">Хэврэг</span>
                         )}
                         {cargo.urgent && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-500">Яаралтай</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-500">Яаралтай</span>
                         )}
                       </div>
                     </div>
@@ -1234,7 +1276,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                       <Clock className="w-4 h-4 text-primary" />
                       <p className="text-sm font-semibold">Үнэ операторын зүгээс тогтоогдоно</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна. Доод үнэ — 5,000₮.</p>
+                    <p className="text-sm text-muted-foreground">Захиалга өгсний дараа оператор үнийг баталгаажуулна.</p>
                   </div>
                 )}
 
@@ -1263,7 +1305,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                 {/* 1. Одоогийн төлөв — "Таны ээлж" бол тод өнгөөр */}
                 {view.tone !== "done" && (
                   <div
-                    className={`rounded-3xl p-5 ${
+                    className={`rounded-2xl p-5 ${
                       view.tone === "action"
                         ? "bg-primary text-primary-foreground"
                         : view.tone === "cancelled"
@@ -1321,14 +1363,18 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
 
                 {/* 2. Дөрвөн шат — хаана явааг нэг харцаар */}
                 {ms >= 0 && view.tone !== "done" && (
-                  <div className="grid grid-cols-4 gap-1.5" aria-label="Захиалгын шат">
-                    {MILESTONES.map((m, i) => (
-                      <div key={m} className="space-y-1.5">
-                        <span className={`block h-1.5 rounded-full ${i < ms ? "bg-primary" : i === ms ? "bg-primary/50 animate-pulse" : "bg-border"}`} />
-                        <span className={`block text-[11px] leading-tight ${i <= ms ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{m}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <ol className="grid grid-cols-4 gap-2" aria-label="Захиалгын шат">
+                    {MILESTONES.map((m, i) => {
+                      const state = i < ms ? "done" : i === ms ? "current" : "todo";
+                      return (
+                        <li key={m} className="min-w-0">
+                          <span className={`block h-1.5 rounded-full mb-2 ${state === "todo" ? "bg-border" : "bg-primary"} ${state === "current" ? "animate-pulse" : ""}`} />
+                          <span className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold mb-1 ${state === "todo" ? "bg-secondary text-muted-foreground" : "bg-primary text-primary-foreground"}`}>{i + 1}</span>
+                          <span className={`block text-xs leading-tight ${state === "todo" ? "text-muted-foreground" : "text-foreground font-semibold"}`}>{m}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
                 )}
 
                 {!viewAs && (view.tone === "wait" || view.tone === "action") && (
@@ -1379,22 +1425,24 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                 {/* 4. Хүргэгч */}
                 {myOrder.courierName && onTheWay && (
                   <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between gap-3">
-                    <button onClick={() => setCourierProfileOpen(true)} className="flex items-center gap-3 text-left group min-w-0">
-                      <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold shrink-0">
+                    <button type="button" onClick={() => setCourierProfileOpen(true)} className="flex items-center gap-3 text-left group min-w-0 min-h-12">
+                      <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-primary text-lg font-bold shrink-0">
                         {myOrder.courierName[0]}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs text-muted-foreground">Таны хүргэгч</p>
-                        <p className="font-semibold truncate group-hover:text-primary transition-colors">{myOrder.courierName}</p>
-                        <p className="text-xs text-primary flex items-center gap-1">Мэдээлэл харах <ArrowRight className="w-3 h-3" /></p>
+                        <p className="text-lg font-bold leading-tight truncate group-hover:text-primary transition-colors">{myOrder.courierName}</p>
+                        <p className="text-sm text-primary flex items-center gap-1">Мэдээлэл харах <ArrowRight className="w-3.5 h-3.5" /></p>
                       </div>
                     </button>
-                    <a
-                      href={`tel:${myOrder.courierPhone}`}
-                      className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
-                    >
-                      <Phone className="w-4 h-4" /> Залгах
-                    </a>
+                    {myOrder.courierPhone && (
+                      <a
+                        href={`tel:${myOrder.courierPhone}`}
+                        className="shrink-0 min-h-12 min-w-12 px-4 rounded-2xl bg-primary text-primary-foreground inline-flex items-center justify-center gap-2 text-base font-bold hover:bg-primary/90 transition-colors"
+                      >
+                        <Phone className="w-5 h-5" /> Залгах
+                      </a>
+                    )}
                   </div>
                 )}
 
@@ -1475,8 +1523,8 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
               <input
                 value={placesSearch}
                 onChange={(e) => setPlacesSearch(e.target.value)}
-                placeholder="Газар хайх..."
-                className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                placeholder="Байр, гудамж, байгууллага хайх"
+                className="w-full min-h-11 bg-card border border-border rounded-2xl pl-9 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-colors"
               />
               {placesSearch && (
                 <button onClick={() => setPlacesSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -1492,7 +1540,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                   <button
                     key={c.key}
                     onClick={() => setPlacesCat(c.key)}
-                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${placesCat === c.key ? "bg-primary text-white border-primary shadow-sm" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
+                    className={`shrink-0 min-h-11 flex items-center gap-1.5 px-4 rounded-full border text-sm font-semibold transition-all ${placesCat === c.key ? "bg-primary text-white border-primary shadow-sm" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"}`}
                   >
                     <span>{c.emoji}</span> {c.key}
                   </button>
@@ -1698,7 +1746,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
           onClick={() => setServicePickerOpen(false)}
         >
           <motion.div
-            className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-4 pb-6 max-h-[85dvh] overflow-y-auto"
+            className="bg-card w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-4 pb-6 max-h-[85dvh] overflow-y-auto"
             initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
             onClick={(e) => e.stopPropagation()}
@@ -1744,7 +1792,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
             <motion.div
               role="dialog"
               aria-label={`${LAUNCH_DATE}-нд нээгдэнэ`}
-              className="bg-card w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
+              className="bg-card w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center"
               initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
               transition={{ type: "spring", damping: 26, stiffness: 320 }}
               onClick={(e) => e.stopPropagation()}
@@ -1782,7 +1830,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
       />
 
       {/* Доод цэс — голд нь үргэлж харагдах "Захиалах" */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)] md:left-auto md:right-6 md:bottom-6 md:w-[26rem] md:rounded-b-3xl md:border md:pb-0">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)] md:left-auto md:right-6 md:bottom-6 md:w-[26rem] md:rounded-b-2xl md:border md:pb-0">
         <div className="max-w-sm md:max-w-none mx-auto grid grid-cols-5 h-[4.75rem]">
           {([
             { key: "order" as AppTab, label: "Нүүр", icon: Home, badge: 0 },
@@ -1801,7 +1849,7 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                 >
                   <Plus className="w-7 h-7" strokeWidth={2.5} />
                 </motion.button>
-                <span className="text-[11px] font-semibold text-primary mt-1">Захиалах</span>
+                <span className="text-xs font-semibold text-primary mt-1">Захиалах</span>
               </div>
             ) : (
               <button
@@ -1812,9 +1860,9 @@ export function CustomerApp({ ordersOpen = true, orders, partners, products, ban
                 <span className={`flex items-center justify-center w-14 h-8 rounded-full transition-colors ${tab === item.key ? "bg-primary/12" : ""}`}>
                   <item.icon className="w-[22px] h-[22px]" strokeWidth={tab === item.key ? 2.4 : 2} />
                 </span>
-                <span className={`text-[11px] ${tab === item.key ? "font-bold" : "font-medium"}`}>{item.label}</span>
+                <span className={`text-xs ${tab === item.key ? "font-bold" : "font-medium"}`}>{item.label}</span>
                 {item.badge > 0 && (
-                  <span className="absolute top-2 left-1/2 ml-2 min-w-[18px] h-[18px] px-1 bg-primary rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-card tabular">
+                  <span className="absolute top-1.5 left-1/2 ml-2 min-w-5 h-5 px-1 bg-primary rounded-full text-white text-xs font-bold flex items-center justify-center ring-2 ring-card tabular">
                     {item.badge}
                   </span>
                 )}

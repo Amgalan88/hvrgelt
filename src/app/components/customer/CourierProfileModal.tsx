@@ -83,7 +83,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
                 <ImageWithFallback src={p.photo} alt={name} className="w-full h-full object-cover" />
               </div>
               {docs?.verified !== false && (
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap">
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-green-500/90 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
                   <BadgeCheck className="w-3 h-3" /> Баталгаажсан
                 </div>
               )}
@@ -113,7 +113,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
                   >
                     <Icon className="w-[18px] h-[18px]" />
                   </span>
-                  <span className={`text-[10px] whitespace-nowrap ${active ? "text-primary" : "text-muted-foreground"}`}>
+                  <span className={`text-xs whitespace-nowrap ${active ? "text-primary" : "text-muted-foreground"}`}>
                     {o.label}
                   </span>
                 </motion.button>
@@ -197,7 +197,7 @@ export function CourierProfileModal({ courierId, name, phone, docs, onClose }: C
           </AnimatePresence>
 
           {isMock && (
-            <p className="text-[10px] text-center text-amber-500/80">
+            <p className="text-sm text-center text-amber-500/80">
               Хүргэгч баримт бичгээ хараахан оруулаагүй — туршилтын өгөгдөл харуулж байна.
             </p>
           )}

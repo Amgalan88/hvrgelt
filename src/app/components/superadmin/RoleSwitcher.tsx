@@ -130,13 +130,13 @@ export function RoleSwitcher({
                     <div className="flex items-center gap-2">
                       <p className="font-semibold" style={{ fontFamily: "var(--font-display)" }}>{r.label}</p>
                       {isCurrent && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                           одоо
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{r.desc}</p>
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                    <p className="text-xs text-muted-foreground/70 mt-0.5">
                       {list.length > 0 ? `${list.length} бүртгэл` : "бүртгэл байхгүй — демо"}
                     </p>
                   </div>
@@ -189,7 +189,7 @@ export function RoleSwitcher({
           Болих
         </button>
 
-        <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+        <p className="text-sm text-muted-foreground text-center leading-relaxed">
           Role-оор үзэж байхдаа дэлгэцийн доод талын товчоор супер админ
           руугаа буцна. Нууц үг дахин асуухгүй.
         </p>
@@ -209,13 +209,13 @@ export function ViewAsBar({ label, onSwitch, onExit }: { label: string; onSwitch
       <span className="text-xs font-semibold truncate max-w-[9rem]" style={{ fontFamily: "var(--font-display)" }}>{label}</span>
       <button
         onClick={onSwitch}
-        className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-black/10 transition-colors"
+        className="min-h-11 text-xs font-semibold px-3 rounded-full hover:bg-black/10 transition-colors"
       >
         Солих
       </button>
       <button
         onClick={onExit}
-        className="text-[11px] font-semibold bg-black text-amber-400 px-2.5 py-1 rounded-full hover:bg-black/80 transition-colors"
+        className="min-h-11 text-xs font-semibold bg-black text-amber-400 px-3 rounded-full hover:bg-black/80 transition-colors"
       >
         Буцах
       </button>
