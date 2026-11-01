@@ -211,9 +211,7 @@ function ServiceTile({
       <span className="flex-1 min-w-0">
         <span className="block text-lg font-bold leading-snug">{sv.label}</span>
         <span className="block text-sm text-muted-foreground mt-1 leading-snug">{sv.desc}</span>
-        {from != null && (
-          <span className="block text-lg font-extrabold text-primary mt-2 tabular">₮{from.toLocaleString()}-аас</span>
-        )}
+        <span className="block text-lg font-extrabold text-primary mt-2 tabular">{from != null ? `₮${from.toLocaleString()}-аас` : "Үнэ тохиролцоно"}</span>
       </span>
       {!featured && (
         <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
